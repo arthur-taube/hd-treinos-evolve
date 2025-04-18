@@ -31,7 +31,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 const formSchema = z.object({
@@ -66,6 +65,7 @@ const splits = [
 export default function ProgramStructureForm() {
   const navigate = useNavigate();
   const [showExitDialog, setShowExitDialog] = useState(false);
+  const [showPhase2, setShowPhase2] = useState(false);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -75,14 +75,14 @@ export default function ProgramStructureForm() {
       mesocycles: 1,
       duration: "",
       goals: [],
-      weeklyFrequency: 1,
+      weeklyFrequency: 3,
       split: "",
     },
   });
   
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     console.log(values);
-    // Aqui implementaremos a navegação para a próxima fase
+    setShowPhase2(true);
   };
 
   const handleBack = () => {
@@ -92,6 +92,18 @@ export default function ProgramStructureForm() {
       navigate("/programs");
     }
   };
+
+  if (showPhase2) {
+    return (
+      <div className="space-y-6">
+        <ProgramExercisesForm 
+          programName={form.getValues().name}
+          programLevel={form.getValues().level}
+          weeklyFrequency={form.getValues().weeklyFrequency}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -286,3 +298,6 @@ export default function ProgramStructureForm() {
     </div>
   );
 }
+
+// Import ProgramExercisesForm at the top of the file
+import ProgramExercisesForm from "./ProgramExercisesForm";
