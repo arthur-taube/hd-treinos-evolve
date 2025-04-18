@@ -15,6 +15,7 @@ import Stats from "./pages/Stats";
 import History from "./pages/History";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
+import ProgramEditor from "./pages/ProgramEditor";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +44,14 @@ const App = () => (
               element={
                 <AppLayout>
                   <Programs />
+                </AppLayout>
+              }
+            />
+            <Route
+              path="/programs/new"
+              element={
+                <AppLayout>
+                  <ProgramEditor />
                 </AppLayout>
               }
             />

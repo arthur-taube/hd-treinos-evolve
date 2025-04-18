@@ -6,9 +6,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { PlusCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Programs = () => {
   const [isDeveloper, setIsDeveloper] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const checkUserRole = async () => {
@@ -101,7 +103,11 @@ const Programs = () => {
         )}
 
         {isDeveloper && (
-          <Button className="w-full mt-6 btn-outline">
+          <Button
+            className="w-full mt-6"
+            variant="outline"
+            onClick={() => navigate("/programs/new")}
+          >
             <PlusCircle className="mr-2 h-4 w-4" />
             Criar novo programa
           </Button>
