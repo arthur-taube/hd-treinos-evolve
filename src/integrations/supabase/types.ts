@@ -9,7 +9,297 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      exercicios_avancados: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          grupo_muscular: string
+          id: string
+          image_url: string | null
+          nome: string
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          grupo_muscular: string
+          id?: string
+          image_url?: string | null
+          nome: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          grupo_muscular?: string
+          id?: string
+          image_url?: string | null
+          nome?: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
+      exercicios_iniciantes: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          grupo_muscular: string
+          id: string
+          image_url: string | null
+          nome: string
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          grupo_muscular: string
+          id?: string
+          image_url?: string | null
+          nome: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          grupo_muscular?: string
+          id?: string
+          image_url?: string | null
+          nome?: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
+      itens_treino_avancados: {
+        Row: {
+          created_at: string
+          exercicio_id: string | null
+          id: string
+          ordem: number
+          repeticoes: number
+          series: number
+          treino_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          exercicio_id?: string | null
+          id?: string
+          ordem: number
+          repeticoes: number
+          series: number
+          treino_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          exercicio_id?: string | null
+          id?: string
+          ordem?: number
+          repeticoes?: number
+          series?: number
+          treino_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itens_treino_avancados_exercicio_id_fkey"
+            columns: ["exercicio_id"]
+            isOneToOne: false
+            referencedRelation: "exercicios_avancados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itens_treino_avancados_treino_id_fkey"
+            columns: ["treino_id"]
+            isOneToOne: false
+            referencedRelation: "treinos_avancados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      itens_treino_iniciantes: {
+        Row: {
+          created_at: string
+          exercicio_id: string | null
+          id: string
+          ordem: number
+          repeticoes: number
+          series: number
+          treino_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          exercicio_id?: string | null
+          id?: string
+          ordem: number
+          repeticoes: number
+          series: number
+          treino_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          exercicio_id?: string | null
+          id?: string
+          ordem?: number
+          repeticoes?: number
+          series?: number
+          treino_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itens_treino_iniciantes_exercicio_id_fkey"
+            columns: ["exercicio_id"]
+            isOneToOne: false
+            referencedRelation: "exercicios_iniciantes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itens_treino_iniciantes_treino_id_fkey"
+            columns: ["treino_id"]
+            isOneToOne: false
+            referencedRelation: "treinos_iniciantes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+          phone_number: string | null
+          training_goal: string | null
+          training_level: string | null
+          updated_at: string
+          weight: number | null
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id: string
+          phone_number?: string | null
+          training_goal?: string | null
+          training_level?: string | null
+          updated_at?: string
+          weight?: number | null
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          phone_number?: string | null
+          training_goal?: string | null
+          training_level?: string | null
+          updated_at?: string
+          weight?: number | null
+        }
+        Relationships: []
+      }
+      treinos_avancados: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          dias_semana: string[]
+          id: string
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          dias_semana: string[]
+          id?: string
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          dias_semana?: string[]
+          id?: string
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      treinos_iniciantes: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          dias_semana: string[]
+          id: string
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          dias_semana: string[]
+          id?: string
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          dias_semana?: string[]
+          id?: string
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      usuarios_treinos: {
+        Row: {
+          ativo: boolean | null
+          created_at: string
+          id: string
+          nivel: string
+          treino_avancado_id: string | null
+          treino_iniciante_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string
+          id?: string
+          nivel: string
+          treino_avancado_id?: string | null
+          treino_iniciante_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string
+          id?: string
+          nivel?: string
+          treino_avancado_id?: string | null
+          treino_iniciante_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usuarios_treinos_treino_avancado_id_fkey"
+            columns: ["treino_avancado_id"]
+            isOneToOne: false
+            referencedRelation: "treinos_avancados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usuarios_treinos_treino_iniciante_id_fkey"
+            columns: ["treino_iniciante_id"]
+            isOneToOne: false
+            referencedRelation: "treinos_iniciantes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

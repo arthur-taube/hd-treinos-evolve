@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Eye, EyeOff, LogIn, UserPlus } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface RegisterFormProps {
   onToggleForm: () => void;
@@ -18,16 +19,33 @@ const RegisterForm = ({ onToggleForm }: RegisterFormProps) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // For now, we'll just simulate registration
-    setTimeout(() => {
-      toast.success("Cadastro simulado com sucesso!");
-      onToggleForm();
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            birth_date: birthDate,
+          },
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success("Cadastro realizado com sucesso! Verifique seu email.");
+      onToggleForm(); // Volta para o formulário de login
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao criar conta");
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (

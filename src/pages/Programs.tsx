@@ -1,17 +1,28 @@
-
 import React from "react";
 import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import ProgramCard from "@/components/programs/ProgramCard";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PlusCircle } from "lucide-react";
-
-// Mock user email for development
-const userEmail = "usuario@exemplo.com";
-const developerEmail = "arthurtaube.com.br@gmail.com";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
 
 const Programs = () => {
-  // Mock programs data (will come from backend later)
+  const [isDeveloper, setIsDeveloper] = useState(false);
+
+  useEffect(() => {
+    const checkUserRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setIsDeveloper(user?.email === "arthurtaube.com.br@gmail.com");
+    };
+
+    checkUserRole();
+  }, []);
+
+  // Mock user email for development
+  const userEmail = "usuario@exemplo.com";
+  const developerEmail = "arthurtaube.com.br@gmail.com";
+
   const activePrograms = [
     {
       id: 1,
@@ -32,9 +43,6 @@ const Programs = () => {
       description: "Treino dividido por grupos musculares",
     },
   ];
-
-  // Check if the user is a developer
-  const isDeveloper = userEmail === developerEmail;
 
   return (
     <div className="pb-20">
