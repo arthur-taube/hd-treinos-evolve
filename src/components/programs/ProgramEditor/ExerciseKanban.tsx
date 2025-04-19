@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { PlusCircle, Eye, X, Grip } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import MuscleGroupDialog from "./MuscleGroupDialog";
 
 interface ExerciseKanbanProps {
   weeklyFrequency: number;
@@ -29,6 +29,8 @@ interface Exercise {
   sets: number;
   reps: number;
   muscleGroup: string;
+  allowMultipleGroups?: boolean;
+  availableGroups?: string[];
 }
 
 export default function ExerciseKanban({ 
@@ -178,6 +180,31 @@ export default function ExerciseKanban({
     setExercises(newExercises);
   };
 
+  const [muscleGroupDialogOpen, setMuscleGroupDialogOpen] = useState(false);
+  const [currentDay, setCurrentDay] = useState<string>("");
+
+  const handleAddExercise = (day: string) => {
+    setCurrentDay(day);
+    setMuscleGroupDialogOpen(true);
+  };
+
+  const handleMuscleGroupSelect = (groups: string[], isMultiple: boolean) => {
+    const newExercise: Exercise = {
+      id: `exercise-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: "Novo Exercício",
+      sets: 3,
+      reps: 12,
+      muscleGroup: groups[0],
+      allowMultipleGroups: isMultiple,
+      availableGroups: isMultiple ? groups : undefined
+    };
+
+    setExercises({
+      ...exercises,
+      [currentDay]: [...(exercises[currentDay] || []), newExercise]
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -199,7 +226,7 @@ export default function ExerciseKanban({
 
       <DragDropContext onDragEnd={onDragEnd}>
         {getDayRows().map((row, rowIndex) => (
-          <div key={rowIndex} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div key={rowIndex} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
             {row.map((day, dayIndex) => (
               <div key={`${day}-${dayIndex}`} className="flex flex-col">
                 <div className="bg-muted p-2 rounded-t-md">
@@ -218,7 +245,7 @@ export default function ExerciseKanban({
                   <Button
                     variant="ghost"
                     className="flex w-full justify-center p-2 mb-2"
-                    onClick={() => addExercise(day)}
+                    onClick={() => handleAddExercise(day)}
                   >
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Adicionar Exercício
@@ -337,6 +364,12 @@ export default function ExerciseKanban({
           </p>
         </div>
       )}
+
+      <MuscleGroupDialog 
+        open={muscleGroupDialogOpen}
+        onClose={() => setMuscleGroupDialogOpen(false)}
+        onSelect={handleMuscleGroupSelect}
+      />
     </div>
   );
 }
