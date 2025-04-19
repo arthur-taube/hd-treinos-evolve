@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -62,6 +61,8 @@ const splits = [
   { id: "split", label: "Split" },
 ];
 
+import ProgramExercisesForm from "./ProgramExercisesForm";
+
 export default function ProgramStructureForm() {
   const navigate = useNavigate();
   const [showExitDialog, setShowExitDialog] = useState(false);
@@ -100,6 +101,7 @@ export default function ProgramStructureForm() {
           programName={form.getValues().name}
           programLevel={form.getValues().level}
           weeklyFrequency={form.getValues().weeklyFrequency}
+          mesocycles={form.getValues().mesocycles}
         />
       </div>
     );
@@ -298,6 +300,3 @@ export default function ProgramStructureForm() {
     </div>
   );
 }
-
-// Import ProgramExercisesForm at the top of the file
-import ProgramExercisesForm from "./ProgramExercisesForm";

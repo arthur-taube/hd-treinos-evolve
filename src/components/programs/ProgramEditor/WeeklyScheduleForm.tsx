@@ -7,6 +7,7 @@ import { X } from "lucide-react";
 
 interface WeeklyScheduleProps {
   weeklyFrequency: number;
+  onSaveSchedule?: (schedule: string[]) => void;
 }
 
 type DayOfWeek = {
@@ -25,7 +26,10 @@ const daysOfWeek: DayOfWeek[] = [
   { id: "domingo", name: "domingo", label: "Domingo" },
 ];
 
-export default function WeeklyScheduleForm({ weeklyFrequency }: WeeklyScheduleProps) {
+export default function WeeklyScheduleForm({ 
+  weeklyFrequency, 
+  onSaveSchedule 
+}: WeeklyScheduleProps) {
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [savedSchedules, setSavedSchedules] = useState<string[][]>([]);
 
@@ -41,8 +45,14 @@ export default function WeeklyScheduleForm({ weeklyFrequency }: WeeklySchedulePr
 
   const handleSaveSchedule = () => {
     if (selectedDays.length === weeklyFrequency) {
-      setSavedSchedules([...savedSchedules, [...selectedDays]]);
+      const newSchedule = [...selectedDays];
+      setSavedSchedules([...savedSchedules, newSchedule]);
       setSelectedDays([]);
+      
+      // Notify parent component
+      if (onSaveSchedule) {
+        onSaveSchedule(newSchedule);
+      }
     }
   };
 

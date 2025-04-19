@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import PageHeader from "@/components/layout/PageHeader";
 import ProgramStructureForm from "@/components/programs/ProgramEditor/ProgramStructureForm";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 
 export default function ProgramEditor() {
   const navigate = useNavigate();
-
+  
   return (
     <div className="pb-20">
       <PageHeader title="Criar Novo Programa">
