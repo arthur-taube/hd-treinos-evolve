@@ -41,11 +41,9 @@ export default function ExerciseKanban({
   mesocycleDuration = 4,
   onDurationChange,
 }: ExerciseKanbanProps) {
-  // For demo purposes, we'll use just the first schedule if available
   const schedule = daysSchedule.length > 0 ? daysSchedule[0] : Array(weeklyFrequency).fill("").map((_, i) => `dia${i+1}`);
   
   const [exercises, setExercises] = useState<Record<string, Exercise[]>>(() => {
-    // Initialize with empty arrays for each day
     const initialExercises: Record<string, Exercise[]> = {};
     schedule.forEach((day) => {
       initialExercises[day] = [];
@@ -54,7 +52,6 @@ export default function ExerciseKanban({
   });
 
   const [dayTitles, setDayTitles] = useState<Record<string, string>>(() => {
-    // Initialize with default titles
     const initialTitles: Record<string, string> = {};
     schedule.forEach((day, index) => {
       initialTitles[day] = `Dia ${index + 1}`;
@@ -115,7 +112,6 @@ export default function ExerciseKanban({
     return dayMap[dayId] || dayId;
   };
 
-  // Group days into rows (max 3 columns per row)
   const getDayRows = () => {
     const rows: string[][] = [];
     let currentRow: string[] = [];
@@ -140,11 +136,9 @@ export default function ExerciseKanban({
     "Quadríceps", "Posteriores", "Panturrilhas", "Abdômen", "Trapézio"
   ];
 
-  // Handle drag end event
   const onDragEnd = (result: any) => {
     const { destination, source, draggableId } = result;
 
-    // If there's no destination or the item was dropped back in the same position
     if (!destination || 
         (destination.droppableId === source.droppableId && 
          destination.index === source.index)) {
@@ -154,10 +148,8 @@ export default function ExerciseKanban({
     const sourceDay = source.droppableId;
     const destinationDay = destination.droppableId;
     
-    // Create a copy of the current exercises
     const newExercises = { ...exercises };
     
-    // Handle reordering within the same day
     if (sourceDay === destinationDay) {
       const dayExercises = [...newExercises[sourceDay]];
       const [movedExercise] = dayExercises.splice(source.index, 1);
@@ -165,7 +157,6 @@ export default function ExerciseKanban({
       
       newExercises[sourceDay] = dayExercises;
     } 
-    // Handle moving between days
     else {
       const sourceExercises = [...newExercises[sourceDay]];
       const destinationExercises = [...newExercises[destinationDay]];

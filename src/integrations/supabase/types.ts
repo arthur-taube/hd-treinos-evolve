@@ -45,31 +45,37 @@ export type Database = {
       exercicios_iniciantes: {
         Row: {
           created_at: string
-          descricao: string | null
           grupo_muscular: string
           id: string
-          image_url: string | null
           nome: string
+          primary_muscle: string | null
+          quaternary_muscle: string | null
+          secondary_muscle: string | null
+          tertiary_muscle: string | null
           updated_at: string
           video_url: string | null
         }
         Insert: {
           created_at?: string
-          descricao?: string | null
           grupo_muscular: string
           id?: string
-          image_url?: string | null
           nome: string
+          primary_muscle?: string | null
+          quaternary_muscle?: string | null
+          secondary_muscle?: string | null
+          tertiary_muscle?: string | null
           updated_at?: string
           video_url?: string | null
         }
         Update: {
           created_at?: string
-          descricao?: string | null
           grupo_muscular?: string
           id?: string
-          image_url?: string | null
           nome?: string
+          primary_muscle?: string | null
+          quaternary_muscle?: string | null
+          secondary_muscle?: string | null
+          tertiary_muscle?: string | null
           updated_at?: string
           video_url?: string | null
         }
