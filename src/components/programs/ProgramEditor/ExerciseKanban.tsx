@@ -1,8 +1,8 @@
 
 import { useState } from "react";
-import { PlusCircle, Eye, X, ArrowUp, ArrowDown, Grip } from "lucide-react";
+import { PlusCircle, Eye, X, Grip } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
 interface ExerciseKanbanProps {
   weeklyFrequency: number;
@@ -39,7 +40,7 @@ export default function ExerciseKanban({
   onDurationChange,
 }: ExerciseKanbanProps) {
   // For demo purposes, we'll use just the first schedule if available
-  const schedule = daysSchedule.length > 0 ? daysSchedule[0] : Array(weeklyFrequency).fill("");
+  const schedule = daysSchedule.length > 0 ? daysSchedule[0] : Array(weeklyFrequency).fill("").map((_, i) => `dia${i+1}`);
   
   const [exercises, setExercises] = useState<Record<string, Exercise[]>>(() => {
     // Initialize with empty arrays for each day
@@ -78,23 +79,6 @@ export default function ExerciseKanban({
     setDayTitles({
       ...dayTitles,
       [day]: title
-    });
-  };
-
-  const moveExercise = (day: string, index: number, direction: 'up' | 'down') => {
-    if (!exercises[day]) return;
-    
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= exercises[day].length) return;
-    
-    const newExercises = [...exercises[day]];
-    const temp = newExercises[index];
-    newExercises[index] = newExercises[newIndex];
-    newExercises[newIndex] = temp;
-    
-    setExercises({
-      ...exercises,
-      [day]: newExercises
     });
   };
 
@@ -154,6 +138,46 @@ export default function ExerciseKanban({
     "Quadríceps", "Posteriores", "Panturrilhas", "Abdômen", "Trapézio"
   ];
 
+  // Handle drag end event
+  const onDragEnd = (result: any) => {
+    const { destination, source, draggableId } = result;
+
+    // If there's no destination or the item was dropped back in the same position
+    if (!destination || 
+        (destination.droppableId === source.droppableId && 
+         destination.index === source.index)) {
+      return;
+    }
+
+    const sourceDay = source.droppableId;
+    const destinationDay = destination.droppableId;
+    
+    // Create a copy of the current exercises
+    const newExercises = { ...exercises };
+    
+    // Handle reordering within the same day
+    if (sourceDay === destinationDay) {
+      const dayExercises = [...newExercises[sourceDay]];
+      const [movedExercise] = dayExercises.splice(source.index, 1);
+      dayExercises.splice(destination.index, 0, movedExercise);
+      
+      newExercises[sourceDay] = dayExercises;
+    } 
+    // Handle moving between days
+    else {
+      const sourceExercises = [...newExercises[sourceDay]];
+      const destinationExercises = [...newExercises[destinationDay]];
+      
+      const [movedExercise] = sourceExercises.splice(source.index, 1);
+      destinationExercises.splice(destination.index, 0, movedExercise);
+      
+      newExercises[sourceDay] = sourceExercises;
+      newExercises[destinationDay] = destinationExercises;
+    }
+    
+    setExercises(newExercises);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -173,126 +197,138 @@ export default function ExerciseKanban({
         </div>
       </div>
 
-      {getDayRows().map((row, rowIndex) => (
-        <div key={rowIndex} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {row.map((day, dayIndex) => (
-            <div key={`${rowIndex}-${dayIndex}`} className="flex flex-col">
-              <div className="bg-muted p-2 rounded-t-md">
-                <Input
-                  value={dayTitles[day]}
-                  onChange={(e) => updateDayTitle(day, e.target.value)}
-                  className="font-medium text-center bg-transparent border-none focus-visible:ring-0"
-                  placeholder={`Dia ${rowIndex * 3 + dayIndex + 1}`}
-                />
-                <div className="text-xs text-center text-muted-foreground mt-0.5">
-                  {getDayLabel(day)}
+      <DragDropContext onDragEnd={onDragEnd}>
+        {getDayRows().map((row, rowIndex) => (
+          <div key={rowIndex} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {row.map((day, dayIndex) => (
+              <div key={`${day}-${dayIndex}`} className="flex flex-col">
+                <div className="bg-muted p-2 rounded-t-md">
+                  <Input
+                    value={dayTitles[day]}
+                    onChange={(e) => updateDayTitle(day, e.target.value)}
+                    className="font-medium text-center bg-transparent border-none focus-visible:ring-0"
+                    placeholder={`Dia ${rowIndex * 3 + dayIndex + 1}`}
+                  />
+                  <div className="text-xs text-center text-muted-foreground mt-0.5">
+                    {getDayLabel(day)}
+                  </div>
                 </div>
-              </div>
-              
-              <div className="bg-muted/50 rounded-b-md p-2 flex-1 min-h-[400px] flex flex-col">
-                <Button
-                  variant="ghost"
-                  className="flex w-full justify-center p-2 mb-2"
-                  onClick={() => addExercise(day)}
-                >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Adicionar Exercício
-                </Button>
+                
+                <div className="bg-muted/50 rounded-b-md p-2 flex-1 min-h-[400px] flex flex-col">
+                  <Button
+                    variant="ghost"
+                    className="flex w-full justify-center p-2 mb-2"
+                    onClick={() => addExercise(day)}
+                  >
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Adicionar Exercício
+                  </Button>
 
-                <div className="space-y-3 flex-1">
-                  {exercises[day]?.map((exercise, index) => (
-                    <Card key={exercise.id} className="shadow-sm">
-                      <CardHeader className="p-3">
-                        <div className="flex justify-between items-center">
-                          <Select
-                            value={exercise.muscleGroup}
-                            onValueChange={(value) => 
-                              updateExercise(day, exercise.id, 'muscleGroup', value)
-                            }
+                  <Droppable droppableId={day}>
+                    {(provided) => (
+                      <div 
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className="space-y-3 flex-1"
+                      >
+                        {exercises[day]?.map((exercise, index) => (
+                          <Draggable 
+                            key={exercise.id} 
+                            draggableId={exercise.id} 
+                            index={index}
                           >
-                            <SelectTrigger className="h-7 w-32 text-xs rounded-full px-2">
-                              <SelectValue placeholder="Grupo muscular" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {muscleGroups.map((group) => (
-                                <SelectItem key={group} value={group}>
-                                  {group}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            {(provided) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                              >
+                                <Card className="shadow-sm">
+                                  <CardHeader className="p-3">
+                                    <div className="flex justify-between items-center">
+                                      <Select
+                                        value={exercise.muscleGroup}
+                                        onValueChange={(value) => 
+                                          updateExercise(day, exercise.id, 'muscleGroup', value)
+                                        }
+                                      >
+                                        <SelectTrigger className="h-7 w-32 text-xs">
+                                          <SelectValue placeholder="Grupo muscular" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {muscleGroups.map((group) => (
+                                            <SelectItem key={group} value={group}>
+                                              {group}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
 
-                          <div className="flex gap-1">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-6 w-6"
-                              onClick={() => moveExercise(day, index, 'up')}
-                              disabled={index === 0}
-                            >
-                              <ArrowUp className="h-3 w-3" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-6 w-6"
-                              onClick={() => moveExercise(day, index, 'down')}
-                              disabled={index === exercises[day].length - 1}
-                            >
-                              <ArrowDown className="h-3 w-3" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-6 w-6"
-                            >
-                              <Eye className="h-3 w-3" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-6 w-6 text-destructive hover:text-destructive/80"
-                              onClick={() => deleteExercise(day, exercise.id)}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                        <Input
-                          className="mt-2"
-                          value={exercise.name}
-                          onChange={(e) => updateExercise(day, exercise.id, 'name', e.target.value)}
-                          placeholder="Nome do exercício"
-                        />
-                      </CardHeader>
-                      <CardContent className="p-3 pt-0 grid grid-cols-2 gap-2">
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">Séries</p>
-                          <Input
-                            type="number"
-                            min={1}
-                            value={exercise.sets}
-                            onChange={(e) => updateExercise(day, exercise.id, 'sets', Number(e.target.value))}
-                          />
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">Repetições</p>
-                          <Input
-                            type="number"
-                            min={1}
-                            value={exercise.reps}
-                            onChange={(e) => updateExercise(day, exercise.id, 'reps', Number(e.target.value))}
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                                      <div className="flex gap-1">
+                                        <div 
+                                          {...provided.dragHandleProps} 
+                                          className="cursor-grab p-1"
+                                        >
+                                          <Grip className="h-3 w-3" />
+                                        </div>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          className="h-6 w-6"
+                                        >
+                                          <Eye className="h-3 w-3" />
+                                        </Button>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          className="h-6 w-6 text-destructive hover:text-destructive/80"
+                                          onClick={() => deleteExercise(day, exercise.id)}
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                    <Input
+                                      className="mt-2"
+                                      value={exercise.name}
+                                      onChange={(e) => updateExercise(day, exercise.id, 'name', e.target.value)}
+                                      placeholder="Nome do exercício"
+                                    />
+                                  </CardHeader>
+                                  <CardContent className="p-3 pt-0 grid grid-cols-2 gap-2">
+                                    <div>
+                                      <p className="text-xs text-muted-foreground mb-1">Séries</p>
+                                      <Input
+                                        type="number"
+                                        min={1}
+                                        value={exercise.sets}
+                                        onChange={(e) => updateExercise(day, exercise.id, 'sets', Number(e.target.value))}
+                                      />
+                                    </div>
+                                    <div>
+                                      <p className="text-xs text-muted-foreground mb-1">Repetições</p>
+                                      <Input
+                                        type="number"
+                                        min={1}
+                                        value={exercise.reps}
+                                        onChange={(e) => updateExercise(day, exercise.id, 'reps', Number(e.target.value))}
+                                      />
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      ))}
+            ))}
+          </div>
+        ))}
+      </DragDropContext>
 
       {schedule.length === 0 && (
         <div className="text-center p-4 border border-dashed rounded-md">
