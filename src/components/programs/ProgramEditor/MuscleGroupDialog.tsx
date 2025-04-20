@@ -33,19 +33,28 @@ const MuscleGroupDialog = ({ open, onClose, onSelect }: MuscleGroupDialogProps) 
 
   useEffect(() => {
     const fetchMuscleGroups = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('exercicios_iniciantes')
         .select('grupo_muscular')
         .order('grupo_muscular');
 
+      if (error) {
+        console.error('Error fetching muscle groups:', error);
+        return;
+      }
+
       if (data) {
+        // Extract unique muscle groups
         const uniqueGroups = Array.from(new Set(data.map(item => item.grupo_muscular)));
+        console.log('Fetched muscle groups:', uniqueGroups);
         setMuscleGroups(uniqueGroups);
       }
     };
 
-    fetchMuscleGroups();
-  }, []);
+    if (open) {
+      fetchMuscleGroups();
+    }
+  }, [open]);
 
   const handleSubmit = () => {
     if (allowMultiple) {
@@ -102,21 +111,25 @@ const MuscleGroupDialog = ({ open, onClose, onSelect }: MuscleGroupDialogProps) 
           {allowMultiple ? (
             <ScrollArea className="h-[300px] pr-4">
               <div className="space-y-2">
-                {muscleGroups.map((group) => (
-                  <div key={group} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={group}
-                      checked={selectedGroups.includes(group)}
-                      onCheckedChange={() => toggleMuscleGroup(group)}
-                    />
-                    <label
-                      htmlFor={group}
-                      className="text-sm font-medium leading-none"
-                    >
-                      {group}
-                    </label>
-                  </div>
-                ))}
+                {muscleGroups.length > 0 ? (
+                  muscleGroups.map((group) => (
+                    <div key={group} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={group}
+                        checked={selectedGroups.includes(group)}
+                        onCheckedChange={() => toggleMuscleGroup(group)}
+                      />
+                      <label
+                        htmlFor={group}
+                        className="text-sm font-medium leading-none"
+                      >
+                        {group}
+                      </label>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">Carregando grupos musculares...</p>
+                )}
               </div>
             </ScrollArea>
           ) : (
@@ -126,11 +139,15 @@ const MuscleGroupDialog = ({ open, onClose, onSelect }: MuscleGroupDialogProps) 
               </SelectTrigger>
               <SelectContent>
                 <ScrollArea className="h-[200px]">
-                  {muscleGroups.map((group) => (
-                    <SelectItem key={group} value={group}>
-                      {group}
-                    </SelectItem>
-                  ))}
+                  {muscleGroups.length > 0 ? (
+                    muscleGroups.map((group) => (
+                      <SelectItem key={group} value={group}>
+                        {group}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem disabled value="loading">Carregando...</SelectItem>
+                  )}
                 </ScrollArea>
               </SelectContent>
             </Select>
