@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -9,6 +9,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -16,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MuscleGroupDialogProps {
   open: boolean;
@@ -23,15 +25,27 @@ interface MuscleGroupDialogProps {
   onSelect: (groups: string[], isMultiple: boolean) => void;
 }
 
-const muscleGroups = [
-  "Peito", "Costas", "Ombros", "Bíceps", "Tríceps", 
-  "Quadríceps", "Posteriores", "Panturrilhas", "Abdômen", "Trapézio"
-];
-
 const MuscleGroupDialog = ({ open, onClose, onSelect }: MuscleGroupDialogProps) => {
   const [allowMultiple, setAllowMultiple] = useState(false);
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
   const [singleGroup, setSingleGroup] = useState<string>("");
+  const [muscleGroups, setMuscleGroups] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchMuscleGroups = async () => {
+      const { data } = await supabase
+        .from('exercicios_iniciantes')
+        .select('grupo_muscular')
+        .order('grupo_muscular');
+
+      if (data) {
+        const uniqueGroups = Array.from(new Set(data.map(item => item.grupo_muscular)));
+        setMuscleGroups(uniqueGroups);
+      }
+    };
+
+    fetchMuscleGroups();
+  }, []);
 
   const handleSubmit = () => {
     if (allowMultiple) {
@@ -39,6 +53,13 @@ const MuscleGroupDialog = ({ open, onClose, onSelect }: MuscleGroupDialogProps) 
     } else {
       onSelect([singleGroup], false);
     }
+    handleClose();
+  };
+
+  const handleClose = () => {
+    setSelectedGroups([]);
+    setSingleGroup("");
+    setAllowMultiple(false);
     onClose();
   };
 
@@ -57,7 +78,7 @@ const MuscleGroupDialog = ({ open, onClose, onSelect }: MuscleGroupDialogProps) 
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Selecionar Grupo Muscular</DialogTitle>
@@ -79,41 +100,45 @@ const MuscleGroupDialog = ({ open, onClose, onSelect }: MuscleGroupDialogProps) 
           </div>
 
           {allowMultiple ? (
-            <div className="space-y-2">
-              {muscleGroups.map((group) => (
-                <div key={group} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={group}
-                    checked={selectedGroups.includes(group)}
-                    onCheckedChange={() => toggleMuscleGroup(group)}
-                  />
-                  <label
-                    htmlFor={group}
-                    className="text-sm font-medium leading-none"
-                  >
-                    {group}
-                  </label>
-                </div>
-              ))}
-            </div>
+            <ScrollArea className="h-[300px] pr-4">
+              <div className="space-y-2">
+                {muscleGroups.map((group) => (
+                  <div key={group} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={group}
+                      checked={selectedGroups.includes(group)}
+                      onCheckedChange={() => toggleMuscleGroup(group)}
+                    />
+                    <label
+                      htmlFor={group}
+                      className="text-sm font-medium leading-none"
+                    >
+                      {group}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
           ) : (
             <Select value={singleGroup} onValueChange={setSingleGroup}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o grupo muscular" />
               </SelectTrigger>
               <SelectContent>
-                {muscleGroups.map((group) => (
-                  <SelectItem key={group} value={group}>
-                    {group}
-                  </SelectItem>
-                ))}
+                <ScrollArea className="h-[200px]">
+                  {muscleGroups.map((group) => (
+                    <SelectItem key={group} value={group}>
+                      {group}
+                    </SelectItem>
+                  ))}
+                </ScrollArea>
               </SelectContent>
             </Select>
           )}
         </div>
 
         <DialogFooter className="flex justify-end space-x-2">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={handleClose}>
             Cancelar
           </Button>
           <Button

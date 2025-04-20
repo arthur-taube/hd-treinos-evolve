@@ -1,10 +1,14 @@
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Eye, Grip, X } from "lucide-react";
 import { Exercise } from "./types";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ExerciseCardProps {
   exercise: Exercise;
@@ -19,38 +23,59 @@ export function ExerciseCard({
   onDelete,
   onExerciseUpdate,
 }: ExerciseCardProps) {
-  const muscleGroups = [
-    "Peito", "Costas", "Ombros", "Bíceps", "Tríceps", 
-    "Quadríceps", "Posteriores", "Panturrilhas", "Abdômen", "Trapézio"
-  ];
+  const [exercises, setExercises] = useState<Array<{ nome: string; grupo_muscular: string }>>([]);
+
+  useEffect(() => {
+    const fetchExercises = async () => {
+      if (exercise.allowMultipleGroups && exercise.availableGroups) {
+        const { data } = await supabase
+          .from('exercicios_iniciantes')
+          .select('nome, grupo_muscular')
+          .in('grupo_muscular', exercise.availableGroups)
+          .order('nome');
+        setExercises(data || []);
+      } else if (exercise.muscleGroup) {
+        const { data } = await supabase
+          .from('exercicios_iniciantes')
+          .select('nome, grupo_muscular')
+          .eq('grupo_muscular', exercise.muscleGroup)
+          .order('nome');
+        setExercises(data || []);
+      }
+    };
+
+    fetchExercises();
+  }, [exercise.muscleGroup, exercise.availableGroups, exercise.allowMultipleGroups]);
 
   return (
     <Card className="shadow-sm">
       <CardHeader className="p-3">
         <div className="flex justify-between items-center">
-          <Select
-            value={exercise.muscleGroup}
-            onValueChange={(value) => onExerciseUpdate('muscleGroup', value)}
-          >
-            <SelectTrigger className="h-7 w-32 text-xs">
-              <SelectValue placeholder="Grupo muscular" />
-            </SelectTrigger>
-            <SelectContent>
-              {exercise.allowMultipleGroups && exercise.availableGroups ? (
-                exercise.availableGroups.map((group) => (
-                  <SelectItem key={group} value={group}>
-                    {group}
-                  </SelectItem>
-                ))
-              ) : (
-                muscleGroups.map((group) => (
-                  <SelectItem key={group} value={group}>
-                    {group}
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
+          {exercise.allowMultipleGroups ? (
+            <Select
+              value={exercise.muscleGroup}
+              onValueChange={(value) => onExerciseUpdate('muscleGroup', value)}
+            >
+              <SelectTrigger className="w-32">
+                <Badge variant="muscle" className="w-full bg-orange-100 hover:bg-orange-200">
+                  {exercise.muscleGroup}
+                </Badge>
+              </SelectTrigger>
+              <SelectContent>
+                <ScrollArea className="h-[200px]">
+                  {exercise.availableGroups?.map((group) => (
+                    <SelectItem key={group} value={group}>
+                      {group}
+                    </SelectItem>
+                  ))}
+                </ScrollArea>
+              </SelectContent>
+            </Select>
+          ) : (
+            <Badge variant="muscle" className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+              {exercise.muscleGroup}
+            </Badge>
+          )}
 
           <div className="flex gap-1">
             <div {...provided.dragHandleProps} className="cursor-grab p-1">
@@ -69,12 +94,24 @@ export function ExerciseCard({
             </Button>
           </div>
         </div>
-        <Input
-          className="mt-2"
+
+        <Select
           value={exercise.name}
-          onChange={(e) => onExerciseUpdate('name', e.target.value)}
-          placeholder="Nome do exercício"
-        />
+          onValueChange={(value) => onExerciseUpdate('name', value)}
+        >
+          <SelectTrigger className="mt-2">
+            <SelectValue placeholder="Selecione um exercício" />
+          </SelectTrigger>
+          <SelectContent>
+            <ScrollArea className="h-[200px]">
+              {exercises.map((ex) => (
+                <SelectItem key={`${ex.grupo_muscular}-${ex.nome}`} value={ex.nome}>
+                  {ex.nome}
+                </SelectItem>
+              ))}
+            </ScrollArea>
+          </SelectContent>
+        </Select>
       </CardHeader>
       <CardContent className="p-3 pt-0 grid grid-cols-2 gap-2">
         <div>
