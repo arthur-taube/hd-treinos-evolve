@@ -23,59 +23,50 @@ export function ExerciseCard({
   onDelete,
   onExerciseUpdate,
 }: ExerciseCardProps) {
-  const [exercises, setExercises] = useState<Array<{ nome: string; grupo_muscular: string }>>([]);
+  const [exercises, setExercises] = useState<Array<{ nome: string }>>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchExercises = async () => {
-      if (exercise.allowMultipleGroups && exercise.availableGroups) {
-        const { data } = await supabase
+      if (!exercise.muscleGroup) return;
+      
+      setIsLoading(true);
+      console.log(`Fetching exercises for muscle group: ${exercise.muscleGroup}`);
+      
+      try {
+        // Fetch exercises based on the selected muscle group
+        const { data, error } = await supabase
           .from('exercicios_iniciantes')
-          .select('nome, grupo_muscular')
-          .in('grupo_muscular', exercise.availableGroups)
-          .order('nome');
-        setExercises(data || []);
-      } else if (exercise.muscleGroup) {
-        const { data } = await supabase
-          .from('exercicios_iniciantes')
-          .select('nome, grupo_muscular')
+          .select('nome')
           .eq('grupo_muscular', exercise.muscleGroup)
           .order('nome');
-        setExercises(data || []);
+        
+        if (error) {
+          console.error('Error fetching exercises:', error);
+          return;
+        }
+        
+        if (data) {
+          console.log(`Found ${data.length} exercises for ${exercise.muscleGroup}:`, data);
+          setExercises(data);
+        }
+      } catch (error) {
+        console.error('Exception while fetching exercises:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchExercises();
-  }, [exercise.muscleGroup, exercise.availableGroups, exercise.allowMultipleGroups]);
+  }, [exercise.muscleGroup]);
 
   return (
     <Card className="shadow-sm">
       <CardHeader className="p-3">
         <div className="flex justify-between items-center">
-          {exercise.allowMultipleGroups ? (
-            <Select
-              value={exercise.muscleGroup}
-              onValueChange={(value) => onExerciseUpdate('muscleGroup', value)}
-            >
-              <SelectTrigger className="w-32">
-                <Badge variant="muscle" className="w-full bg-orange-100 hover:bg-orange-200">
-                  {exercise.muscleGroup}
-                </Badge>
-              </SelectTrigger>
-              <SelectContent>
-                <ScrollArea className="h-[200px]">
-                  {exercise.availableGroups?.map((group) => (
-                    <SelectItem key={group} value={group}>
-                      {group}
-                    </SelectItem>
-                  ))}
-                </ScrollArea>
-              </SelectContent>
-            </Select>
-          ) : (
-            <Badge variant="muscle" className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-              {exercise.muscleGroup}
-            </Badge>
-          )}
+          <Badge variant="blue" className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+            {exercise.muscleGroup}
+          </Badge>
 
           <div className="flex gap-1">
             <div {...provided.dragHandleProps} className="cursor-grab p-1">
@@ -104,11 +95,19 @@ export function ExerciseCard({
           </SelectTrigger>
           <SelectContent>
             <ScrollArea className="h-[200px]">
-              {exercises.map((ex) => (
-                <SelectItem key={`${ex.grupo_muscular}-${ex.nome}`} value={ex.nome}>
-                  {ex.nome}
+              {isLoading ? (
+                <SelectItem disabled value="loading">Carregando exercícios...</SelectItem>
+              ) : exercises.length > 0 ? (
+                exercises.map((ex) => (
+                  <SelectItem key={ex.nome} value={ex.nome}>
+                    {ex.nome}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem disabled value="empty">
+                  Nenhum exercício encontrado para {exercise.muscleGroup}
                 </SelectItem>
-              ))}
+              )}
             </ScrollArea>
           </SelectContent>
         </Select>

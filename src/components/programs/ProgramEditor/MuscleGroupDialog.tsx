@@ -35,34 +35,38 @@ const MuscleGroupDialog = ({ open, onClose, onSelect }: MuscleGroupDialogProps) 
 
   useEffect(() => {
     const fetchMuscleGroups = async () => {
+      if (!open) return;
+      
       setIsLoading(true);
       console.log("Fetching muscle groups...");
       
-      // Consulta correta para buscar apenas 'grupo_muscular'
-      const { data, error } = await supabase
-        .from('exercicios_iniciantes')
-        .select('grupo_muscular')
-        .order('grupo_muscular');
+      try {
+        const { data, error } = await supabase
+          .from('exercicios_iniciantes')
+          .select('grupo_muscular');
 
-      if (error) {
-        console.error('Error fetching muscle groups:', error);
+        if (error) {
+          console.error('Error fetching muscle groups:', error);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          // Extract unique muscle groups
+          const uniqueGroups = Array.from(new Set(data.map(item => item.grupo_muscular)));
+          console.log('Fetched muscle groups:', uniqueGroups);
+          setMuscleGroups(uniqueGroups);
+        } else {
+          console.log('No muscle groups found');
+          setMuscleGroups([]);
+        }
+      } catch (error) {
+        console.error('Exception while fetching muscle groups:', error);
+      } finally {
         setIsLoading(false);
-        return;
       }
-
-      if (data) {
-        // Extract unique muscle groups
-        const uniqueGroups = Array.from(new Set(data.map(item => item.grupo_muscular)));
-        console.log('Fetched muscle groups:', uniqueGroups);
-        setMuscleGroups(uniqueGroups);
-      }
-      
-      setIsLoading(false);
     };
 
-    if (open) {
-      fetchMuscleGroups();
-    }
+    fetchMuscleGroups();
   }, [open]);
 
   const handleSubmit = () => {
