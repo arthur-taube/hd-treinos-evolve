@@ -6,7 +6,13 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Eye, Grip, X } from "lucide-react";
+import { ChevronDown, Eye, Grip, X } from "lucide-react";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { Exercise } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -60,13 +66,43 @@ export function ExerciseCard({
     fetchExercises();
   }, [exercise.muscleGroup]);
 
+  // Renderiza a tag normal ou dropdown baseado se tem múltiplos grupos
+  const renderMuscleGroupBadge = () => {
+    if (exercise.allowMultipleGroups && exercise.availableGroups && exercise.availableGroups.length > 0) {
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Badge variant="multi" className="flex items-center gap-1">
+              {exercise.muscleGroup}
+              <ChevronDown className="h-3 w-3" />
+            </Badge>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            {exercise.availableGroups.map((group) => (
+              <DropdownMenuItem 
+                key={group}
+                onClick={() => onExerciseUpdate('muscleGroup', group)}
+              >
+                {group}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    }
+    
+    return (
+      <Badge variant="muscle">
+        {exercise.muscleGroup}
+      </Badge>
+    );
+  };
+
   return (
     <Card className="shadow-sm">
       <CardHeader className="p-3">
         <div className="flex justify-between items-center">
-          <Badge variant="blue" className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-            {exercise.muscleGroup}
-          </Badge>
+          {renderMuscleGroupBadge()}
 
           <div className="flex gap-1">
             <div {...provided.dragHandleProps} className="cursor-grab p-1">

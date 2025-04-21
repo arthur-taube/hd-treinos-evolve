@@ -34,4 +34,3 @@ export function getDayRows(schedule: string[]) {
 
   return rows;
 }
-
