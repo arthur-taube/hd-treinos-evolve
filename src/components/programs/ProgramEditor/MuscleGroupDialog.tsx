@@ -38,9 +38,10 @@ const MuscleGroupDialog = ({ open, onClose, onSelect }: MuscleGroupDialogProps) 
       if (!open) return;
       
       setIsLoading(true);
-      console.log("Fetching muscle groups...");
+      console.log("Fetching muscle groups from database...");
       
       try {
+        // Buscar grupos musculares diretamente da tabela exercicios_iniciantes
         const { data, error } = await supabase
           .from('exercicios_iniciantes')
           .select('grupo_muscular');
@@ -51,7 +52,7 @@ const MuscleGroupDialog = ({ open, onClose, onSelect }: MuscleGroupDialogProps) 
         }
 
         if (data && data.length > 0) {
-          // Extract unique muscle groups
+          // Extrair grupos musculares únicos e ordenar
           const uniqueGroups = Array.from(
             new Set(data.map(item => item.grupo_muscular))
           ).sort();
