@@ -156,13 +156,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "itens_treino_iniciantes_exercicio_id_fkey"
-            columns: ["exercicio_id"]
-            isOneToOne: false
-            referencedRelation: "exercicios_iniciantes"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "itens_treino_iniciantes_treino_id_fkey"
             columns: ["treino_id"]
             isOneToOne: false

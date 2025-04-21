@@ -52,7 +52,10 @@ const MuscleGroupDialog = ({ open, onClose, onSelect }: MuscleGroupDialogProps) 
 
         if (data && data.length > 0) {
           // Extract unique muscle groups
-          const uniqueGroups = Array.from(new Set(data.map(item => item.grupo_muscular)));
+          const uniqueGroups = Array.from(
+            new Set(data.map(item => item.grupo_muscular))
+          ).sort();
+          
           console.log('Fetched muscle groups:', uniqueGroups);
           setMuscleGroups(uniqueGroups);
         } else {
