@@ -1,12 +1,12 @@
-
 export interface Exercise {
   id: string;
   name: string;
-  sets: number;
-  reps: number;
   muscleGroup: string;
+  sets: number;
+  reps?: number | string; // Permitir string para faixas
   allowMultipleGroups?: boolean;
   availableGroups?: string[];
+  hidden?: boolean; // Nova propriedade para controlar visibilidade
 }
 
 export interface ExerciseKanbanProps {

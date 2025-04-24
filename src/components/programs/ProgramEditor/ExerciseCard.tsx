@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, Eye, Grip, X } from "lucide-react";
+import { ChevronDown, Eye, EyeOff, Grip, X } from "lucide-react";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -26,7 +26,7 @@ interface ExerciseCardProps {
   exercise: Exercise;
   provided: any;
   onDelete: () => void;
-  onExerciseUpdate: (field: keyof Exercise, value: string | number) => void;
+  onExerciseUpdate: (field: keyof Exercise, value: string | number | boolean) => void;
 }
 
 export function ExerciseCard({
@@ -135,6 +135,11 @@ export function ExerciseCard({
     return `${range.min_reps}-${range.max_reps}`;
   };
 
+  // Função para alternar visibilidade do exercício
+  const toggleVisibility = () => {
+    onExerciseUpdate('hidden', !exercise.hidden);
+  };
+
   return (
     <Card className="shadow-sm">
       <CardHeader className="p-3">
@@ -145,8 +150,16 @@ export function ExerciseCard({
             <div {...provided.dragHandleProps} className="cursor-grab p-1">
               <Grip className="h-3 w-3" />
             </div>
-            <Button variant="ghost" size="icon" className="h-6 w-6">
-              <Eye className="h-3 w-3" />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-6 w-6"
+              onClick={toggleVisibility}
+            >
+              {exercise.hidden ? 
+                <EyeOff className="h-3 w-3" /> : 
+                <Eye className="h-3 w-3" />
+              }
             </Button>
             <Button 
               variant="ghost" 
@@ -208,20 +221,7 @@ export function ExerciseCard({
           <p className="text-xs text-muted-foreground mb-1">Repetições</p>
           <Select
             value={exercise.reps ? String(exercise.reps) : ""}
-            onValueChange={(value) => {
-              // Encontrar a faixa completa que corresponde ao valor selecionado
-              const selectedRange = repsRanges.find(range => {
-                const rangeValue = range.min_reps === range.max_reps 
-                  ? String(range.min_reps) 
-                  : `${range.min_reps}-${range.max_reps}`;
-                return rangeValue === value;
-              });
-              
-              // Usar o min_reps como valor numérico para consistência no banco de dados
-              if (selectedRange) {
-                onExerciseUpdate('reps', selectedRange.min_reps);
-              }
-            }}
+            onValueChange={(value) => onExerciseUpdate('reps', value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Selecione" />

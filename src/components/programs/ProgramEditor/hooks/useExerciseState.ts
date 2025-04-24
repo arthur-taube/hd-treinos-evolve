@@ -31,6 +31,7 @@ export function useExerciseState(schedule: string[]) {
       ...newExercise,
       sets: 2,
       reps: undefined, // Iniciar com repetições em branco
+      hidden: false, // Por padrão, exercícios são visíveis
     };
 
     setExercises((prev) => ({
@@ -46,7 +47,7 @@ export function useExerciseState(schedule: string[]) {
     }));
   };
 
-  const updateExercise = (day: string, exerciseId: string, field: keyof Exercise, value: string | number) => {
+  const updateExercise = (day: string, exerciseId: string, field: keyof Exercise, value: string | number | boolean) => {
     setExercises((prev) => ({
       ...prev,
       [day]: prev[day].map((ex) =>
