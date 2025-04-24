@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import type { Exercise } from "../types";
 
@@ -29,7 +30,7 @@ export function useExerciseState(schedule: string[]) {
     const defaultExercise = {
       ...newExercise,
       sets: 2,
-      reps: 8,
+      reps: undefined, // Iniciar com repetições em branco
     };
 
     setExercises((prev) => ({

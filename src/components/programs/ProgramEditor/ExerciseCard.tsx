@@ -127,6 +127,14 @@ export function ExerciseCard({
     );
   };
 
+  // Função para formatar a exibição das repetições
+  const formatRepsRange = (range: RepsRange) => {
+    if (range.min_reps === range.max_reps) {
+      return `${range.min_reps}`;
+    }
+    return `${range.min_reps}-${range.max_reps}`;
+  };
+
   return (
     <Card className="shadow-sm">
       <CardHeader className="p-3">
@@ -199,23 +207,38 @@ export function ExerciseCard({
         <div>
           <p className="text-xs text-muted-foreground mb-1">Repetições</p>
           <Select
-            value={String(exercise.reps)}
-            onValueChange={(value) => onExerciseUpdate('reps', Number(value))}
+            value={exercise.reps ? String(exercise.reps) : ""}
+            onValueChange={(value) => {
+              // Encontrar a faixa completa que corresponde ao valor selecionado
+              const selectedRange = repsRanges.find(range => {
+                const rangeValue = range.min_reps === range.max_reps 
+                  ? String(range.min_reps) 
+                  : `${range.min_reps}-${range.max_reps}`;
+                return rangeValue === value;
+              });
+              
+              // Usar o min_reps como valor numérico para consistência no banco de dados
+              if (selectedRange) {
+                onExerciseUpdate('reps', selectedRange.min_reps);
+              }
+            }}
           >
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue placeholder="Selecione" />
             </SelectTrigger>
             <SelectContent>
-              {repsRanges.map((range) => (
-                <SelectItem 
-                  key={range.id} 
-                  value={String(range.min_reps)}
-                >
-                  {range.min_reps === range.max_reps 
-                    ? `${range.min_reps}`
-                    : `${range.min_reps}-${range.max_reps}`}
-                </SelectItem>
-              ))}
+              {repsRanges.map((range) => {
+                const displayValue = formatRepsRange(range);
+                const storeValue = range.min_reps === range.max_reps 
+                  ? String(range.min_reps) 
+                  : `${range.min_reps}-${range.max_reps}`;
+                
+                return (
+                  <SelectItem key={range.id} value={storeValue}>
+                    {displayValue}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         </div>
