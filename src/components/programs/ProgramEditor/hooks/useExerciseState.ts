@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import type { Exercise } from "../types";
 
@@ -27,9 +26,15 @@ export function useExerciseState(schedule: string[]) {
   };
 
   const addExercise = (day: string, newExercise: Exercise) => {
+    const defaultExercise = {
+      ...newExercise,
+      sets: 2,
+      reps: 8,
+    };
+
     setExercises((prev) => ({
       ...prev,
-      [day]: [...(prev[day] || []), newExercise]
+      [day]: [...(prev[day] || []), defaultExercise]
     }));
   };
 
@@ -51,7 +56,6 @@ export function useExerciseState(schedule: string[]) {
     }));
   };
 
-  // Full setter -- used by drag handler
   const setAllExercises = setExercises;
 
   return {

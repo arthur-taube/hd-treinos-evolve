@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +14,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Exercise } from "./types";
 import { supabase } from "@/integrations/supabase/client";
+
+interface RepsRange {
+  id: string;
+  min_reps: number;
+  max_reps: number;
+  tipo: string;
+}
 
 interface ExerciseCardProps {
   exercise: Exercise;
@@ -30,7 +36,29 @@ export function ExerciseCard({
   onExerciseUpdate,
 }: ExerciseCardProps) {
   const [exercises, setExercises] = useState<Array<{ nome: string }>>([]);
+  const [repsRanges, setRepsRanges] = useState<RepsRange[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    // Fetch available repetition ranges
+    const fetchRepsRanges = async () => {
+      const { data, error } = await supabase
+        .from('faixas_repeticoes')
+        .select('*')
+        .order('min_reps');
+      
+      if (error) {
+        console.error('Error fetching reps ranges:', error);
+        return;
+      }
+
+      if (data) {
+        setRepsRanges(data);
+      }
+    };
+
+    fetchRepsRanges();
+  }, []);
 
   useEffect(() => {
     const fetchExercises = async () => {
@@ -40,7 +68,6 @@ export function ExerciseCard({
       console.log(`Fetching exercises for muscle group: ${exercise.muscleGroup}`);
       
       try {
-        // Fetch exercises based on the selected muscle group
         const { data, error } = await supabase
           .from('exercicios_iniciantes')
           .select('nome')
@@ -153,21 +180,44 @@ export function ExerciseCard({
       <CardContent className="p-3 pt-0 grid grid-cols-2 gap-2">
         <div>
           <p className="text-xs text-muted-foreground mb-1">Séries</p>
-          <Input
-            type="number"
-            min={1}
-            value={exercise.sets}
-            onChange={(e) => onExerciseUpdate('sets', Number(e.target.value))}
-          />
+          <Select
+            value={String(exercise.sets)}
+            onValueChange={(value) => onExerciseUpdate('sets', Number(value))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[1, 2, 3, 4, 5].map((num) => (
+                <SelectItem key={num} value={String(num)}>
+                  {num}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <p className="text-xs text-muted-foreground mb-1">Repetições</p>
-          <Input
-            type="number"
-            min={1}
-            value={exercise.reps}
-            onChange={(e) => onExerciseUpdate('reps', Number(e.target.value))}
-          />
+          <Select
+            value={String(exercise.reps)}
+            onValueChange={(value) => onExerciseUpdate('reps', Number(value))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {repsRanges.map((range) => (
+                <SelectItem 
+                  key={range.id} 
+                  value={String(range.min_reps)}
+                >
+                  {range.min_reps === range.max_reps 
+                    ? `${range.min_reps}`
+                    : `${range.min_reps}-${range.max_reps}`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </CardContent>
     </Card>

@@ -81,6 +81,30 @@ export type Database = {
         }
         Relationships: []
       }
+      faixas_repeticoes: {
+        Row: {
+          created_at: string
+          id: string
+          max_reps: number
+          min_reps: number
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          max_reps: number
+          min_reps: number
+          tipo: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          max_reps?: number
+          min_reps?: number
+          tipo?: string
+        }
+        Relationships: []
+      }
       itens_treino_avancados: {
         Row: {
           created_at: string
