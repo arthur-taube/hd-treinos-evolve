@@ -42,15 +42,6 @@ export function DayColumn({
       </div>
       
       <div className="bg-muted/50 rounded-b-md p-2 flex-1 min-h-[400px] flex flex-col">
-        <Button
-          variant="ghost"
-          className="flex w-full justify-center p-2 mb-2"
-          onClick={onAddExercise}
-        >
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Adicionar Exercício
-        </Button>
-
         <Droppable droppableId={dayId}>
           {(provided) => (
             <div 
@@ -85,6 +76,15 @@ export function DayColumn({
             </div>
           )}
         </Droppable>
+        
+        <Button
+          variant="ghost"
+          className="flex w-full justify-center p-2 mt-2"
+          onClick={onAddExercise}
+        >
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Adicionar Exercício
+        </Button>
       </div>
     </div>
   );

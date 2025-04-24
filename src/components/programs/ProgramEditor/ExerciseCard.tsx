@@ -72,10 +72,12 @@ export function ExerciseCard({
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Badge variant="multi" className="flex items-center gap-1">
-              {exercise.muscleGroup}
-              <ChevronDown className="h-3 w-3" />
-            </Badge>
+            <div className="cursor-pointer">
+              <Badge variant="multi" className="flex items-center gap-1">
+                {exercise.muscleGroup}
+                <ChevronDown className="h-3 w-3" />
+              </Badge>
+            </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             {exercise.availableGroups.map((group) => (
