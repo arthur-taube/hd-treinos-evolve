@@ -17,3 +17,10 @@ export interface ExerciseKanbanProps {
   mesocycleDuration?: number;
   onDurationChange?: (duration: number) => void;
 }
+
+export interface RepsRange {
+  id: string;
+  min_reps: number;
+  max_reps: number;
+  tipo: string;
+}
