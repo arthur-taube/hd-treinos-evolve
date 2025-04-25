@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,12 +17,18 @@ import {
 
 import WeeklyScheduleForm from "./WeeklyScheduleForm";
 import ExerciseKanban from "./ExerciseKanban";
+import { Exercise } from "./types";
 
 interface ProgramExercisesFormProps {
   programName: string;
   programLevel: string;
   weeklyFrequency: number;
   mesocycles: number;
+  programData: {
+    duration: string;
+    goals: string[];
+    split: string;
+  };
 }
 
 export default function ProgramExercisesForm({
@@ -29,6 +36,7 @@ export default function ProgramExercisesForm({
   programLevel,
   weeklyFrequency,
   mesocycles,
+  programData,
 }: ProgramExercisesFormProps) {
   const navigate = useNavigate();
   const [showExitDialog, setShowExitDialog] = useState(false);
@@ -38,6 +46,8 @@ export default function ProgramExercisesForm({
   const [mesocycleDurations, setMesocycleDurations] = useState<number[]>(
     Array(mesocycles).fill(4)
   );
+  const [isSaving, setIsSaving] = useState(false);
+  const [exercisesPerDay, setExercisesPerDay] = useState<Record<string, Record<string, Exercise[]>>>({});
 
   const handleBack = () => {
     setShowExitDialog(true);
@@ -62,21 +72,142 @@ export default function ProgramExercisesForm({
     setSavedSchedules([...savedSchedules, newSchedule]);
   };
 
-  const handleSave = () => {
-    // Aqui implementaremos a lógica de salvar na base de dados
-    toast({
-      title: "Programa salvo",
-      description: "O programa foi salvo com sucesso.",
+  const handleExercisesUpdate = (dayId: string, exercises: Exercise[], mesocycleNumber: number) => {
+    setExercisesPerDay(prevState => {
+      const mesocycleKey = `mesocycle-${mesocycleNumber}`;
+      
+      return {
+        ...prevState,
+        [mesocycleKey]: {
+          ...(prevState[mesocycleKey] || {}),
+          [dayId]: exercises,
+        }
+      };
     });
   };
 
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      // Obtém o usuário atual
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error("Usuário não encontrado, faça login novamente");
+      }
+
+      // 1. Criar o programa
+      const { data: programa, error: programaError } = await supabase
+        .from('programas')
+        .insert({
+          nome: programName,
+          descricao: `Programa de treino ${programLevel}`,
+          nivel: programLevel,
+          objetivo: programData.goals,
+          frequencia_semanal: weeklyFrequency,
+          duracao_semanas: mesocycleDurations.reduce((acc, curr) => acc + curr, 0),
+          split: programData.split,
+          criado_por: user.id
+        })
+        .select()
+        .single();
+
+      if (programaError || !programa) {
+        throw new Error(`Erro ao criar programa: ${programaError?.message}`);
+      }
+
+      // 2. Criar os mesociclos
+      for (let i = 0; i < mesocycles; i++) {
+        const mesocicloNumero = i + 1;
+        const { data: mesociclo, error: mesocicloError } = await supabase
+          .from('mesociclos')
+          .insert({
+            programa_id: programa.id,
+            numero: mesocicloNumero,
+            duracao_semanas: mesocycleDurations[i]
+          })
+          .select()
+          .single();
+
+        if (mesocicloError || !mesociclo) {
+          throw new Error(`Erro ao criar mesociclo ${mesocicloNumero}: ${mesocicloError?.message}`);
+        }
+
+        // Verifica se há exercícios para este mesociclo
+        const mesocicloKey = `mesocycle-${mesocicloNumero}`;
+        const mesocicloExercises = exercisesPerDay[mesocicloKey] || {};
+        
+        // Criar treinos para cada dia do cronograma
+        if (savedSchedules.length > 0) {
+          const schedule = savedSchedules[0]; // Usar o primeiro cronograma salvo
+          
+          for (let semana = 1; semana <= mesocycleDurations[i]; semana++) {
+            for (let diaIdx = 0; diaIdx < schedule.length; diaIdx++) {
+              const diaSemana = schedule[diaIdx];
+              const nomeTreino = `Dia ${diaIdx + 1}`;
+              
+              // 3. Criar o treino
+              const { data: treino, error: treinoError } = await supabase
+                .from('treinos')
+                .insert({
+                  programa_id: programa.id,
+                  mesociclo_id: mesociclo.id,
+                  nome: nomeTreino,
+                  dia_semana: diaSemana,
+                  ordem_semana: semana
+                })
+                .select()
+                .single();
+
+              if (treinoError || !treino) {
+                throw new Error(`Erro ao criar treino ${nomeTreino}: ${treinoError?.message}`);
+              }
+
+              // 4. Inserir exercícios do treino
+              const exerciciosDia = mesocicloExercises[diaSemana] || [];
+              if (exerciciosDia.length > 0) {
+                const exerciciosToInsert = exerciciosDia.map((ex, index) => ({
+                  treino_id: treino.id,
+                  nome: ex.name,
+                  grupo_muscular: ex.muscleGroup,
+                  series: ex.sets,
+                  repeticoes: ex.reps ? String(ex.reps) : null,
+                  oculto: ex.hidden || false,
+                  ordem: index + 1
+                }));
+
+                const { error: exerciciosError } = await supabase
+                  .from('exercicios_treino')
+                  .insert(exerciciosToInsert);
+
+                if (exerciciosError) {
+                  throw new Error(`Erro ao inserir exercícios: ${exerciciosError.message}`);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      toast({
+        title: "Programa salvo com sucesso!",
+        description: "O programa foi salvo e agora está disponível para os usuários.",
+      });
+      
+      navigate("/programs");
+    } catch (error: any) {
+      toast({
+        title: "Erro ao salvar o programa",
+        description: error.message || "Ocorreu um erro ao salvar o programa.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleFinalize = () => {
-    // Aqui implementaremos a lógica de finalizar e salvar na base de dados
-    toast({
-      title: "Programa finalizado",
-      description: "O programa foi finalizado e salvo com sucesso.",
-    });
-    navigate("/programs");
+    handleSave();
   };
 
   const handleMesocycleDurationChange = (duration: number) => {
@@ -87,7 +218,15 @@ export default function ProgramExercisesForm({
 
   const copyFromPreviousMesocycle = () => {
     if (currentMesocycle > 1) {
-      // Aqui implementaremos a lógica para copiar exercícios do mesociclo anterior
+      // Lógica para copiar exercícios do mesociclo anterior
+      const prevMesocycleKey = `mesocycle-${currentMesocycle - 1}`;
+      const currentMesocycleKey = `mesocycle-${currentMesocycle}`;
+      
+      setExercisesPerDay(prevState => ({
+        ...prevState,
+        [currentMesocycleKey]: { ...prevState[prevMesocycleKey] }
+      }));
+
       toast({
         title: "Cópia realizada",
         description: `Exercícios copiados do Mesociclo ${currentMesocycle - 1}`,
@@ -139,6 +278,7 @@ export default function ProgramExercisesForm({
         totalMesocycles={mesocycles}
         mesocycleDuration={mesocycleDurations[currentMesocycle - 1]}
         onDurationChange={handleMesocycleDurationChange}
+        onExercisesUpdate={(dayId, exercises) => handleExercisesUpdate(dayId, exercises, currentMesocycle)}
       />
 
       <div className="flex justify-between pt-6">
@@ -154,10 +294,20 @@ export default function ProgramExercisesForm({
         </div>
         
         <div>
-          <Button type="button" variant="outline" onClick={handleSave} className="mr-2">
-            Salvar
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => setShowSaveDialog(true)}
+            className="mr-2"
+            disabled={isSaving}
+          >
+            {isSaving ? "Salvando..." : "Salvar"}
           </Button>
-          <Button type="button" onClick={handleNext}>
+          <Button 
+            type="button" 
+            onClick={handleNext}
+            disabled={isSaving}
+          >
             {currentMesocycle < mesocycles ? "Próximo Mesociclo" : "Finalizar"}
           </Button>
         </div>
@@ -196,8 +346,8 @@ export default function ProgramExercisesForm({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleFinalize}>
-              Finalizar
+            <AlertDialogAction onClick={handleFinalize} disabled={isSaving}>
+              {isSaving ? "Salvando..." : "Finalizar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

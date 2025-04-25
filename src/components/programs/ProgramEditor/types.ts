@@ -1,3 +1,4 @@
+
 export interface Exercise {
   id: string;
   name: string;
@@ -6,7 +7,7 @@ export interface Exercise {
   reps?: number | string; // Permitir string para faixas
   allowMultipleGroups?: boolean;
   availableGroups?: string[];
-  hidden?: boolean; // Nova propriedade para controlar visibilidade
+  hidden?: boolean; // Propriedade para controlar visibilidade
 }
 
 export interface ExerciseKanbanProps {
@@ -16,6 +17,7 @@ export interface ExerciseKanbanProps {
   totalMesocycles: number;
   mesocycleDuration?: number;
   onDurationChange?: (duration: number) => void;
+  onExercisesUpdate?: (dayId: string, exercises: Exercise[]) => void;
 }
 
 export interface RepsRange {

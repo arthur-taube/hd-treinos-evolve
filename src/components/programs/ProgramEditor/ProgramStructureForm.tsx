@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -102,6 +103,11 @@ export default function ProgramStructureForm() {
           programLevel={form.getValues().level}
           weeklyFrequency={form.getValues().weeklyFrequency}
           mesocycles={form.getValues().mesocycles}
+          programData={{
+            duration: form.getValues().duration,
+            goals: form.getValues().goals,
+            split: form.getValues().split,
+          }}
         />
       </div>
     );

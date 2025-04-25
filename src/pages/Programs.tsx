@@ -1,3 +1,4 @@
+
 import React from "react";
 import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -10,46 +11,165 @@ import { useNavigate } from "react-router-dom";
 
 const Programs = () => {
   const [isDeveloper, setIsDeveloper] = useState(false);
+  const [hasActiveProgram, setHasActiveProgram] = useState(false);
+  const [activeProgram, setActiveProgram] = useState<any>(null);
+  const [pausedPrograms, setPausedPrograms] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkUserRole = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setIsDeveloper(user?.email === "arthurtaube.com.br@gmail.com");
+    const loadUserData = async () => {
+      try {
+        // Verificar se está logado e se é desenvolvedor
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          setIsDeveloper(user.email === "arthurtaube.com.br@gmail.com");
+          
+          // Buscar programa ativo do usuário
+          const { data: programaUsuarioAtivo, error: activeProgramError } = await supabase
+            .from('programas_usuario')
+            .select(`
+              *,
+              programa_original:programas(nome, descricao)
+            `)
+            .eq('usuario_id', user.id)
+            .eq('ativo', true)
+            .single();
+            
+          if (!activeProgramError && programaUsuarioAtivo) {
+            setHasActiveProgram(true);
+            setActiveProgram({
+              id: programaUsuarioAtivo.id,
+              name: programaUsuarioAtivo.programa_original.nome,
+              description: programaUsuarioAtivo.programa_original.descricao || 
+                          "Programa de treino personalizado",
+            });
+          }
+          
+          // Buscar programas pausados do usuário
+          const { data: programasUsuarioPausados } = await supabase
+            .from('programas_usuario')
+            .select(`
+              *,
+              programa_original:programas(nome, descricao)
+            `)
+            .eq('usuario_id', user.id)
+            .eq('ativo', false);
+            
+          if (programasUsuarioPausados && programasUsuarioPausados.length > 0) {
+            setPausedPrograms(programasUsuarioPausados.map(p => ({
+              id: p.id,
+              name: p.programa_original.nome,
+              description: p.programa_original.descricao || "Programa de treino personalizado"
+            })));
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao carregar dados do usuário:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    checkUserRole();
+    loadUserData();
   }, []);
 
-  // Mock user email for development
-  const userEmail = "usuario@exemplo.com";
-  const developerEmail = "arthurtaube.com.br@gmail.com";
+  const handlePauseProgram = async (programaId: string) => {
+    try {
+      const { error } = await supabase
+        .from('programas_usuario')
+        .update({ ativo: false })
+        .eq('id', programaId);
+        
+      if (error) throw error;
+      
+      // Atualizar UI
+      setHasActiveProgram(false);
+      setActiveProgram(null);
+      
+      if (activeProgram) {
+        setPausedPrograms([...pausedPrograms, activeProgram]);
+      }
+    } catch (error) {
+      console.error("Erro ao pausar programa:", error);
+    }
+  };
+  
+  const handleResumeProgram = async (programaId: string) => {
+    try {
+      // Desativar programa ativo atual, se houver
+      if (hasActiveProgram) {
+        await supabase
+          .from('programas_usuario')
+          .update({ ativo: false })
+          .eq('id', activeProgram.id);
+          
+        if (activeProgram) {
+          setPausedPrograms([...pausedPrograms, activeProgram]);
+        }
+      }
+      
+      // Ativar o programa selecionado
+      const { error } = await supabase
+        .from('programas_usuario')
+        .update({ ativo: true })
+        .eq('id', programaId);
+        
+      if (error) throw error;
+      
+      // Atualizar UI
+      const programToActivate = pausedPrograms.find(p => p.id === programaId);
+      if (programToActivate) {
+        setHasActiveProgram(true);
+        setActiveProgram(programToActivate);
+        setPausedPrograms(pausedPrograms.filter(p => p.id !== programaId));
+      }
+    } catch (error) {
+      console.error("Erro ao retomar programa:", error);
+    }
+  };
 
-  const activePrograms = [
-    {
-      id: 1,
-      name: "Hipertrofia Avançada",
-      description: "Treino de 4 dias focado em hipertrofia muscular",
-    },
-  ];
+  const handleDeleteProgram = async (programaId: string, isPaused: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('programas_usuario')
+        .delete()
+        .eq('id', programaId);
+        
+      if (error) throw error;
+      
+      // Atualizar UI
+      if (isPaused) {
+        setPausedPrograms(pausedPrograms.filter(p => p.id !== programaId));
+      } else {
+        setHasActiveProgram(false);
+        setActiveProgram(null);
+      }
+    } catch (error) {
+      console.error("Erro ao excluir programa:", error);
+    }
+  };
 
-  const pausedPrograms = [
-    {
-      id: 2,
-      name: "Força Total",
-      description: "Programa de 3 dias para ganho de força",
-    },
-    {
-      id: 3,
-      name: "Split Clássico",
-      description: "Treino dividido por grupos musculares",
-    },
-  ];
+  if (loading) {
+    return (
+      <div className="pb-20">
+        <PageHeader title="Meus Programas">
+          <Button className="btn-primary" onClick={() => navigate("/program-catalog")}>
+            Escolher um programa
+          </Button>
+        </PageHeader>
+        <div className="flex justify-center my-8">
+          <p>Carregando seus programas...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pb-20">
       <PageHeader title="Meus Programas">
-        <Button className="btn-primary">
+        <Button className="btn-primary" onClick={() => navigate("/program-catalog")}>
           Escolher um programa
         </Button>
       </PageHeader>
@@ -59,18 +179,18 @@ const Programs = () => {
           <h2 className="mb-4">Programa Ativo</h2>
           <ScrollArea className="h-auto">
             <div className="space-y-3">
-              {activePrograms.length > 0 ? (
-                activePrograms.map((program) => (
+              {hasActiveProgram && activeProgram ? (
+                <div onClick={() => navigate("/active-program")} className="cursor-pointer">
                   <ProgramCard
-                    key={program.id}
-                    name={program.name}
-                    description={program.description}
-                    onPause={() => console.log("Pause program", program.id)}
-                    onEdit={() => console.log("Edit program", program.id)}
-                    onFinish={() => console.log("Finish program", program.id)}
-                    onDelete={() => console.log("Delete program", program.id)}
+                    key={activeProgram.id}
+                    name={activeProgram.name}
+                    description={activeProgram.description}
+                    onPause={() => handlePauseProgram(activeProgram.id)}
+                    onEdit={() => navigate(`/programs/edit/${activeProgram.id}`)}
+                    onFinish={() => console.log("Finish program", activeProgram.id)}
+                    onDelete={() => handleDeleteProgram(activeProgram.id, false)}
                   />
-                ))
+                </div>
               ) : (
                 <p className="text-muted-foreground">
                   Nenhum programa ativo no momento
@@ -91,10 +211,10 @@ const Programs = () => {
                     name={program.name}
                     description={program.description}
                     isPaused
-                    onResume={() => console.log("Resume program", program.id)}
-                    onEdit={() => console.log("Edit program", program.id)}
+                    onResume={() => handleResumeProgram(program.id)}
+                    onEdit={() => navigate(`/programs/edit/${program.id}`)}
                     onFinish={() => console.log("Finish program", program.id)}
-                    onDelete={() => console.log("Delete program", program.id)}
+                    onDelete={() => handleDeleteProgram(program.id, true)}
                   />
                 ))}
               </div>

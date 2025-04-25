@@ -81,6 +81,113 @@ export type Database = {
         }
         Relationships: []
       }
+      exercicios_treino: {
+        Row: {
+          created_at: string
+          grupo_muscular: string
+          id: string
+          nome: string
+          oculto: boolean
+          ordem: number
+          repeticoes: string | null
+          series: number
+          treino_id: string
+        }
+        Insert: {
+          created_at?: string
+          grupo_muscular: string
+          id?: string
+          nome: string
+          oculto?: boolean
+          ordem: number
+          repeticoes?: string | null
+          series: number
+          treino_id: string
+        }
+        Update: {
+          created_at?: string
+          grupo_muscular?: string
+          id?: string
+          nome?: string
+          oculto?: boolean
+          ordem?: number
+          repeticoes?: string | null
+          series?: number
+          treino_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercicios_treino_treino_id_fkey"
+            columns: ["treino_id"]
+            isOneToOne: false
+            referencedRelation: "treinos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercicios_treino_usuario: {
+        Row: {
+          concluido: boolean
+          created_at: string
+          exercicio_original_id: string
+          grupo_muscular: string
+          id: string
+          nome: string
+          oculto: boolean
+          ordem: number
+          peso: number | null
+          repeticoes: string | null
+          series: number
+          treino_usuario_id: string
+          updated_at: string
+        }
+        Insert: {
+          concluido?: boolean
+          created_at?: string
+          exercicio_original_id: string
+          grupo_muscular: string
+          id?: string
+          nome: string
+          oculto?: boolean
+          ordem: number
+          peso?: number | null
+          repeticoes?: string | null
+          series: number
+          treino_usuario_id: string
+          updated_at?: string
+        }
+        Update: {
+          concluido?: boolean
+          created_at?: string
+          exercicio_original_id?: string
+          grupo_muscular?: string
+          id?: string
+          nome?: string
+          oculto?: boolean
+          ordem?: number
+          peso?: number | null
+          repeticoes?: string | null
+          series?: number
+          treino_usuario_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercicios_treino_usuario_exercicio_original_id_fkey"
+            columns: ["exercicio_original_id"]
+            isOneToOne: false
+            referencedRelation: "exercicios_treino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercicios_treino_usuario_treino_usuario_id_fkey"
+            columns: ["treino_usuario_id"]
+            isOneToOne: false
+            referencedRelation: "treinos_usuario"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       faixas_repeticoes: {
         Row: {
           created_at: string
@@ -188,6 +295,38 @@ export type Database = {
           },
         ]
       }
+      mesociclos: {
+        Row: {
+          created_at: string
+          duracao_semanas: number
+          id: string
+          numero: number
+          programa_id: string
+        }
+        Insert: {
+          created_at?: string
+          duracao_semanas: number
+          id?: string
+          numero: number
+          programa_id: string
+        }
+        Update: {
+          created_at?: string
+          duracao_semanas?: number
+          id?: string
+          numero?: number
+          programa_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mesociclos_programa_id_fkey"
+            columns: ["programa_id"]
+            isOneToOne: false
+            referencedRelation: "programas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -220,6 +359,134 @@ export type Database = {
           weight?: number | null
         }
         Relationships: []
+      }
+      programas: {
+        Row: {
+          created_at: string
+          criado_por: string | null
+          descricao: string | null
+          duracao_semanas: number
+          frequencia_semanal: number
+          id: string
+          nivel: string
+          nome: string
+          objetivo: string[]
+          split: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          criado_por?: string | null
+          descricao?: string | null
+          duracao_semanas: number
+          frequencia_semanal: number
+          id?: string
+          nivel: string
+          nome: string
+          objetivo: string[]
+          split: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          criado_por?: string | null
+          descricao?: string | null
+          duracao_semanas?: number
+          frequencia_semanal?: number
+          id?: string
+          nivel?: string
+          nome?: string
+          objetivo?: string[]
+          split?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      programas_usuario: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          data_inicio: string
+          id: string
+          programa_original_id: string
+          progresso: number
+          updated_at: string
+          usuario_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          data_inicio?: string
+          id?: string
+          programa_original_id: string
+          progresso?: number
+          updated_at?: string
+          usuario_id: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          data_inicio?: string
+          id?: string
+          programa_original_id?: string
+          progresso?: number
+          updated_at?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "programas_usuario_programa_original_id_fkey"
+            columns: ["programa_original_id"]
+            isOneToOne: false
+            referencedRelation: "programas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      treinos: {
+        Row: {
+          created_at: string
+          dia_semana: string
+          id: string
+          mesociclo_id: string
+          nome: string
+          ordem_semana: number
+          programa_id: string
+        }
+        Insert: {
+          created_at?: string
+          dia_semana: string
+          id?: string
+          mesociclo_id: string
+          nome: string
+          ordem_semana: number
+          programa_id: string
+        }
+        Update: {
+          created_at?: string
+          dia_semana?: string
+          id?: string
+          mesociclo_id?: string
+          nome?: string
+          ordem_semana?: number
+          programa_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treinos_mesociclo_id_fkey"
+            columns: ["mesociclo_id"]
+            isOneToOne: false
+            referencedRelation: "mesociclos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treinos_programa_id_fkey"
+            columns: ["programa_id"]
+            isOneToOne: false
+            referencedRelation: "programas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       treinos_avancados: {
         Row: {
@@ -274,6 +541,57 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      treinos_usuario: {
+        Row: {
+          concluido: boolean
+          created_at: string
+          data_concluido: string | null
+          id: string
+          nome: string
+          ordem_semana: number
+          programa_usuario_id: string
+          treino_original_id: string
+          updated_at: string
+        }
+        Insert: {
+          concluido?: boolean
+          created_at?: string
+          data_concluido?: string | null
+          id?: string
+          nome: string
+          ordem_semana: number
+          programa_usuario_id: string
+          treino_original_id: string
+          updated_at?: string
+        }
+        Update: {
+          concluido?: boolean
+          created_at?: string
+          data_concluido?: string | null
+          id?: string
+          nome?: string
+          ordem_semana?: number
+          programa_usuario_id?: string
+          treino_original_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treinos_usuario_programa_usuario_id_fkey"
+            columns: ["programa_usuario_id"]
+            isOneToOne: false
+            referencedRelation: "programas_usuario"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treinos_usuario_treino_original_id_fkey"
+            columns: ["treino_original_id"]
+            isOneToOne: false
+            referencedRelation: "treinos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       usuarios_treinos: {
         Row: {

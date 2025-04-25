@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,6 +12,9 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Programs from "./pages/Programs";
+import ProgramCatalog from "./pages/ProgramCatalog";
+import ActiveProgram from "./pages/ActiveProgram";
+import Workout from "./pages/Workout";
 import Stats from "./pages/Stats";
 import History from "./pages/History";
 import Profile from "./pages/Profile";
@@ -44,6 +48,30 @@ const App = () => (
               element={
                 <AppLayout>
                   <Programs />
+                </AppLayout>
+              }
+            />
+            <Route
+              path="/program-catalog"
+              element={
+                <AppLayout>
+                  <ProgramCatalog />
+                </AppLayout>
+              }
+            />
+            <Route
+              path="/active-program"
+              element={
+                <AppLayout>
+                  <ActiveProgram />
+                </AppLayout>
+              }
+            />
+            <Route
+              path="/workout/:treinoId"
+              element={
+                <AppLayout>
+                  <Workout />
                 </AppLayout>
               }
             />

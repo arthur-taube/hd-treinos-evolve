@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DragDropContext } from "react-beautiful-dnd";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ export default function ExerciseKanban({
   totalMesocycles,
   mesocycleDuration = 4,
   onDurationChange,
+  onExercisesUpdate,
 }: ExerciseKanbanProps) {
   const schedule =
     daysSchedule.length > 0
@@ -39,6 +40,16 @@ export default function ExerciseKanban({
 
   const [muscleGroupDialogOpen, setMuscleGroupDialogOpen] = useState(false);
   const [currentDay, setCurrentDay] = useState<string>("");
+
+  // Enviar os exercícios atualizados para o componente pai
+  useEffect(() => {
+    if (onExercisesUpdate) {
+      // Para cada dia, enviar os exercícios atualizados
+      Object.entries(exercises).forEach(([day, dayExercises]) => {
+        onExercisesUpdate(day, dayExercises);
+      });
+    }
+  }, [exercises, onExercisesUpdate]);
 
   const handleAddExercise = (day: string) => {
     setCurrentDay(day);
