@@ -12,7 +12,7 @@ interface DayColumnProps {
   exercises: Exercise[];
   onTitleChange: (title: string) => void;
   onAddExercise: () => void;
-  onExerciseUpdate: (exerciseId: string, field: keyof Exercise, value: string | number) => void;
+  onExerciseUpdate: (exerciseId: string, field: keyof Exercise, value: string | number | boolean) => void;
   onDeleteExercise: (exerciseId: string) => void;
   dayLabel: string;
 }
