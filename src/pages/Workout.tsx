@@ -3,12 +3,10 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronLeft, CheckCircle, ChevronRight } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
+import { ExerciseCard } from "@/components/workout/ExerciseCard";
 
 interface TreinoUsuario {
   id: string;
@@ -27,6 +25,8 @@ interface ExercicioUsuario {
   ordem: number;
   concluido: boolean;
   peso: number | null;
+  observacao?: string | null;
+  video_url?: string | null;
 }
 
 export default function Workout() {
@@ -260,44 +260,13 @@ export default function Workout() {
             {exercicios
               .filter(ex => !ex.oculto)
               .map((exercicio) => (
-                <Card key={exercicio.id} className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <Checkbox 
-                        checked={exercicio.concluido}
-                        onCheckedChange={(checked) => 
-                          toggleExerciseCompletion(exercicio.id, checked as boolean)
-                        }
-                      />
-                      <div>
-                        <h3 className="font-medium">{exercicio.nome}</h3>
-                        <Badge variant="outline" className="mt-1">
-                          {exercicio.grupo_muscular}
-                        </Badge>
-                      </div>
-                    </div>
-                    
-                    <div className="text-right">
-                      <div className="text-sm mb-1">
-                        <span className="font-medium">{exercicio.series}</span> x{' '}
-                        <span>{exercicio.repeticoes || '10-12'}</span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Peso (kg):</span>
-                        <input 
-                          type="number" 
-                          className="w-16 h-7 rounded border px-2 text-sm"
-                          value={exercicio.peso || ''}
-                          onChange={(e) => updateExerciseWeight(exercicio.id, Number(e.target.value))}
-                          min={0}
-                          step={2.5}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-            ))}
+                <ExerciseCard 
+                  key={exercicio.id}
+                  exercise={exercicio}
+                  onExerciseComplete={toggleExerciseCompletion}
+                  onWeightUpdate={updateExerciseWeight}
+                />
+              ))}
           </div>
           
           <div className="pt-4">
