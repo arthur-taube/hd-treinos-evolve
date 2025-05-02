@@ -133,6 +133,7 @@ export type Database = {
           grupo_muscular: string
           id: string
           nome: string
+          observacao: string | null
           oculto: boolean
           ordem: number
           peso: number | null
@@ -140,6 +141,7 @@ export type Database = {
           series: number
           treino_usuario_id: string
           updated_at: string
+          video_url: string | null
         }
         Insert: {
           concluido?: boolean
@@ -148,6 +150,7 @@ export type Database = {
           grupo_muscular: string
           id?: string
           nome: string
+          observacao?: string | null
           oculto?: boolean
           ordem: number
           peso?: number | null
@@ -155,6 +158,7 @@ export type Database = {
           series: number
           treino_usuario_id: string
           updated_at?: string
+          video_url?: string | null
         }
         Update: {
           concluido?: boolean
@@ -163,6 +167,7 @@ export type Database = {
           grupo_muscular?: string
           id?: string
           nome?: string
+          observacao?: string | null
           oculto?: boolean
           ordem?: number
           peso?: number | null
@@ -170,6 +175,7 @@ export type Database = {
           series?: number
           treino_usuario_id?: string
           updated_at?: string
+          video_url?: string | null
         }
         Relationships: [
           {
