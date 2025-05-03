@@ -127,16 +127,23 @@ export type Database = {
       }
       exercicios_treino_usuario: {
         Row: {
+          avaliacao_dificuldade: string | null
+          avaliacao_dor: number | null
+          avaliacao_fadiga: number | null
           concluido: boolean
+          configuracao_inicial: boolean | null
           created_at: string
+          data_avaliacao: string | null
           exercicio_original_id: string
           grupo_muscular: string
           id: string
+          incremento_minimo: number | null
           nome: string
           observacao: string | null
           oculto: boolean
           ordem: number
           peso: number | null
+          primary_muscle: string | null
           repeticoes: string | null
           series: number
           treino_usuario_id: string
@@ -144,16 +151,23 @@ export type Database = {
           video_url: string | null
         }
         Insert: {
+          avaliacao_dificuldade?: string | null
+          avaliacao_dor?: number | null
+          avaliacao_fadiga?: number | null
           concluido?: boolean
+          configuracao_inicial?: boolean | null
           created_at?: string
+          data_avaliacao?: string | null
           exercicio_original_id: string
           grupo_muscular: string
           id?: string
+          incremento_minimo?: number | null
           nome: string
           observacao?: string | null
           oculto?: boolean
           ordem: number
           peso?: number | null
+          primary_muscle?: string | null
           repeticoes?: string | null
           series: number
           treino_usuario_id: string
@@ -161,16 +175,23 @@ export type Database = {
           video_url?: string | null
         }
         Update: {
+          avaliacao_dificuldade?: string | null
+          avaliacao_dor?: number | null
+          avaliacao_fadiga?: number | null
           concluido?: boolean
+          configuracao_inicial?: boolean | null
           created_at?: string
+          data_avaliacao?: string | null
           exercicio_original_id?: string
           grupo_muscular?: string
           id?: string
+          incremento_minimo?: number | null
           nome?: string
           observacao?: string | null
           oculto?: boolean
           ordem?: number
           peso?: number | null
+          primary_muscle?: string | null
           repeticoes?: string | null
           series?: number
           treino_usuario_id?: string
