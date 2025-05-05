@@ -7,6 +7,8 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronLeft, CheckCircle, ChevronRight } from "lucide-react";
 import { ExerciseCard } from "@/components/workout/ExerciseCard";
+import { FeedbackDialog } from "@/components/workout/FeedbackDialog";
+import { useExerciseFeedback } from "@/hooks/use-exercise-feedback";
 
 interface TreinoUsuario {
   id: string;
@@ -29,6 +31,9 @@ interface ExercicioUsuario {
   video_url?: string | null;
   primary_muscle?: string | null;
   configuracao_inicial?: boolean;
+  exercicio_original?: {
+    primary_muscle: string | null;
+  } | null;
 }
 
 export default function Workout() {
@@ -58,7 +63,10 @@ export default function Workout() {
         // Buscar exercícios do treino com informações adicionais para o sistema de progressão
         const { data: exerciciosData, error: exerciciosError } = await supabase
           .from('exercicios_treino_usuario')
-          .select('*, exercicio_original:exercicio_original_id(primary_muscle)')
+          .select(`
+            *,
+            exercicio_original:exercicio_original_id(primary_muscle)
+          `)
           .eq('treino_usuario_id', treinoId)
           .order('ordem', { ascending: true });
 
