@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,14 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Check, Youtube, MoreHorizontal, ChevronDown, Play, Edit, X } from "lucide-react";
 import { FeedbackDialog } from "./FeedbackDialog";
-import { 
-  useExerciseFeedback, 
-  DIFFICULTY_OPTIONS, 
-  FATIGUE_OPTIONS, 
-  PAIN_OPTIONS, 
-  INCREMENT_OPTIONS 
-} from "@/hooks/use-exercise-feedback";
-
+import { useExerciseFeedback, DIFFICULTY_OPTIONS, FATIGUE_OPTIONS, PAIN_OPTIONS, INCREMENT_OPTIONS } from "@/hooks/use-exercise-feedback";
 interface ExerciseCardProps {
   exercise: {
     id: string;
@@ -35,14 +27,12 @@ interface ExerciseCardProps {
   onExerciseComplete: (exerciseId: string, isCompleted: boolean) => Promise<void>;
   onWeightUpdate: (exerciseId: string, weight: number) => Promise<void>;
 }
-
 interface SetData {
   number: number;
   weight: number | null;
   reps: number | null;
   completed: boolean;
 }
-
 export function ExerciseCard({
   exercise,
   onExerciseComplete,
@@ -61,9 +51,8 @@ export function ExerciseCard({
     reps: exercise.repeticoes ? parseInt(exercise.repeticoes) : null,
     completed: false
   })));
-
-  const { 
-    showDifficultyDialog, 
+  const {
+    showDifficultyDialog,
     setShowDifficultyDialog,
     showFatigueDialog,
     setShowFatigueDialog,
@@ -93,7 +82,6 @@ export function ExerciseCard({
       checkNeedsPainEvaluation(exercise.grupo_muscular);
     }
   }, [isOpen, exercise.grupo_muscular]);
-
   const handleSetComplete = (index: number) => {
     setSets(prevSets => {
       const newSets = [...prevSets];
@@ -101,7 +89,6 @@ export function ExerciseCard({
       return newSets;
     });
   };
-
   const handleWeightChange = (index: number, weight: number) => {
     setSets(prevSets => {
       const newSets = [...prevSets];
@@ -114,7 +101,6 @@ export function ExerciseCard({
       return newSets;
     });
   };
-
   const handleRepsChange = (index: number, reps: number) => {
     setSets(prevSets => {
       const newSets = [...prevSets];
@@ -122,15 +108,13 @@ export function ExerciseCard({
       return newSets;
     });
   };
-
   const handleExerciseComplete = async () => {
     await onExerciseComplete(exercise.id, true);
     setIsOpen(false);
-    
+
     // Show difficulty dialog after completing the exercise
     setShowDifficultyDialog(true);
   };
-
   const saveObservation = async () => {
     try {
       const {
@@ -152,29 +136,25 @@ export function ExerciseCard({
       });
     }
   };
-
   const skipIncompleteSets = async () => {
     await onExerciseComplete(exercise.id, true);
     setIsOpen(false);
-    
+
     // Show difficulty dialog after completing the exercise
     setShowDifficultyDialog(true);
   };
-
   const replaceExerciseThisWorkout = async () => {
     // Implementação para substituir o exercício apenas neste treino
     toast({
       description: "Funcionalidade a ser implementada: Substituir exercício neste treino"
     });
   };
-
   const replaceExerciseAllWorkouts = async () => {
     // Implementação para substituir o exercício em todos os treinos futuros
     toast({
       description: "Funcionalidade a ser implementada: Substituir exercício em todos os treinos"
     });
   };
-
   const addNote = () => {
     // Implementação para adicionar uma nota ao exercício
     toast({
@@ -182,11 +162,8 @@ export function ExerciseCard({
     });
     setShowNoteInput(false);
   };
-
   const allSetsCompleted = sets.every(set => set.completed);
-
-  return (
-    <>
+  return <>
       <Card className="mb-4 overflow-hidden">
         <div className="p-4">
           <div className="flex justify-between items-start mb-2">
@@ -195,16 +172,9 @@ export function ExerciseCard({
             </Badge>
             
             <div className="flex items-center gap-2">
-              {exercise.video_url && (
-                <a 
-                  href={exercise.video_url} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="text-red-500 hover:text-red-700"
-                >
+              {exercise.video_url && <a href={exercise.video_url} target="_blank" rel="noopener noreferrer" className="text-red-500 hover:text-red-700">
                   <Youtube className="h-5 w-5" />
-                </a>
-              )}
+                </a>}
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -239,30 +209,18 @@ export function ExerciseCard({
                 {exercise.peso ? ` @ ${exercise.peso}kg` : ""}
               </p>
               
-              {observation && (
-                <div className="mt-2 p-1.5 border border-yellow-200 rounded-md text-sm bg-[#aea218]/70">
+              {observation && <div className="mt-2 p-1.5 border border-yellow-200 rounded-md text-sm bg-[#aea218]/70">
                   {observation}
-                </div>
-              )}
+                </div>}
             </div>
             
-            <Button 
-              variant="ghost" 
-              size="lg" 
-              className={`rounded-full h-12 w-12 p-0 ${exercise.concluido ? "bg-green-100 text-green-600" : ""}`} 
-              onClick={() => setIsOpen(!isOpen)}
-            >
+            <Button variant="ghost" size="lg" className={`rounded-full h-12 w-12 p-0 ${exercise.concluido ? "bg-green-100 text-green-600" : ""}`} onClick={() => setIsOpen(!isOpen)}>
               {exercise.concluido ? <Check className="h-6 w-6" /> : <Play className="h-6 w-6" />}
             </Button>
           </div>
           
-          {showObservationInput && (
-            <div className="mt-4 space-y-2">
-              <Input 
-                value={observation} 
-                onChange={e => setObservation(e.target.value)} 
-                placeholder="Digite sua observação sobre o exercício" 
-              />
+          {showObservationInput && <div className="mt-4 space-y-2">
+              <Input value={observation} onChange={e => setObservation(e.target.value)} placeholder="Digite sua observação sobre o exercício" />
               <div className="flex justify-end gap-2">
                 <Button variant="outline" size="sm" onClick={() => setShowObservationInput(false)}>
                   Cancelar
@@ -271,8 +229,7 @@ export function ExerciseCard({
                   Salvar
                 </Button>
               </div>
-            </div>
-          )}
+            </div>}
         </div>
 
         <Accordion type="single" collapsible value={isOpen ? "sets" : ""} className="border-t">
@@ -287,54 +244,25 @@ export function ExerciseCard({
                   <div></div>
                 </div>
                 
-                {sets.map((set, index) => (
-                  <div 
-                    key={index} 
-                    className={`grid grid-cols-4 gap-2 items-center py-2 ${index !== sets.length - 1 ? "border-b" : ""}`}
-                  >
+                {sets.map((set, index) => <div key={index} className={`grid grid-cols-4 gap-2 items-center py-2 ${index !== sets.length - 1 ? "border-b" : ""}`}>
                     <div>{set.number}</div>
                     <div className="flex items-center">
-                      <Input 
-                        type="number" 
-                        className="w-16 h-8 text-sm" 
-                        value={set.weight || ""} 
-                        onChange={e => handleWeightChange(index, Number(e.target.value))} 
-                        min={0} 
-                        step={1} 
-                      />
+                      <Input type="number" value={set.weight || ""} onChange={e => handleWeightChange(index, Number(e.target.value))} min={0} step={1} className="w-20 h-8 text-sm" />
                       <span className="ml-1 text-sm">kg</span>
                     </div>
                     <div>
-                      <Input 
-                        type="number" 
-                        className="w-12 h-8 text-sm" 
-                        value={set.reps || ""} 
-                        onChange={e => handleRepsChange(index, Number(e.target.value))} 
-                        min={0} 
-                        step={1} 
-                      />
+                      <Input type="number" className="w-12 h-8 text-sm" value={set.reps || ""} onChange={e => handleRepsChange(index, Number(e.target.value))} min={0} step={1} />
                     </div>
                     <div className="flex justify-center">
-                      <Button 
-                        variant={set.completed ? "default" : "outline"} 
-                        size="sm" 
-                        className="h-8 w-8 p-0" 
-                        onClick={() => handleSetComplete(index)}
-                      >
+                      <Button variant={set.completed ? "default" : "outline"} size="sm" className="h-8 w-8 p-0" onClick={() => handleSetComplete(index)}>
                         {set.completed ? <Check className="h-4 w-4" /> : null}
                       </Button>
                     </div>
-                  </div>
-                ))}
+                  </div>)}
                 
                 <div className="mt-4 space-y-4">
-                  {showNoteInput ? (
-                    <div className="space-y-2">
-                      <Input 
-                        placeholder="Digite sua anotação sobre este exercício" 
-                        value={exerciseNote} 
-                        onChange={e => setExerciseNote(e.target.value)} 
-                      />
+                  {showNoteInput ? <div className="space-y-2">
+                      <Input placeholder="Digite sua anotação sobre este exercício" value={exerciseNote} onChange={e => setExerciseNote(e.target.value)} />
                       <div className="flex justify-end gap-2">
                         <Button variant="outline" size="sm" onClick={() => setShowNoteInput(false)}>
                           Cancelar
@@ -343,18 +271,11 @@ export function ExerciseCard({
                           Salvar nota
                         </Button>
                       </div>
-                    </div>
-                  ) : (
-                    <Button variant="outline" className="text-sm" onClick={() => setShowNoteInput(true)}>
+                    </div> : <Button variant="outline" className="text-sm" onClick={() => setShowNoteInput(true)}>
                       Adicionar nota
-                    </Button>
-                  )}
+                    </Button>}
                   
-                  <Button 
-                    className="w-full" 
-                    disabled={exercise.concluido} 
-                    onClick={handleExerciseComplete}
-                  >
+                  <Button className="w-full" disabled={exercise.concluido} onClick={handleExerciseComplete}>
                     {allSetsCompleted ? "Todas séries concluídas" : "Concluir exercício"}
                   </Button>
                 </div>
@@ -364,50 +285,12 @@ export function ExerciseCard({
         </Accordion>
       </Card>
 
-      <FeedbackDialog
-        isOpen={showDifficultyDialog}
-        onClose={() => setShowDifficultyDialog(false)}
-        onSubmit={saveDifficultyFeedback}
-        title="Como foi o exercício?"
-        description="Avalie a dificuldade do exercício {exerciseName}"
-        options={DIFFICULTY_OPTIONS}
-        exerciseName={exercise.nome}
-      />
+      <FeedbackDialog isOpen={showDifficultyDialog} onClose={() => setShowDifficultyDialog(false)} onSubmit={saveDifficultyFeedback} title="Como foi o exercício?" description="Avalie a dificuldade do exercício {exerciseName}" options={DIFFICULTY_OPTIONS} exerciseName={exercise.nome} />
 
-      <FeedbackDialog
-        isOpen={showFatigueDialog}
-        onClose={() => setShowFatigueDialog(false)}
-        onSubmit={saveFatigueFeedback}
-        title="Fadiga Muscular"
-        description="Como você sentiu seus músculos após completar o exercício {exerciseName}?"
-        options={FATIGUE_OPTIONS}
-        exerciseName={exercise.nome}
-      />
+      <FeedbackDialog isOpen={showFatigueDialog} onClose={() => setShowFatigueDialog(false)} onSubmit={saveFatigueFeedback} title="Fadiga Muscular" description="Como você sentiu seus músculos após completar o exercício {exerciseName}?" options={FATIGUE_OPTIONS} exerciseName={exercise.nome} />
 
-      <FeedbackDialog
-        isOpen={showPainDialog}
-        onClose={() => setShowPainDialog(false)}
-        onSubmit={savePainFeedback}
-        title="Dor Muscular"
-        description="Em relação à dor muscular no(s) {muscleName}, quão dolorido você ficou depois do último treino?"
-        options={PAIN_OPTIONS}
-        exerciseName={exercise.nome}
-        muscleName={exercise.grupo_muscular}
-      />
+      <FeedbackDialog isOpen={showPainDialog} onClose={() => setShowPainDialog(false)} onSubmit={savePainFeedback} title="Dor Muscular" description="Em relação à dor muscular no(s) {muscleName}, quão dolorido você ficou depois do último treino?" options={PAIN_OPTIONS} exerciseName={exercise.nome} muscleName={exercise.grupo_muscular} />
 
-      <FeedbackDialog
-        isOpen={showIncrementDialog}
-        onClose={() => setShowIncrementDialog(false)}
-        onSubmit={saveIncrementSetting}
-        title="Defina a carga incremental mínima"
-        description="Antes de começar, informe qual o incremento mínimo de peso que você consegue adicionar no equipamento usado para o exercício {exerciseName}."
-        options={INCREMENT_OPTIONS}
-        exerciseName={exercise.nome}
-        isNumericInput={true}
-        minValue={0.5}
-        maxValue={10}
-        step={0.5}
-      />
-    </>
-  );
+      <FeedbackDialog isOpen={showIncrementDialog} onClose={() => setShowIncrementDialog(false)} onSubmit={saveIncrementSetting} title="Defina a carga incremental mínima" description="Antes de começar, informe qual o incremento mínimo de peso que você consegue adicionar no equipamento usado para o exercício {exerciseName}." options={INCREMENT_OPTIONS} exerciseName={exercise.nome} isNumericInput={true} minValue={0.5} maxValue={10} step={0.5} />
+    </>;
 }
