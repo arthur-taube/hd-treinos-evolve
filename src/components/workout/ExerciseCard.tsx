@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -88,11 +87,12 @@ export function ExerciseCard({
   }, [isOpen, exercise.configuracao_inicial]);
 
   // Check if pain evaluation is needed when starting the exercise
+  // Agora usando apenas o grupo_muscular
   useEffect(() => {
-    if (isOpen && exercise.primary_muscle) {
-      checkNeedsPainEvaluation(exercise.primary_muscle, exercise.grupo_muscular);
+    if (isOpen) {
+      checkNeedsPainEvaluation(exercise.grupo_muscular);
     }
-  }, [isOpen, exercise.primary_muscle, exercise.grupo_muscular]);
+  }, [isOpen, exercise.grupo_muscular]);
 
   const handleSetComplete = (index: number) => {
     setSets(prevSets => {
@@ -393,7 +393,7 @@ export function ExerciseCard({
         description="Em relação à dor muscular no(s) {muscleName}, quão dolorido você ficou depois do último treino?"
         options={PAIN_OPTIONS}
         exerciseName={exercise.nome}
-        muscleName={exercise.primary_muscle || exercise.grupo_muscular}
+        muscleName={exercise.grupo_muscular} {/* Agora usando grupo_muscular diretamente */}
       />
 
       <FeedbackDialog

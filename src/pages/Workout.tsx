@@ -28,11 +28,7 @@ interface ExercicioUsuario {
   peso: number | null;
   observacao?: string | null;
   video_url?: string | null;
-  primary_muscle?: string | null;
   configuracao_inicial?: boolean;
-  exercicio_original?: {
-    primary_muscle: string | null;
-  } | null;
 }
 
 export default function Workout() {
@@ -59,26 +55,17 @@ export default function Workout() {
 
         setTreino(treinoData);
 
-        // Buscar exercícios do treino com informações adicionais para o sistema de progressão
+        // Buscar exercícios do treino - sem tentar acessar primary_muscle do exercício original
         const { data: exerciciosData, error: exerciciosError } = await supabase
           .from('exercicios_treino_usuario')
-          .select(`
-            *,
-            exercicio_original:exercicio_original_id(primary_muscle)
-          `)
+          .select('*')
           .eq('treino_usuario_id', treinoId)
           .order('ordem', { ascending: true });
 
         if (exerciciosError) throw exerciciosError;
 
-        // Processar os resultados para incluir o primary_muscle no objeto principal
-        const processedExercicios = exerciciosData?.map(ex => ({
-          ...ex,
-          primary_muscle: ex.exercicio_original?.primary_muscle || null
-        })) || [];
-
-        // Assure TypeScript that processedExercicios matches ExercicioUsuario[]
-        setExercicios(processedExercicios as ExercicioUsuario[]);
+        // Não precisamos mais processar os resultados para incluir primary_muscle
+        setExercicios(exerciciosData as ExercicioUsuario[]);
       } catch (error: any) {
         toast({
           title: "Erro ao carregar treino",

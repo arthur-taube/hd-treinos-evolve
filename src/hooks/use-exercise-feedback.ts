@@ -209,7 +209,8 @@ export function useExerciseFeedback(exerciseId: string) {
     }
   };
   
-  const checkNeedsPainEvaluation = async (primaryMuscle: string, groupName: string) => {
+  // Simplificado para usar apenas o grupo_muscular
+  const checkNeedsPainEvaluation = async (groupName: string) => {
     // Here we would check if the user has done an exercise for the same muscle group recently
     // For now, this is a placeholder for future implementation
     // This would check if there's a previous uncompleted pain evaluation for the same muscle group
