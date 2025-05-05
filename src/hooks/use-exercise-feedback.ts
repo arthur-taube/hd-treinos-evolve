@@ -7,27 +7,27 @@ export const DIFFICULTY_OPTIONS = [
   {
     value: "muito_leve",
     label: "Muito leve",
-    description: "Este exercício estava muito fácil, conseguiria fazer mais repetições ou adicionar mais peso."
+    description: "Foi fácil completar as repetições previstas para hoje."
   },
   {
     value: "bom",
     label: "Bom/Pesado",
-    description: "Este exercício estava no peso ideal, consegui completar mas foi desafiador."
+    description: "Foi difícil, mas consegui completar todas as repetições de hoje com técnica perfeita."
   },
   {
     value: "muito_pesado",
     label: "Muito pesado",
-    description: "Este exercício estava muito pesado, tive muita dificuldade para completar as repetições."
+    description: "Técnica comprometida e/ou não consegui completar as repetições previstas para hoje."
   },
   {
     value: "errei_carga",
     label: "Errei a carga",
-    description: "Percebi que coloquei uma carga incorreta para este exercício hoje."
+    description: "Escolhi uma carga muito pesada no início e agora não consigo progredir mais."
   },
   {
     value: "socorro",
     label: "Socorro!",
-    description: "Este exercício foi impossível ou me causou desconforto/dor durante a execução."
+    description: "Já é a 2ª ou 3ª semana seguida que não consigo completar minhas repetições previstas."
   }
 ];
 
