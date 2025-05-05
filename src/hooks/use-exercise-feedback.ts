@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -68,6 +67,7 @@ export const PAIN_OPTIONS = [
   }
 ];
 
+// We'll keep these for backward compatibility, but they won't be used in the new numeric input version
 export const INCREMENT_OPTIONS = [
   { value: 1, label: "1 kg", description: "Incremento mínimo de 1 kg" },
   { value: 2.5, label: "2.5 kg", description: "Incremento mínimo de 2.5 kg (recomendado)" },

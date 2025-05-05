@@ -399,10 +399,14 @@ export function ExerciseCard({
         isOpen={showIncrementDialog}
         onClose={() => setShowIncrementDialog(false)}
         onSubmit={saveIncrementSetting}
-        title="Configuração Inicial"
-        description="Qual o incremento mínimo de peso que você consegue adicionar para o exercício {exerciseName}?"
+        title="Defina a carga incremental mínima"
+        description="Antes de começar, informe qual o incremento mínimo de peso que você consegue adicionar no equipamento usado para o exercício {exerciseName}."
         options={INCREMENT_OPTIONS}
         exerciseName={exercise.nome}
+        isNumericInput={true}
+        minValue={0.5}
+        maxValue={10}
+        step={0.5}
       />
     </>
   );
