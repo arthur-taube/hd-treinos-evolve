@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +30,6 @@ interface ExerciseCardProps {
     concluido: boolean;
     observacao?: string | null;
     video_url?: string | null;
-    primary_muscle?: string | null;
     configuracao_inicial?: boolean;
   };
   onExerciseComplete: (exerciseId: string, isCompleted: boolean) => Promise<void>;
@@ -364,7 +364,6 @@ export function ExerciseCard({
         </Accordion>
       </Card>
 
-      {/* Feedback Dialogs */}
       <FeedbackDialog
         isOpen={showDifficultyDialog}
         onClose={() => setShowDifficultyDialog(false)}
@@ -393,7 +392,7 @@ export function ExerciseCard({
         description="Em relação à dor muscular no(s) {muscleName}, quão dolorido você ficou depois do último treino?"
         options={PAIN_OPTIONS}
         exerciseName={exercise.nome}
-        muscleName={exercise.grupo_muscular} {/* Agora usando grupo_muscular diretamente */}
+        muscleName={exercise.grupo_muscular}
       />
 
       <FeedbackDialog
