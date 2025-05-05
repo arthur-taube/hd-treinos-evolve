@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PageHeader from "@/components/layout/PageHeader";
@@ -78,7 +77,8 @@ export default function Workout() {
           primary_muscle: ex.exercicio_original?.primary_muscle || null
         })) || [];
 
-        setExercicios(processedExercicios);
+        // Assure TypeScript that processedExercicios matches ExercicioUsuario[]
+        setExercicios(processedExercicios as ExercicioUsuario[]);
       } catch (error: any) {
         toast({
           title: "Erro ao carregar treino",
