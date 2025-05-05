@@ -251,7 +251,7 @@ export function ExerciseCard({
                       <span className="ml-1 text-sm">kg</span>
                     </div>
                     <div>
-                      <Input type="number" className="w-12 h-8 text-sm" value={set.reps || ""} onChange={e => handleRepsChange(index, Number(e.target.value))} min={0} step={1} />
+                      <Input type="number" value={set.reps || ""} onChange={e => handleRepsChange(index, Number(e.target.value))} min={0} step={1} className="w-20 h-8 text-sm" />
                     </div>
                     <div className="flex justify-center">
                       <Button variant={set.completed ? "default" : "outline"} size="sm" className="h-8 w-8 p-0" onClick={() => handleSetComplete(index)}>
