@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +42,18 @@ interface SeriesData {
   date: string;
   weight: number;
   reps: number;
+}
+
+// Define a more specific type for the series data returned from the RPC
+interface SeriesRecord {
+  id: string;
+  exercicio_usuario_id: string;
+  numero_serie: number;
+  peso: number;
+  repeticoes: number;
+  concluida: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export function ExerciseCard({
@@ -126,23 +137,7 @@ export function ExerciseCard({
       
       // Para cada exercício anterior, buscar as séries
       const seriesPromises = previousExercises.map(async (ex) => {
-        // Check if table exists before querying it
-        const { error: tableExistsError } = await supabase
-          .from('exercicios_treino_usuario')
-          .select('id')
-          .limit(1);
-        
-        if (tableExistsError && tableExistsError.message.includes('does not exist')) {
-          console.warn("Series table does not exist yet, skipping history lookup");
-          return { 
-            exerciseId: ex.id, 
-            trainingId: ex.treino_usuario_id,
-            series: [] 
-          };
-        }
-        
-        // We'll manually use RPC to get series data instead of direct table access
-        // since we might not have the series_exercicio_usuario table in types yet
+        // We'll use RPC to get series data
         const { data, error } = await supabase.rpc('get_series_by_exercise', {
           exercise_id: ex.id
         });
@@ -159,7 +154,7 @@ export function ExerciseCard({
         return { 
           exerciseId: ex.id, 
           trainingId: ex.treino_usuario_id,
-          series: data || [] 
+          series: data as SeriesRecord[] || [] 
         };
       });
       
@@ -190,10 +185,8 @@ export function ExerciseCard({
       const formattedSeries = trainingResults
         .filter(result => result !== null && result.date !== null)
         .map(result => {
-          // Since we're using RPC, we need to handle the response differently
-          // Let's assume the RPC returns data in the expected format
-          const bestSeries = result!.series.reduce((best: any, current: any) => {
-            // Considerar a melhor série como a que tem o maior produto peso x repetições
+          // Get the best series (highest weight × reps product)
+          const bestSeries = result!.series.reduce((best, current) => {
             const bestValue = best.peso * best.repeticoes;
             const currentValue = current.peso * current.repeticoes;
             return currentValue > bestValue ? current : best;
