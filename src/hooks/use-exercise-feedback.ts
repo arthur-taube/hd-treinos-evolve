@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -209,20 +210,45 @@ export function useExerciseFeedback(exerciseId: string) {
     }
   };
   
-  // Simplificado para usar apenas o grupo_muscular
-  const checkNeedsPainEvaluation = async (groupName: string) => {
-    // Here we would check if the user has done an exercise for the same muscle group recently
-    // For now, this is a placeholder for future implementation
-    // This would check if there's a previous uncompleted pain evaluation for the same muscle group
+  // Atualizado para usar primary_muscle ao invés de grupo_muscular
+  const checkNeedsPainEvaluation = async (primaryMuscle: string) => {
+    if (!primaryMuscle) return false;
     
-    // For testing purposes, we can randomly decide to show the pain dialog
-    const shouldAskForPain = Math.random() > 0.7;
-    if (shouldAskForPain) {
-      setShowPainDialog(true);
-      return true;
+    try {
+      // Verificar se o usuário já treinou este músculo primário antes
+      const { data: previousExercises, error } = await supabase
+        .from('exercicios_treino_usuario')
+        .select('id, treino_usuario_id, data_avaliacao')
+        .eq('primary_muscle', primaryMuscle)
+        .eq('concluido', true)
+        .order('updated_at', { ascending: false })
+        .limit(5);
+      
+      if (error) throw error;
+      
+      // Se não há exercícios prévios com este músculo primário, não precisamos avaliar dor
+      if (!previousExercises || previousExercises.length === 0) {
+        return false;
+      }
+      
+      // Se há exercícios prévios, verificamos se há uma avaliação recente
+      const hasRecentEvaluation = previousExercises.some(ex => 
+        ex.id !== exerciseId && 
+        ex.data_avaliacao !== null && 
+        new Date(ex.data_avaliacao).getTime() > (Date.now() - 7 * 24 * 60 * 60 * 1000)
+      );
+      
+      // Se não há avaliação recente e existem exercícios anteriores, mostramos o diálogo
+      if (!hasRecentEvaluation && previousExercises.length > 0) {
+        setShowPainDialog(true);
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error("Erro ao verificar necessidade de avaliação de dor:", error);
+      return false;
     }
-    
-    return false;
   };
 
   return {

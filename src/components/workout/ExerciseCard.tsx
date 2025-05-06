@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,11 +12,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Check, Youtube, MoreHorizontal, ChevronDown, Play, Edit, X } from "lucide-react";
 import { FeedbackDialog } from "./FeedbackDialog";
 import { useExerciseFeedback, DIFFICULTY_OPTIONS, FATIGUE_OPTIONS, PAIN_OPTIONS, INCREMENT_OPTIONS } from "@/hooks/use-exercise-feedback";
+
 interface ExerciseCardProps {
   exercise: {
     id: string;
     nome: string;
     grupo_muscular: string;
+    primary_muscle: string;  // Adicionado primary_muscle
+    exercicio_original_id: string;  // Adicionado ID do exercício original
     series: number;
     repeticoes: string | null;
     peso: number | null;
@@ -27,12 +31,14 @@ interface ExerciseCardProps {
   onExerciseComplete: (exerciseId: string, isCompleted: boolean) => Promise<void>;
   onWeightUpdate: (exerciseId: string, weight: number) => Promise<void>;
 }
+
 interface SetData {
   number: number;
   weight: number | null;
   reps: number | null;
   completed: boolean;
 }
+
 export function ExerciseCard({
   exercise,
   onExerciseComplete,
@@ -51,6 +57,9 @@ export function ExerciseCard({
     reps: exercise.repeticoes ? parseInt(exercise.repeticoes) : null,
     completed: false
   })));
+  const [isLoadingSeries, setIsLoadingSeries] = useState(false);
+  const [previousSeries, setPreviousSeries] = useState<{date: string, weight: number, reps: number}[]>([]);
+
   const {
     showDifficultyDialog,
     setShowDifficultyDialog,
@@ -76,12 +85,105 @@ export function ExerciseCard({
   }, [isOpen, exercise.configuracao_inicial]);
 
   // Check if pain evaluation is needed when starting the exercise
-  // Agora usando apenas o grupo_muscular
+  // Atualizado para usar primary_muscle ao invés de grupo_muscular
   useEffect(() => {
     if (isOpen) {
-      checkNeedsPainEvaluation(exercise.grupo_muscular);
+      checkNeedsPainEvaluation(exercise.primary_muscle);
     }
-  }, [isOpen, exercise.grupo_muscular]);
+  }, [isOpen, exercise.primary_muscle]);
+
+  // Carregar séries anteriores do mesmo exercício (usando exercicio_original_id)
+  useEffect(() => {
+    if (isOpen && exercise.exercicio_original_id) {
+      fetchPreviousSeries();
+    }
+  }, [isOpen, exercise.exercicio_original_id]);
+
+  const fetchPreviousSeries = async () => {
+    setIsLoadingSeries(true);
+    try {
+      // Buscar exercícios anteriores com o mesmo exercicio_original_id
+      const { data: previousExercises, error: exercisesError } = await supabase
+        .from('exercicios_treino_usuario')
+        .select('id, treino_usuario_id')
+        .eq('exercicio_original_id', exercise.exercicio_original_id)
+        .eq('concluido', true)
+        .neq('id', exercise.id)  // Excluir o exercício atual
+        .order('updated_at', { ascending: false })
+        .limit(3);  // Pegar apenas os 3 últimos exercícios
+      
+      if (exercisesError) throw exercisesError;
+      
+      if (!previousExercises || previousExercises.length === 0) {
+        setIsLoadingSeries(false);
+        return;
+      }
+      
+      // Para cada exercício anterior, buscar as séries
+      const seriesPromises = previousExercises.map(async (ex) => {
+        const { data, error } = await supabase
+          .from('series_exercicio_usuario')
+          .select('*')
+          .eq('exercicio_usuario_id', ex.id)
+          .order('numero_serie', { ascending: true });
+          
+        if (error) throw error;
+        return { 
+          exerciseId: ex.id, 
+          trainingId: ex.treino_usuario_id,
+          series: data || [] 
+        };
+      });
+      
+      const seriesResults = await Promise.all(seriesPromises);
+      
+      // Para cada treino, buscar a data de conclusão
+      const trainingDatePromises = seriesResults.map(async (result) => {
+        if (result.series.length === 0) return null;
+        
+        const { data, error } = await supabase
+          .from('treinos_usuario')
+          .select('data_concluido')
+          .eq('id', result.trainingId)
+          .single();
+          
+        if (error) return null;
+        
+        return {
+          exerciseId: result.exerciseId,
+          date: data?.data_concluido || null,
+          series: result.series
+        };
+      });
+      
+      const trainingResults = await Promise.all(trainingDatePromises);
+      
+      // Formatar os dados para exibição
+      const formattedSeries = trainingResults
+        .filter(result => result !== null && result.date !== null)
+        .map(result => {
+          const bestSeries = result!.series.reduce((best, current) => {
+            // Considerar a melhor série como a que tem o maior produto peso x repetições
+            const bestValue = best.peso && best.repeticoes ? best.peso * best.repeticoes : 0;
+            const currentValue = current.peso && current.repeticoes ? current.peso * current.repeticoes : 0;
+            return currentValue > bestValue ? current : best;
+          }, result!.series[0] || { peso: 0, repeticoes: 0 });
+          
+          return {
+            date: new Date(result!.date!).toLocaleDateString('pt-BR'),
+            weight: bestSeries.peso || 0,
+            reps: bestSeries.repeticoes || 0
+          };
+        });
+      
+      setPreviousSeries(formattedSeries);
+    } catch (error) {
+      console.error("Erro ao buscar séries anteriores:", error);
+    } finally {
+      setIsLoadingSeries(false);
+    }
+  };
+
   const handleSetComplete = (index: number) => {
     setSets(prevSets => {
       const newSets = [...prevSets];
@@ -89,6 +191,7 @@ export function ExerciseCard({
       return newSets;
     });
   };
+
   const handleWeightChange = (index: number, weight: number) => {
     setSets(prevSets => {
       const newSets = [...prevSets];
@@ -101,6 +204,7 @@ export function ExerciseCard({
       return newSets;
     });
   };
+
   const handleRepsChange = (index: number, reps: number) => {
     setSets(prevSets => {
       const newSets = [...prevSets];
@@ -108,13 +212,40 @@ export function ExerciseCard({
       return newSets;
     });
   };
-  const handleExerciseComplete = async () => {
-    await onExerciseComplete(exercise.id, true);
-    setIsOpen(false);
 
-    // Show difficulty dialog after completing the exercise
-    setShowDifficultyDialog(true);
+  const handleExerciseComplete = async () => {
+    try {
+      // Salvar dados de todas as séries
+      const seriesPromises = sets.map((set, index) => 
+        supabase
+          .from('series_exercicio_usuario')
+          .upsert({
+            exercicio_usuario_id: exercise.id,
+            numero_serie: index + 1,
+            peso: set.weight || 0,
+            repeticoes: set.reps || 0,
+            concluida: set.completed
+          })
+      );
+      
+      await Promise.all(seriesPromises);
+      
+      // Marcar exercício como concluído
+      await onExerciseComplete(exercise.id, true);
+      setIsOpen(false);
+
+      // Show difficulty dialog after completing the exercise
+      setShowDifficultyDialog(true);
+      
+    } catch (error: any) {
+      toast({
+        title: "Erro ao salvar séries",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   };
+  
   const saveObservation = async () => {
     try {
       const {
@@ -136,6 +267,7 @@ export function ExerciseCard({
       });
     }
   };
+  
   const skipIncompleteSets = async () => {
     await onExerciseComplete(exercise.id, true);
     setIsOpen(false);
@@ -143,18 +275,21 @@ export function ExerciseCard({
     // Show difficulty dialog after completing the exercise
     setShowDifficultyDialog(true);
   };
+  
   const replaceExerciseThisWorkout = async () => {
     // Implementação para substituir o exercício apenas neste treino
     toast({
       description: "Funcionalidade a ser implementada: Substituir exercício neste treino"
     });
   };
+  
   const replaceExerciseAllWorkouts = async () => {
     // Implementação para substituir o exercício em todos os treinos futuros
     toast({
       description: "Funcionalidade a ser implementada: Substituir exercício em todos os treinos"
     });
   };
+  
   const addNote = () => {
     // Implementação para adicionar uma nota ao exercício
     toast({
@@ -162,7 +297,9 @@ export function ExerciseCard({
     });
     setShowNoteInput(false);
   };
+  
   const allSetsCompleted = sets.every(set => set.completed);
+  
   return <>
       <Card className="mb-4 overflow-hidden">
         <div className="p-4">
@@ -237,6 +374,26 @@ export function ExerciseCard({
             <AccordionTrigger className="hidden">Séries</AccordionTrigger>
             <AccordionContent>
               <div className="px-4 py-2">
+                {/* Histórico de séries anteriores */}
+                {previousSeries.length > 0 && (
+                  <div className="mb-4 p-3 bg-gray-50 rounded-md">
+                    <h4 className="text-sm font-medium mb-2">Histórico recente:</h4>
+                    <div className="space-y-1">
+                      {previousSeries.map((seriesData, idx) => (
+                        <p key={idx} className="text-sm">
+                          {seriesData.date}: <span className="font-medium">{seriesData.weight}kg</span> x {seriesData.reps} reps
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {isLoadingSeries && (
+                  <div className="text-center py-2 text-sm text-muted-foreground">
+                    Carregando histórico...
+                  </div>
+                )}
+              
                 <div className="grid grid-cols-4 gap-2 mb-2 text-sm font-medium text-muted-foreground">
                   <div>Série</div>
                   <div>Carga</div>
@@ -285,12 +442,49 @@ export function ExerciseCard({
         </Accordion>
       </Card>
 
-      <FeedbackDialog isOpen={showDifficultyDialog} onClose={() => setShowDifficultyDialog(false)} onSubmit={saveDifficultyFeedback} title="Como foi o exercício?" description="Avalie a dificuldade do exercício {exerciseName}" options={DIFFICULTY_OPTIONS} exerciseName={exercise.nome} />
+      <FeedbackDialog 
+        isOpen={showDifficultyDialog} 
+        onClose={() => setShowDifficultyDialog(false)} 
+        onSubmit={saveDifficultyFeedback} 
+        title="Como foi o exercício?" 
+        description="Avalie a dificuldade do exercício {exerciseName}" 
+        options={DIFFICULTY_OPTIONS} 
+        exerciseName={exercise.nome} 
+      />
 
-      <FeedbackDialog isOpen={showFatigueDialog} onClose={() => setShowFatigueDialog(false)} onSubmit={saveFatigueFeedback} title="Fadiga Muscular" description="Como você sentiu seus músculos após completar o exercício {exerciseName}?" options={FATIGUE_OPTIONS} exerciseName={exercise.nome} />
+      <FeedbackDialog 
+        isOpen={showFatigueDialog} 
+        onClose={() => setShowFatigueDialog(false)} 
+        onSubmit={saveFatigueFeedback} 
+        title="Fadiga Muscular" 
+        description="Como você sentiu seus músculos após completar o exercício {exerciseName}?" 
+        options={FATIGUE_OPTIONS} 
+        exerciseName={exercise.nome} 
+      />
 
-      <FeedbackDialog isOpen={showPainDialog} onClose={() => setShowPainDialog(false)} onSubmit={savePainFeedback} title="Dor Muscular" description="Em relação à dor muscular no(s) {muscleName}, quão dolorido você ficou depois do último treino?" options={PAIN_OPTIONS} exerciseName={exercise.nome} muscleName={exercise.grupo_muscular} />
+      <FeedbackDialog 
+        isOpen={showPainDialog} 
+        onClose={() => setShowPainDialog(false)} 
+        onSubmit={savePainFeedback} 
+        title="Dor Muscular" 
+        description="Em relação à dor muscular no(s) {muscleName}, quão dolorido você ficou depois do último treino?" 
+        options={PAIN_OPTIONS} 
+        exerciseName={exercise.nome} 
+        muscleName={exercise.primary_muscle} 
+      />
 
-      <FeedbackDialog isOpen={showIncrementDialog} onClose={() => setShowIncrementDialog(false)} onSubmit={saveIncrementSetting} title="Defina a carga incremental mínima" description="Antes de começar, informe qual o incremento mínimo de peso que você consegue adicionar no equipamento usado para o exercício {exerciseName}." options={INCREMENT_OPTIONS} exerciseName={exercise.nome} isNumericInput={true} minValue={0.5} maxValue={10} step={0.5} />
+      <FeedbackDialog 
+        isOpen={showIncrementDialog} 
+        onClose={() => setShowIncrementDialog(false)} 
+        onSubmit={saveIncrementSetting} 
+        title="Defina a carga incremental mínima" 
+        description="Antes de começar, informe qual o incremento mínimo de peso que você consegue adicionar no equipamento usado para o exercício {exerciseName}." 
+        options={INCREMENT_OPTIONS} 
+        exerciseName={exercise.nome} 
+        isNumericInput={true} 
+        minValue={0.5} 
+        maxValue={10} 
+        step={0.5} 
+      />
     </>;
 }

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PageHeader from "@/components/layout/PageHeader";
@@ -20,6 +21,8 @@ interface ExercicioUsuario {
   id: string;
   nome: string;
   grupo_muscular: string;
+  primary_muscle: string;  // Adicionado primary_muscle
+  exercicio_original_id: string;  // Adicionado ID do exercício original
   series: number;
   repeticoes: string | null;
   oculto: boolean;
@@ -55,17 +58,58 @@ export default function Workout() {
 
         setTreino(treinoData);
 
-        // Buscar exercícios do treino - sem tentar acessar primary_muscle do exercício original
+        // Buscar exercícios do treino com primary_muscle dos exercícios originais
         const { data: exerciciosData, error: exerciciosError } = await supabase
           .from('exercicios_treino_usuario')
-          .select('*')
+          .select(`
+            id, 
+            nome, 
+            grupo_muscular, 
+            primary_muscle,
+            exercicio_original_id,
+            series, 
+            repeticoes, 
+            oculto, 
+            ordem, 
+            concluido, 
+            peso, 
+            observacao, 
+            video_url,
+            configuracao_inicial
+          `)
           .eq('treino_usuario_id', treinoId)
           .order('ordem', { ascending: true });
 
         if (exerciciosError) throw exerciciosError;
+        
+        // Se o primary_muscle não estiver preenchido, fazer uma consulta adicional para obtê-lo
+        const exerciciosProcessados = await Promise.all(
+          exerciciosData.map(async (exercicio) => {
+            // Se não tivermos primary_muscle, vamos buscar do exercício original
+            if (!exercicio.primary_muscle && exercicio.exercicio_original_id) {
+              const { data, error } = await supabase
+                .from('exercicios_iniciantes')
+                .select('primary_muscle')
+                .eq('id', exercicio.exercicio_original_id)
+                .single();
+                
+              if (!error && data) {
+                // Atualizar o objeto atual
+                exercicio.primary_muscle = data.primary_muscle || exercicio.grupo_muscular;
+                
+                // Atualizar no banco de dados para futuros acessos
+                await supabase
+                  .from('exercicios_treino_usuario')
+                  .update({ primary_muscle: data.primary_muscle })
+                  .eq('id', exercicio.id);
+              }
+            }
+            
+            return exercicio;
+          })
+        );
 
-        // Não precisamos mais processar os resultados para incluir primary_muscle
-        setExercicios(exerciciosData as ExercicioUsuario[]);
+        setExercicios(exerciciosProcessados);
       } catch (error: any) {
         toast({
           title: "Erro ao carregar treino",
@@ -79,6 +123,28 @@ export default function Workout() {
 
     fetchWorkoutData();
   }, [treinoId]);
+
+  // Certificar que a tabela series_exercicio_usuario existe
+  useEffect(() => {
+    async function checkSeriesTable() {
+      try {
+        // Tentamos fazer uma consulta básica para verificar se a tabela existe
+        const { error } = await supabase
+          .from('series_exercicio_usuario')
+          .select('id')
+          .limit(1);
+          
+        // Se temos um erro que não seja "not found", consideramos que a tabela existe
+        if (error && !error.message.includes('does not exist')) {
+          console.error("Erro ao verificar tabela de séries:", error);
+        }
+      } catch (error) {
+        console.error("Erro ao verificar tabela de séries:", error);
+      }
+    }
+    
+    checkSeriesTable();
+  }, []);
 
   const toggleExerciseCompletion = async (exerciseId: string, isCompleted: boolean) => {
     // Atualizar localmente primeiro para UI responsiva

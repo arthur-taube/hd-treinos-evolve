@@ -102,13 +102,28 @@ export function FeedbackDialog({
     }
   };
 
+  // Função para formatar o texto da descrição substituindo os placeholders
+  const formatDescription = () => {
+    let formattedDesc = description;
+    
+    if (exerciseName) {
+      formattedDesc = formattedDesc.replace("{exerciseName}", exerciseName);
+    }
+    
+    if (muscleName) {
+      formattedDesc = formattedDesc.replace("{muscleName}", muscleName);
+    }
+    
+    return formattedDesc;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            {description.replace("{exerciseName}", exerciseName).replace("{muscleName}", muscleName || "")}
+            {formatDescription()}
             
             {isNumericInput && (
               <TooltipProvider>
