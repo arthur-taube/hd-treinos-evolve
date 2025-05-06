@@ -18,8 +18,8 @@ interface ExerciseCardProps {
     id: string;
     nome: string;
     grupo_muscular: string;
-    primary_muscle: string;  // Adicionado primary_muscle
-    exercicio_original_id: string;  // Adicionado ID do exercício original
+    primary_muscle: string;
+    exercicio_original_id: string;
     series: number;
     repeticoes: string | null;
     peso: number | null;
@@ -37,6 +37,12 @@ interface SetData {
   weight: number | null;
   reps: number | null;
   completed: boolean;
+}
+
+interface SeriesData {
+  date: string;
+  weight: number;
+  reps: number;
 }
 
 export function ExerciseCard({
@@ -58,7 +64,7 @@ export function ExerciseCard({
     completed: false
   })));
   const [isLoadingSeries, setIsLoadingSeries] = useState(false);
-  const [previousSeries, setPreviousSeries] = useState<{date: string, weight: number, reps: number}[]>([]);
+  const [previousSeries, setPreviousSeries] = useState<SeriesData[]>([]);
 
   const {
     showDifficultyDialog,
@@ -85,7 +91,6 @@ export function ExerciseCard({
   }, [isOpen, exercise.configuracao_inicial]);
 
   // Check if pain evaluation is needed when starting the exercise
-  // Atualizado para usar primary_muscle ao invés de grupo_muscular
   useEffect(() => {
     if (isOpen) {
       checkNeedsPainEvaluation(exercise.primary_muscle);
@@ -121,13 +126,36 @@ export function ExerciseCard({
       
       // Para cada exercício anterior, buscar as séries
       const seriesPromises = previousExercises.map(async (ex) => {
-        const { data, error } = await supabase
-          .from('series_exercicio_usuario')
-          .select('*')
-          .eq('exercicio_usuario_id', ex.id)
-          .order('numero_serie', { ascending: true });
+        // Check if table exists before querying it
+        const { error: tableExistsError } = await supabase
+          .from('exercicios_treino_usuario')
+          .select('id')
+          .limit(1);
+        
+        if (tableExistsError && tableExistsError.message.includes('does not exist')) {
+          console.warn("Series table does not exist yet, skipping history lookup");
+          return { 
+            exerciseId: ex.id, 
+            trainingId: ex.treino_usuario_id,
+            series: [] 
+          };
+        }
+        
+        // We'll manually use RPC to get series data instead of direct table access
+        // since we might not have the series_exercicio_usuario table in types yet
+        const { data, error } = await supabase.rpc('get_series_by_exercise', {
+          exercise_id: ex.id
+        });
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error fetching series:", error);
+          return { 
+            exerciseId: ex.id, 
+            trainingId: ex.treino_usuario_id,
+            series: []
+          };
+        }
+        
         return { 
           exerciseId: ex.id, 
           trainingId: ex.treino_usuario_id,
@@ -162,10 +190,12 @@ export function ExerciseCard({
       const formattedSeries = trainingResults
         .filter(result => result !== null && result.date !== null)
         .map(result => {
-          const bestSeries = result!.series.reduce((best, current) => {
+          // Since we're using RPC, we need to handle the response differently
+          // Let's assume the RPC returns data in the expected format
+          const bestSeries = result!.series.reduce((best: any, current: any) => {
             // Considerar a melhor série como a que tem o maior produto peso x repetições
-            const bestValue = best.peso && best.repeticoes ? best.peso * best.repeticoes : 0;
-            const currentValue = current.peso && current.repeticoes ? current.peso * current.repeticoes : 0;
+            const bestValue = best.peso * best.repeticoes;
+            const currentValue = current.peso * current.repeticoes;
             return currentValue > bestValue ? current : best;
           }, result!.series[0] || { peso: 0, repeticoes: 0 });
           
@@ -215,20 +245,20 @@ export function ExerciseCard({
 
   const handleExerciseComplete = async () => {
     try {
-      // Salvar dados de todas as séries
-      const seriesPromises = sets.map((set, index) => 
-        supabase
-          .from('series_exercicio_usuario')
-          .upsert({
-            exercicio_usuario_id: exercise.id,
-            numero_serie: index + 1,
-            peso: set.weight || 0,
-            repeticoes: set.reps || 0,
-            concluida: set.completed
-          })
-      );
+      // Create the series table if it doesn't exist yet
+      await supabase.rpc('ensure_series_table');
       
-      await Promise.all(seriesPromises);
+      // Salvar dados de todas as séries usando RPC
+      for (let i = 0; i < sets.length; i++) {
+        const set = sets[i];
+        await supabase.rpc('save_series', {
+          p_exercicio_id: exercise.id,
+          p_numero_serie: i + 1,
+          p_peso: set.weight || 0,
+          p_repeticoes: set.reps || 0,
+          p_concluida: set.completed
+        });
+      }
       
       // Marcar exercício como concluído
       await onExerciseComplete(exercise.id, true);

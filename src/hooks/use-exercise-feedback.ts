@@ -210,7 +210,6 @@ export function useExerciseFeedback(exerciseId: string) {
     }
   };
   
-  // Atualizado para usar primary_muscle ao invés de grupo_muscular
   const checkNeedsPainEvaluation = async (primaryMuscle: string) => {
     if (!primaryMuscle) return false;
     
@@ -221,6 +220,7 @@ export function useExerciseFeedback(exerciseId: string) {
         .select('id, treino_usuario_id, data_avaliacao')
         .eq('primary_muscle', primaryMuscle)
         .eq('concluido', true)
+        .neq('id', exerciseId)  // Excluir o exercício atual
         .order('updated_at', { ascending: false })
         .limit(5);
       

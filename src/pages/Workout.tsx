@@ -124,26 +124,22 @@ export default function Workout() {
     fetchWorkoutData();
   }, [treinoId]);
 
-  // Certificar que a tabela series_exercicio_usuario existe
+  // Criar a função para garantir que a tabela series_exercicio_usuario existe
   useEffect(() => {
-    async function checkSeriesTable() {
+    async function ensureSeriesTable() {
       try {
-        // Tentamos fazer uma consulta básica para verificar se a tabela existe
-        const { error } = await supabase
-          .from('series_exercicio_usuario')
-          .select('id')
-          .limit(1);
-          
-        // Se temos um erro que não seja "not found", consideramos que a tabela existe
-        if (error && !error.message.includes('does not exist')) {
-          console.error("Erro ao verificar tabela de séries:", error);
-        }
+        // Vamos criar uma função RPC para criar a tabela se necessário
+        await supabase.rpc('ensure_series_table').then(({ error }) => {
+          if (error) {
+            console.error("Erro ao verificar/criar tabela de séries:", error);
+          }
+        });
       } catch (error) {
         console.error("Erro ao verificar tabela de séries:", error);
       }
     }
     
-    checkSeriesTable();
+    ensureSeriesTable();
   }, []);
 
   const toggleExerciseCompletion = async (exerciseId: string, isCompleted: boolean) => {

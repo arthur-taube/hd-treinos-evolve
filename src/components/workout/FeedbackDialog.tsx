@@ -179,7 +179,7 @@ export function FeedbackDialog({
             <div className="grid grid-cols-1 gap-3">
               {options.map((option) => (
                 <Button
-                  key={option.value}
+                  key={option.value.toString()}
                   variant={selectedValue === option.value ? "default" : "outline"}
                   className={`w-full justify-start text-left ${selectedValue === option.value ? "bg-blue-600 hover:bg-blue-700" : ""}`}
                   onClick={() => handleSelect(option)}
