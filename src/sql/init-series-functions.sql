@@ -89,52 +89,11 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to get series data by exercise
 CREATE OR REPLACE FUNCTION public.get_series_by_exercise(exercise_id UUID)
-RETURNS TABLE (
-    id UUID,
-    exercicio_usuario_id UUID,
-    numero_serie INTEGER,
-    peso NUMERIC,
-    repeticoes INTEGER,
-    concluida BOOLEAN,
-    created_at TIMESTAMP WITH TIME ZONE,
-    updated_at TIMESTAMP WITH TIME ZONE
-) AS $$
+RETURNS SETOF public.series_exercicio_usuario AS $$
 BEGIN
     RETURN QUERY
-    SELECT s.id, s.exercicio_usuario_id, s.numero_serie, s.peso, s.repeticoes, s.concluida, s.created_at, s.updated_at
-    FROM public.series_exercicio_usuario s
-    WHERE s.exercicio_usuario_id = exercise_id
-    ORDER BY s.numero_serie;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Function to update primary_muscle in existing exercise records
-CREATE OR REPLACE FUNCTION public.update_primary_muscle_from_original()
-RETURNS void AS $$
-DECLARE
-    exercise_record RECORD;
-BEGIN
-    -- Loop through all exercises in exercicios_treino_usuario that have an original exercise ID
-    FOR exercise_record IN 
-        SELECT etu.id, etu.exercicio_original_id
-        FROM public.exercicios_treino_usuario etu
-        WHERE etu.exercicio_original_id IS NOT NULL
-          AND (etu.primary_muscle IS NULL OR etu.primary_muscle = '')
-    LOOP
-        -- Find primary_muscle from the original exercise and update
-        UPDATE public.exercicios_treino_usuario
-        SET primary_muscle = (
-            SELECT ei.primary_muscle 
-            FROM public.exercicios_iniciantes ei 
-            WHERE ei.id = exercise_record.exercicio_original_id
-        )
-        WHERE id = exercise_record.id;
-    END LOOP;
-    
-    -- For records without primary_muscle or original exercise, use grupo_muscular as fallback
-    UPDATE public.exercicios_treino_usuario
-    SET primary_muscle = grupo_muscular
-    WHERE (primary_muscle IS NULL OR primary_muscle = '')
-      AND grupo_muscular IS NOT NULL;
+    SELECT * FROM public.series_exercicio_usuario
+    WHERE exercicio_usuario_id = exercise_id
+    ORDER BY numero_serie;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

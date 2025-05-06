@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PageHeader from "@/components/layout/PageHeader";
@@ -81,16 +82,29 @@ export default function Workout() {
 
         if (exerciciosError) throw exerciciosError;
         
-        // Update primary_muscle for all exercises
-        await supabase.rpc('update_primary_muscle_from_original');
-        
-        // Atualizar exercícios com primary_muscle se necessário
+        // Se o primary_muscle não estiver preenchido, fazer uma consulta adicional para obtê-lo
         const exerciciosProcessados = await Promise.all(
           exerciciosData.map(async (exercicio) => {
-            // Se não tivermos primary_muscle, vamos usar o grupo_muscular como fallback
-            if (!exercicio.primary_muscle) {
-              exercicio.primary_muscle = exercicio.grupo_muscular;
+            // Se não tivermos primary_muscle, vamos buscar do exercício original
+            if (!exercicio.primary_muscle && exercicio.exercicio_original_id) {
+              const { data, error } = await supabase
+                .from('exercicios_iniciantes')
+                .select('primary_muscle')
+                .eq('id', exercicio.exercicio_original_id)
+                .single();
+                
+              if (!error && data) {
+                // Atualizar o objeto atual
+                exercicio.primary_muscle = data.primary_muscle || exercicio.grupo_muscular;
+                
+                // Atualizar no banco de dados para futuros acessos
+                await supabase
+                  .from('exercicios_treino_usuario')
+                  .update({ primary_muscle: data.primary_muscle })
+                  .eq('id', exercicio.id);
+              }
             }
+            
             return exercicio;
           })
         );
@@ -115,7 +129,11 @@ export default function Workout() {
     async function ensureSeriesTable() {
       try {
         // Vamos criar uma função RPC para criar a tabela se necessário
-        await supabase.rpc('ensure_series_table');
+        await supabase.rpc('ensure_series_table').then(({ error }) => {
+          if (error) {
+            console.error("Erro ao verificar/criar tabela de séries:", error);
+          }
+        });
       } catch (error) {
         console.error("Erro ao verificar tabela de séries:", error);
       }
