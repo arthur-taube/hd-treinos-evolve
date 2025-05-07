@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -138,7 +137,6 @@ export function ExerciseCard({
       
       // Para cada exercício anterior, buscar as séries usando RPC
       const seriesPromises = previousExercises.map(async (ex) => {
-        // Use RPC function to get series data
         const { data, error } = await supabase.rpc(
           'get_series_by_exercise',
           { exercise_id: ex.id }
@@ -187,15 +185,14 @@ export function ExerciseCard({
       const formattedSeries = trainingResults
         .filter(result => result !== null && result.date !== null)
         .map(result => {
-          // Cast the series data to our SeriesRecord type
-          const seriesData = result!.series as unknown as SeriesRecord[];
-          
           // Find best series based on weight and reps
-          const bestSeries = seriesData.reduce((best, current) => {
+          if (!result!.series.length) return { date: new Date(result!.date!).toLocaleDateString('pt-BR'), weight: 0, reps: 0 };
+          
+          const bestSeries = result!.series.reduce((best, current) => {
             const bestValue = best.peso * best.repeticoes;
             const currentValue = current.peso * current.repeticoes;
             return currentValue > bestValue ? current : best;
-          }, seriesData[0]);
+          }, result!.series[0]);
           
           return {
             date: new Date(result!.date!).toLocaleDateString('pt-BR'),
