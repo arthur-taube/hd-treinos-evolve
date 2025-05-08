@@ -61,10 +61,11 @@ export function ExerciseCard({
       console.log(`Fetching exercises for muscle group: ${exercise.muscleGroup}`);
       
       try {
+        // Use typed filter value for grupo_muscular
         const { data, error } = await supabase
           .from('exercicios_iniciantes')
           .select('nome')
-          .eq('grupo_muscular', exercise.muscleGroup as string)
+          .eq('grupo_muscular', exercise.muscleGroup)
           .order('nome');
         
         if (error) {

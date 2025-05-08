@@ -108,12 +108,16 @@ export default function ProgramExercisesForm({
           duracao_semanas: mesocycleDurations.reduce((acc, curr) => acc + curr, 0),
           split: programData.split,
           criado_por: user.id
-        })
+        } as any) // Usar any para evitar erros de tipo específicos durante a inserção
         .select()
         .single();
 
-      if (programaError || !programa) {
+      if (programaError) {
         throw new Error(`Erro ao criar programa: ${programaError?.message}`);
+      }
+      
+      if (!programa) {
+        throw new Error("Erro ao criar programa: Nenhum dado retornado");
       }
 
       // 2. Criar os mesociclos
@@ -125,12 +129,16 @@ export default function ProgramExercisesForm({
             programa_id: programa.id,
             numero: mesocicloNumero,
             duracao_semanas: mesocycleDurations[i]
-          })
+          } as any) // Usar any para evitar erros de tipo
           .select()
           .single();
 
-        if (mesocicloError || !mesociclo) {
+        if (mesocicloError) {
           throw new Error(`Erro ao criar mesociclo ${mesocicloNumero}: ${mesocicloError?.message}`);
+        }
+        
+        if (!mesociclo) {
+          throw new Error(`Erro ao criar mesociclo ${mesocicloNumero}: Nenhum dado retornado`);
         }
 
         // Verifica se há exercícios para este mesociclo
@@ -155,12 +163,16 @@ export default function ProgramExercisesForm({
                   nome: nomeTreino,
                   dia_semana: diaSemana,
                   ordem_semana: semana
-                })
+                } as any) // Usar any para evitar erros de tipo
                 .select()
                 .single();
 
-              if (treinoError || !treino) {
+              if (treinoError) {
                 throw new Error(`Erro ao criar treino ${nomeTreino}: ${treinoError?.message}`);
+              }
+              
+              if (!treino) {
+                throw new Error(`Erro ao criar treino ${nomeTreino}: Nenhum dado retornado`);
               }
 
               // 4. Inserir exercícios do treino
@@ -178,7 +190,7 @@ export default function ProgramExercisesForm({
 
                 const { error: exerciciosError } = await supabase
                   .from('exercicios_treino')
-                  .insert(exerciciosToInsert);
+                  .insert(exerciciosToInsert as any[]); // Usar any[] para evitar erros de tipo
 
                 if (exerciciosError) {
                   throw new Error(`Erro ao inserir exercícios: ${exerciciosError.message}`);
