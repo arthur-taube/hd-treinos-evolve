@@ -31,6 +31,7 @@ export type SupabaseRpcFunctions = {
     };
     Returns: {
       id: string;
+      user_id: string;
       exercicio_usuario_id: string;
       numero_serie: number;
       peso: number;

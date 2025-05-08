@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import ProgramCatalogOptionsMenu from "@/components/programs/ProgramCatalogOptionsMenu";
 
 interface Program {
   id: string;
@@ -20,10 +22,18 @@ interface Program {
   split: string;
 }
 
+// Developer user ID and email constants
+const DEV_USER_ID = "a2eba955-7a98-42a6-ba49-1cf31dfad15d";
+const DEV_USER_EMAIL = "arthurtaube.com.br@gmail.com";
+
 export default function ProgramCatalog() {
   const navigate = useNavigate();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  
+  // Check if current user is the developer
+  const isDeveloper = user?.id === DEV_USER_ID || user?.email === DEV_USER_EMAIL;
   
   useEffect(() => {
     async function fetchPrograms() {
@@ -149,7 +159,7 @@ export default function ProgramCatalog() {
             // Para cada exercício, criar uma cópia para o usuário
             const exerciciosUsuario = exerciciosOriginais.map(exercicio => ({
               treino_usuario_id: treinoUsuario.id,
-              exercicio_original_id: exercicio.id,
+              exercicio_original_id: exercicio.exercicio_original_id,
               nome: exercicio.nome,
               grupo_muscular: exercicio.grupo_muscular,
               series: exercicio.series,
@@ -179,6 +189,199 @@ export default function ProgramCatalog() {
         description: error.message || "Não foi possível selecionar o programa.",
         variant: "destructive"
       });
+    }
+  };
+
+  const handleEditProgram = (programId: string) => {
+    // Navegar para a página de edição do programa
+    navigate(`/programs/edit/${programId}`);
+  };
+
+  const handleDuplicateProgram = async (programId: string) => {
+    try {
+      // 1. Buscar o programa original
+      const { data: originalProgram, error: programError } = await supabase
+        .from('programas')
+        .select('*')
+        .eq('id', programId)
+        .single();
+        
+      if (programError || !originalProgram) throw new Error("Programa não encontrado");
+      
+      // 2. Criar uma cópia do programa original
+      const { data: newProgram, error: newProgramError } = await supabase
+        .from('programas')
+        .insert({
+          ...originalProgram,
+          nome: `${originalProgram.nome} (cópia)`,
+          criado_por: user?.id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+        
+      if (newProgramError || !newProgram) throw newProgramError || new Error("Erro ao criar cópia do programa");
+      
+      // 3. Buscar todos os mesociclos do programa original
+      const { data: originalMesocycles } = await supabase
+        .from('mesociclos')
+        .select('*')
+        .eq('programa_id', programId);
+        
+      if (originalMesocycles && originalMesocycles.length > 0) {
+        // Mapear IDs originais para novos IDs para referência cruzada
+        const mesocyclesMap = new Map();
+        
+        // 4. Para cada mesociclo, criar uma cópia associada ao novo programa
+        for (const mesociclo of originalMesocycles) {
+          const { data: newMesocycle } = await supabase
+            .from('mesociclos')
+            .insert({
+              programa_id: newProgram.id,
+              numero: mesociclo.numero,
+              duracao_semanas: mesociclo.duracao_semanas
+            })
+            .select()
+            .single();
+            
+          if (newMesocycle) {
+            mesocyclesMap.set(mesociclo.id, newMesocycle.id);
+          }
+        }
+        
+        // 5. Buscar todos os treinos do programa original
+        const { data: originalWorkouts } = await supabase
+          .from('treinos')
+          .select('*')
+          .eq('programa_id', programId);
+          
+        if (originalWorkouts && originalWorkouts.length > 0) {
+          // 6. Para cada treino, criar uma cópia associada ao novo programa
+          for (const treino of originalWorkouts) {
+            // Obter o novo ID do mesociclo correspondente
+            const newMesocicloId = mesocyclesMap.get(treino.mesociclo_id);
+            if (!newMesocicloId) continue;
+            
+            const { data: newWorkout } = await supabase
+              .from('treinos')
+              .insert({
+                programa_id: newProgram.id,
+                mesociclo_id: newMesocicloId,
+                nome: treino.nome,
+                dia_semana: treino.dia_semana,
+                ordem_semana: treino.ordem_semana
+              })
+              .select()
+              .single();
+              
+            if (newWorkout) {
+              // 7. Buscar exercícios do treino original
+              const { data: originalExercises } = await supabase
+                .from('exercicios_treino')
+                .select('*')
+                .eq('treino_id', treino.id);
+                
+              if (originalExercises && originalExercises.length > 0) {
+                // 8. Para cada exercício, criar uma cópia associada ao novo treino
+                const newExercises = originalExercises.map(exercicio => ({
+                  treino_id: newWorkout.id,
+                  nome: exercicio.nome,
+                  grupo_muscular: exercicio.grupo_muscular,
+                  series: exercicio.series,
+                  repeticoes: exercicio.repeticoes,
+                  oculto: exercicio.oculto,
+                  ordem: exercicio.ordem,
+                  exercicio_original_id: exercicio.exercicio_original_id
+                }));
+                
+                await supabase
+                  .from('exercicios_treino')
+                  .insert(newExercises);
+              }
+            }
+          }
+        }
+      }
+      
+      // Atualizar a lista de programas
+      const { data } = await supabase
+        .from('programas')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (data) {
+        setPrograms(data);
+      }
+      
+      return true;
+    } catch (error: any) {
+      console.error('Erro ao duplicar programa:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteProgram = async (programId: string) => {
+    try {
+      // Verificar se o programa está sendo usado por algum usuário
+      const { data: usedPrograms, error: checkError } = await supabase
+        .from('programas_usuario')
+        .select('id')
+        .eq('programa_original_id', programId)
+        .limit(1);
+        
+      if (checkError) throw checkError;
+      
+      // Se o programa está sendo usado, apenas marca como oculto (implementação futura)
+      if (usedPrograms && usedPrograms.length > 0) {
+        // Por enquanto, apenas alertar e permitir a exclusão
+        console.warn(`Programa ${programId} está sendo usado por usuários, mas será excluído mesmo assim.`);
+      }
+      
+      // 1. Excluir exercícios dos treinos
+      // Primeiro, obter todos os treinos do programa
+      const { data: treinos } = await supabase
+        .from('treinos')
+        .select('id')
+        .eq('programa_id', programId);
+        
+      if (treinos && treinos.length > 0) {
+        const treinoIds = treinos.map(t => t.id);
+        
+        // Excluir os exercícios associados aos treinos
+        await supabase
+          .from('exercicios_treino')
+          .delete()
+          .in('treino_id', treinoIds);
+      }
+      
+      // 2. Excluir os treinos
+      await supabase
+        .from('treinos')
+        .delete()
+        .eq('programa_id', programId);
+        
+      // 3. Excluir os mesociclos
+      await supabase
+        .from('mesociclos')
+        .delete()
+        .eq('programa_id', programId);
+        
+      // 4. Finalmente, excluir o programa
+      const { error: deleteError } = await supabase
+        .from('programas')
+        .delete()
+        .eq('id', programId);
+        
+      if (deleteError) throw deleteError;
+      
+      // Atualizar a lista de programas
+      setPrograms(programs.filter(p => p.id !== programId));
+      
+      return true;
+    } catch (error: any) {
+      console.error('Erro ao excluir programa:', error);
+      throw error;
     }
   };
 
@@ -239,12 +442,24 @@ export default function ProgramCatalog() {
                 </div>
               </div>
               
-              <Button 
-                onClick={() => selectProgram(program)} 
-                className="w-full"
-              >
-                Selecionar Programa
-              </Button>
+              <div className="flex justify-between items-center">
+                <Button 
+                  onClick={() => selectProgram(program)} 
+                  className="flex-grow"
+                >
+                  Selecionar Programa
+                </Button>
+                
+                {isDeveloper && (
+                  <ProgramCatalogOptionsMenu
+                    programId={program.id}
+                    programName={program.nome}
+                    onEdit={handleEditProgram}
+                    onDuplicate={handleDuplicateProgram}
+                    onDelete={handleDeleteProgram}
+                  />
+                )}
+              </div>
             </Card>
           ))}
         </div>

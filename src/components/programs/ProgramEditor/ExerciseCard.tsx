@@ -6,13 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { ExerciseHeader } from "./components/ExerciseHeader";
 import { ExerciseNameSelect } from "./components/ExerciseNameSelect";
 import { ExerciseDetails } from "./components/ExerciseDetails";
-
-interface RepsRange {
-  id: string;
-  min_reps: number;
-  max_reps: number;
-  tipo: string;
-}
+import { Database } from "@/integrations/supabase/types";
+import { RepsRange } from "./types";
 
 interface ExerciseCardProps {
   exercise: Exercise;
@@ -44,7 +39,14 @@ export function ExerciseCard({
       }
 
       if (data) {
-        setRepsRanges(data);
+        // Convert Supabase data to our RepsRange type
+        const typedRanges: RepsRange[] = data.map(range => ({
+          id: range.id,
+          min_reps: range.min_reps,
+          max_reps: range.max_reps,
+          tipo: range.tipo
+        }));
+        setRepsRanges(typedRanges);
       }
     };
 
@@ -62,7 +64,7 @@ export function ExerciseCard({
         const { data, error } = await supabase
           .from('exercicios_iniciantes')
           .select('nome')
-          .eq('grupo_muscular', exercise.muscleGroup)
+          .eq('grupo_muscular', exercise.muscleGroup as string)
           .order('nome');
         
         if (error) {
@@ -72,7 +74,9 @@ export function ExerciseCard({
         
         if (data) {
           console.log(`Found ${data.length} exercises for ${exercise.muscleGroup}:`, data);
-          setExercises(data);
+          // Convert Supabase data to our required type
+          const typedExercises: Array<{ nome: string }> = data.map(ex => ({ nome: ex.nome }));
+          setExercises(typedExercises);
         }
       } catch (error) {
         console.error('Exception while fetching exercises:', error);
