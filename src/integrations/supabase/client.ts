@@ -29,7 +29,7 @@ export type SupabaseRpcFunctions = {
     Args: {
       exercise_id: string;
     };
-    Returns: {
+    Returns: Array<{
       id: string;
       user_id: string;
       exercicio_usuario_id: string;
@@ -39,11 +39,13 @@ export type SupabaseRpcFunctions = {
       concluida: boolean;
       created_at: string;
       updated_at: string;
-    }[];
+    }>;
   };
   get_distinct_muscle_groups: {
     Args: Record<string, never>;
-    Returns: string[];
+    Returns: Array<{
+      grupo_muscular: string;
+    }>;
   };
 };
 

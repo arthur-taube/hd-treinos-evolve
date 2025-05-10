@@ -273,11 +273,12 @@ export function ExerciseCard({
   
   const saveObservation = async () => {
     try {
-      const {
-        error
-      } = await supabase.from('exercicios_treino_usuario').update({
-        observacao: observation
-      } as any).eq('id', exercise.id);
+      const { error } = await supabase
+        .from('exercicios_treino_usuario')
+        .update({
+          observacao: observation
+        })
+        .eq('id', exercise.id);
       
       if (error) throw error;
       toast({

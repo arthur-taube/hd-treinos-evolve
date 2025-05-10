@@ -41,8 +41,7 @@ const MuscleGroupDialog = ({ open, onClose, onSelect }: MuscleGroupDialogProps) 
       console.log("Fetching muscle groups from database...");
       
       try {
-        // Get distinct muscle groups from the exercicios_iniciantes table
-        // We need to unnest the grupo_muscular array to get individual values
+        // Get distinct muscle groups using our RPC function
         const { data, error } = await supabase
           .rpc('get_distinct_muscle_groups');
 
@@ -51,9 +50,10 @@ const MuscleGroupDialog = ({ open, onClose, onSelect }: MuscleGroupDialogProps) 
           return;
         }
 
-        if (data && data.length > 0) {
-          // Sort the muscle groups alphabetically
-          const sortedGroups = data.sort();
+        if (data) {
+          // Convert data to string[] and sort alphabetically
+          const groups = data.map(item => item.grupo_muscular);
+          const sortedGroups = groups.sort();
           console.log('Fetched muscle groups:', sortedGroups);
           setMuscleGroups(sortedGroups);
         } else {
