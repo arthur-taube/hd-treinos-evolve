@@ -277,7 +277,8 @@ export function ExerciseCard({
         error
       } = await supabase.from('exercicios_treino_usuario').update({
         observacao: observation
-      }).eq('id', exercise.id);
+      } as any).eq('id', exercise.id);
+      
       if (error) throw error;
       toast({
         title: "Observação salva",

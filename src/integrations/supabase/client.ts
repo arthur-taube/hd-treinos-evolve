@@ -41,6 +41,10 @@ export type SupabaseRpcFunctions = {
       updated_at: string;
     }[];
   };
+  get_distinct_muscle_groups: {
+    Args: Record<string, never>;
+    Returns: string[];
+  };
 };
 
 export const supabase = createClient<Database, SupabaseRpcFunctions>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
