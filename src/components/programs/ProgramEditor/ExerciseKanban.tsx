@@ -10,6 +10,10 @@ import { useExerciseState } from "./hooks/useExerciseState";
 import { useExerciseDrag } from "./hooks/useExerciseDrag";
 import { getDayLabel, getDayRows } from "./hooks/useScheduleHelpers";
 
+interface ExtendedExerciseKanbanProps extends ExerciseKanbanProps {
+  initialExercises?: Record<string, Exercise[]>;
+}
+
 export default function ExerciseKanban({
   weeklyFrequency,
   daysSchedule,
@@ -18,7 +22,8 @@ export default function ExerciseKanban({
   mesocycleDuration = 4,
   onDurationChange,
   onExercisesUpdate,
-}: ExerciseKanbanProps) {
+  initialExercises = {},
+}: ExtendedExerciseKanbanProps) {
   const schedule =
     daysSchedule.length > 0
       ? daysSchedule[0]
@@ -34,12 +39,20 @@ export default function ExerciseKanban({
     addExercise,
     deleteExercise,
     updateExercise,
-  } = useExerciseState(schedule);
+    initializeExercises,
+  } = useExerciseState(schedule, initialExercises);
 
   const { onDragEnd } = useExerciseDrag(exercises, setAllExercises);
 
   const [muscleGroupDialogOpen, setMuscleGroupDialogOpen] = useState(false);
   const [currentDay, setCurrentDay] = useState<string>("");
+
+  // Inicializar exercícios quando initialExercises muda
+  useEffect(() => {
+    if (Object.keys(initialExercises).length > 0) {
+      initializeExercises(initialExercises);
+    }
+  }, [initialExercises, initializeExercises]);
 
   // Enviar os exercícios atualizados para o componente pai
   useEffect(() => {

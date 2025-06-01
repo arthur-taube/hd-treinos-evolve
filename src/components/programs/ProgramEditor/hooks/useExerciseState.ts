@@ -1,17 +1,17 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import type { Exercise } from "../types";
 
 /**
  * Handles exercises per day and day titles state, plus updaters.
  */
-export function useExerciseState(schedule: string[]) {
+export function useExerciseState(schedule: string[], initialExercises?: Record<string, Exercise[]>) {
   const [exercises, setExercises] = useState<Record<string, Exercise[]>>(() => {
-    const initialExercises: Record<string, Exercise[]> = {};
+    const initialExercisesState: Record<string, Exercise[]> = {};
     schedule.forEach((day) => {
-      initialExercises[day] = [];
+      initialExercisesState[day] = initialExercises?.[day] || [];
     });
-    return initialExercises;
+    return initialExercisesState;
   });
 
   const [dayTitles, setDayTitles] = useState<Record<string, string>>(() => {
@@ -21,6 +21,16 @@ export function useExerciseState(schedule: string[]) {
     });
     return initialTitles;
   });
+
+  const initializeExercises = useCallback((newInitialExercises: Record<string, Exercise[]>) => {
+    setExercises(prevExercises => {
+      const updatedExercises: Record<string, Exercise[]> = {};
+      schedule.forEach((day) => {
+        updatedExercises[day] = newInitialExercises[day] || prevExercises[day] || [];
+      });
+      return updatedExercises;
+    });
+  }, [schedule]);
 
   const updateDayTitle = (day: string, title: string) => {
     setDayTitles((prev) => ({ ...prev, [day]: title }));
@@ -68,5 +78,6 @@ export function useExerciseState(schedule: string[]) {
     addExercise,
     deleteExercise,
     updateExercise,
+    initializeExercises,
   };
 }

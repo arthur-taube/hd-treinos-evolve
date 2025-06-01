@@ -122,6 +122,8 @@ export type Database = {
       }
       exercicios_treino: {
         Row: {
+          allow_multiple_groups: boolean | null
+          available_groups: string[] | null
           created_at: string
           exercicio_original_id: string | null
           grupo_muscular: string
@@ -134,6 +136,8 @@ export type Database = {
           treino_id: string
         }
         Insert: {
+          allow_multiple_groups?: boolean | null
+          available_groups?: string[] | null
           created_at?: string
           exercicio_original_id?: string | null
           grupo_muscular: string
@@ -146,6 +150,8 @@ export type Database = {
           treino_id: string
         }
         Update: {
+          allow_multiple_groups?: boolean | null
+          available_groups?: string[] | null
           created_at?: string
           exercicio_original_id?: string | null
           grupo_muscular?: string

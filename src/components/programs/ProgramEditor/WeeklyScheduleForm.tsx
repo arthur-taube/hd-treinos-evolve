@@ -1,132 +1,118 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "@/hooks/use-toast";
 
-interface WeeklyScheduleProps {
+interface WeeklyScheduleFormProps {
   weeklyFrequency: number;
-  onSaveSchedule?: (schedule: string[]) => void;
+  onSaveSchedule: (schedule: string[]) => void;
+  initialSchedule?: string[];
 }
 
-type DayOfWeek = {
-  id: string;
-  name: string;
-  label: string;
-};
-
-const daysOfWeek: DayOfWeek[] = [
-  { id: "segunda", name: "segunda", label: "Segunda" },
-  { id: "terca", name: "terca", label: "Terça" },
-  { id: "quarta", name: "quarta", label: "Quarta" },
-  { id: "quinta", name: "quinta", label: "Quinta" },
-  { id: "sexta", name: "sexta", label: "Sexta" },
-  { id: "sabado", name: "sabado", label: "Sábado" },
-  { id: "domingo", name: "domingo", label: "Domingo" },
+const daysOfWeek = [
+  { value: "segunda", label: "Segunda-feira" },
+  { value: "terca", label: "Terça-feira" },
+  { value: "quarta", label: "Quarta-feira" },
+  { value: "quinta", label: "Quinta-feira" },
+  { value: "sexta", label: "Sexta-feira" },
+  { value: "sabado", label: "Sábado" },
+  { value: "domingo", label: "Domingo" },
 ];
 
-export default function WeeklyScheduleForm({ 
-  weeklyFrequency, 
-  onSaveSchedule 
-}: WeeklyScheduleProps) {
-  const [selectedDays, setSelectedDays] = useState<string[]>([]);
-  const [savedSchedules, setSavedSchedules] = useState<string[][]>([]);
+export default function WeeklyScheduleForm({ weeklyFrequency, onSaveSchedule, initialSchedule }: WeeklyScheduleFormProps) {
+  const [schedule, setSchedule] = useState<string[]>(
+    initialSchedule || Array(weeklyFrequency).fill("")
+  );
 
-  const handleDayToggle = (day: string) => {
-    if (selectedDays.includes(day)) {
-      setSelectedDays(selectedDays.filter((d) => d !== day));
-    } else {
-      if (selectedDays.length < weeklyFrequency) {
-        setSelectedDays([...selectedDays, day]);
-      }
+  // Atualizar o cronograma quando initialSchedule muda
+  useEffect(() => {
+    if (initialSchedule && initialSchedule.length > 0) {
+      setSchedule(initialSchedule);
+      // Se há um cronograma inicial, salvá-lo automaticamente
+      onSaveSchedule(initialSchedule);
     }
+  }, [initialSchedule, onSaveSchedule]);
+
+  const handleDayChange = (index: number, day: string) => {
+    const newSchedule = [...schedule];
+    newSchedule[index] = day;
+    setSchedule(newSchedule);
   };
 
-  const handleSaveSchedule = () => {
-    if (selectedDays.length === weeklyFrequency) {
-      const newSchedule = [...selectedDays];
-      setSavedSchedules([...savedSchedules, newSchedule]);
-      setSelectedDays([]);
-      
-      // Notify parent component
-      if (onSaveSchedule) {
-        onSaveSchedule(newSchedule);
-      }
+  const handleSave = () => {
+    if (schedule.some(day => !day)) {
+      toast({
+        title: "Cronograma incompleto",
+        description: "Por favor, selecione todos os dias da semana.",
+        variant: "destructive"
+      });
+      return;
     }
+
+    // Verificar se há dias duplicados
+    const uniqueDays = new Set(schedule);
+    if (uniqueDays.size !== schedule.length) {
+      toast({
+        title: "Dias duplicados",
+        description: "Cada dia só pode ser selecionado uma vez.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    onSaveSchedule(schedule);
+    toast({
+      title: "Cronograma salvo",
+      description: "O cronograma semanal foi salvo com sucesso!",
+    });
   };
 
-  const handleRemoveSchedule = (index: number) => {
-    setSavedSchedules(savedSchedules.filter((_, i) => i !== index));
-  };
+  const isScheduleComplete = schedule.every(day => day) && new Set(schedule).size === schedule.length;
 
   return (
-    <div className="space-y-6">
-      <h3 className="text-lg font-medium">Cronograma de Treino</h3>
-      
-      <div>
-        <p className="text-sm text-muted-foreground mb-2">
-          Selecione {weeklyFrequency} dias para criar um cronograma recomendado
-        </p>
-        
-        <div className="flex flex-wrap gap-4 mb-4">
-          {daysOfWeek.map((day) => (
-            <div 
-              key={day.id} 
-              className="flex items-center space-x-2"
-            >
-              <Checkbox 
-                id={day.id} 
-                checked={selectedDays.includes(day.id)} 
-                onCheckedChange={() => handleDayToggle(day.id)}
-                disabled={selectedDays.length >= weeklyFrequency && !selectedDays.includes(day.id)}
-              />
-              <label 
-                htmlFor={day.id}
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+    <Card>
+      <CardHeader>
+        <CardTitle>Cronograma Semanal</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-4">
+          {Array.from({ length: weeklyFrequency }, (_, index) => (
+            <div key={index} className="flex items-center gap-3">
+              <Label className="min-w-[80px]">Dia {index + 1}:</Label>
+              <Select
+                value={schedule[index] || ""}
+                onValueChange={(value) => handleDayChange(index, value)}
               >
-                {day.label}
-              </label>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Selecione o dia" />
+                </SelectTrigger>
+                <SelectContent>
+                  {daysOfWeek.map((day) => (
+                    <SelectItem 
+                      key={day.value} 
+                      value={day.value}
+                      disabled={schedule.includes(day.value) && schedule[index] !== day.value}
+                    >
+                      {day.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           ))}
         </div>
         
         <Button 
-          onClick={handleSaveSchedule} 
-          variant="outline" 
-          size="sm" 
-          disabled={selectedDays.length !== weeklyFrequency}
+          onClick={handleSave} 
+          disabled={!isScheduleComplete}
+          className="w-full"
         >
-          Definir
+          {initialSchedule ? "Atualizar Cronograma" : "Salvar Cronograma"}
         </Button>
-      </div>
-
-      {savedSchedules.length > 0 && (
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">Cronogramas salvos</h4>
-          <div className="flex flex-col gap-2">
-            {savedSchedules.map((schedule, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <div className="flex flex-wrap gap-1 flex-1">
-                  {schedule.map((day) => (
-                    <Badge key={day} variant="outline">
-                      {daysOfWeek.find((d) => d.id === day)?.label || day}
-                    </Badge>
-                  ))}
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-6 w-6" 
-                  onClick={() => handleRemoveSchedule(index)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   );
 }

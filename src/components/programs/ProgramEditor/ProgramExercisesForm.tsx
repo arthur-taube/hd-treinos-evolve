@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
@@ -29,6 +28,11 @@ interface ProgramExercisesFormProps {
     goals: string[];
     split: string;
   };
+  initialExercisesPerDay?: Record<string, Record<string, Exercise[]>>;
+  initialSavedSchedules?: string[][];
+  initialMesocycleDurations?: number[];
+  isEditing?: boolean;
+  programId?: string;
 }
 
 export default function ProgramExercisesForm({
@@ -37,17 +41,22 @@ export default function ProgramExercisesForm({
   weeklyFrequency,
   mesocycles,
   programData,
+  initialExercisesPerDay = {},
+  initialSavedSchedules = [],
+  initialMesocycleDurations = [],
+  isEditing = false,
+  programId
 }: ProgramExercisesFormProps) {
   const navigate = useNavigate();
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
-  const [savedSchedules, setSavedSchedules] = useState<string[][]>([]);
+  const [savedSchedules, setSavedSchedules] = useState<string[][]>(initialSavedSchedules);
   const [currentMesocycle, setCurrentMesocycle] = useState(1);
   const [mesocycleDurations, setMesocycleDurations] = useState<number[]>(
-    Array(mesocycles).fill(4)
+    initialMesocycleDurations.length > 0 ? initialMesocycleDurations : Array(mesocycles).fill(4)
   );
   const [isSaving, setIsSaving] = useState(false);
-  const [exercisesPerDay, setExercisesPerDay] = useState<Record<string, Record<string, Exercise[]>>>({});
+  const [exercisesPerDay, setExercisesPerDay] = useState<Record<string, Record<string, Exercise[]>>>(initialExercisesPerDay);
 
   const handleBack = () => {
     setShowExitDialog(true);
@@ -89,132 +98,201 @@ export default function ProgramExercisesForm({
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Obtém o usuário atual
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
         throw new Error("Usuário não encontrado, faça login novamente");
       }
 
-      // 1. Criar o programa
-      const { data: programa, error: programaError } = await supabase
-        .from('programas')
-        .insert({
-          nome: programName,
-          descricao: `Programa de treino ${programLevel}`,
-          nivel: programLevel,
-          objetivo: programData.goals,
-          frequencia_semanal: weeklyFrequency,
-          duracao_semanas: mesocycleDurations.reduce((acc, curr) => acc + curr, 0),
-          split: programData.split,
-          criado_por: user.id
-        } as any) // Usar any para evitar erros de tipo específicos durante a inserção
-        .select()
-        .single();
-
-      if (programaError) {
-        throw new Error(`Erro ao criar programa: ${programaError?.message}`);
-      }
-      
-      if (!programa) {
-        throw new Error("Erro ao criar programa: Nenhum dado retornado");
-      }
-
-      // 2. Criar os mesociclos
-      for (let i = 0; i < mesocycles; i++) {
-        const mesocicloNumero = i + 1;
-        const { data: mesociclo, error: mesocicloError } = await supabase
-          .from('mesociclos')
-          .insert({
-            programa_id: programa.id,
-            numero: mesocicloNumero,
-            duracao_semanas: mesocycleDurations[i]
-          } as any) // Usar any para evitar erros de tipo
-          .select()
-          .single();
-
-        if (mesocicloError) {
-          throw new Error(`Erro ao criar mesociclo ${mesocicloNumero}: ${mesocicloError?.message}`);
-        }
-        
-        if (!mesociclo) {
-          throw new Error(`Erro ao criar mesociclo ${mesocicloNumero}: Nenhum dado retornado`);
-        }
-
-        // Verifica se há exercícios para este mesociclo
-        const mesocicloKey = `mesocycle-${mesocicloNumero}`;
-        const mesocicloExercises = exercisesPerDay[mesocicloKey] || {};
-        
-        // Criar treinos para cada dia do cronograma
-        if (savedSchedules.length > 0) {
-          const schedule = savedSchedules[0]; // Usar o primeiro cronograma salvo
-          
-          for (let semana = 1; semana <= mesocycleDurations[i]; semana++) {
-            for (let diaIdx = 0; diaIdx < schedule.length; diaIdx++) {
-              const diaSemana = schedule[diaIdx];
-              const nomeTreino = `Dia ${diaIdx + 1}`;
-              
-              // 3. Criar o treino
-              const { data: treino, error: treinoError } = await supabase
-                .from('treinos')
-                .insert({
-                  programa_id: programa.id,
-                  mesociclo_id: mesociclo.id,
-                  nome: nomeTreino,
-                  dia_semana: diaSemana,
-                  ordem_semana: semana
-                } as any) // Usar any para evitar erros de tipo
-                .select()
-                .single();
-
-              if (treinoError) {
-                throw new Error(`Erro ao criar treino ${nomeTreino}: ${treinoError?.message}`);
-              }
-              
-              if (!treino) {
-                throw new Error(`Erro ao criar treino ${nomeTreino}: Nenhum dado retornado`);
-              }
-
-              // 4. Inserir exercícios do treino
-              const exerciciosDia = mesocicloExercises[diaSemana] || [];
-              if (exerciciosDia.length > 0) {
-                const exerciciosToInsert = exerciciosDia.map((ex, index) => ({
-                  treino_id: treino.id,
-                  nome: ex.name,
-                  grupo_muscular: ex.muscleGroup,
-                  series: ex.sets,
-                  repeticoes: ex.reps ? String(ex.reps) : null,
-                  oculto: ex.hidden || false,
-                  ordem: index + 1
-                }));
-
-                const { error: exerciciosError } = await supabase
-                  .from('exercicios_treino')
-                  .insert(exerciciosToInsert as any[]); // Usar any[] para evitar erros de tipo
-
-                if (exerciciosError) {
-                  throw new Error(`Erro ao inserir exercícios: ${exerciciosError.message}`);
-                }
-              }
-            }
-          }
-        }
+      if (isEditing && programId) {
+        // Modo de edição - atualizar programa existente
+        await updateExistingProgram(programId);
+      } else {
+        // Modo de criação - criar novo programa
+        await createNewProgram(user.id);
       }
 
       toast({
-        title: "Programa salvo com sucesso!",
-        description: "O programa foi salvo e agora está disponível para os usuários.",
+        title: isEditing ? "Programa atualizado com sucesso!" : "Programa salvo com sucesso!",
+        description: isEditing ? "As alterações foram salvas." : "O programa foi salvo e agora está disponível para os usuários.",
       });
       
       navigate("/programs");
     } catch (error: any) {
       toast({
-        title: "Erro ao salvar o programa",
-        description: error.message || "Ocorreu um erro ao salvar o programa.",
+        title: isEditing ? "Erro ao atualizar o programa" : "Erro ao salvar o programa",
+        description: error.message || "Ocorreu um erro.",
         variant: "destructive"
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const createNewProgram = async (userId: string) => {
+    // 1. Criar o programa
+    const { data: programa, error: programaError } = await supabase
+      .from('programas')
+      .insert({
+        nome: programName,
+        descricao: `Programa de treino ${programLevel}`,
+        nivel: programLevel,
+        objetivo: programData.goals,
+        frequencia_semanal: weeklyFrequency,
+        duracao_semanas: mesocycleDurations.reduce((acc, curr) => acc + curr, 0),
+        split: programData.split,
+        criado_por: userId
+      } as any)
+      .select()
+      .single();
+
+    if (programaError || !programa) {
+      throw new Error(`Erro ao criar programa: ${programaError?.message}`);
+    }
+
+    await createMesocyclesAndWorkouts(programa.id);
+  };
+
+  const updateExistingProgram = async (programId: string) => {
+    // 1. Atualizar dados do programa
+    const { error: programaError } = await supabase
+      .from('programas')
+      .update({
+        nome: programName,
+        descricao: `Programa de treino ${programLevel}`,
+        nivel: programLevel,
+        objetivo: programData.goals,
+        frequencia_semanal: weeklyFrequency,
+        duracao_semanas: mesocycleDurations.reduce((acc, curr) => acc + curr, 0),
+        split: programData.split
+      })
+      .eq('id', programId);
+
+    if (programaError) {
+      throw new Error(`Erro ao atualizar programa: ${programaError.message}`);
+    }
+
+    // 2. Deletar exercícios_treino existentes para recriar
+    const { data: treinos } = await supabase
+      .from('treinos')
+      .select('id')
+      .eq('programa_id', programId);
+
+    if (treinos && treinos.length > 0) {
+      const treinoIds = treinos.map(t => t.id);
+      await supabase
+        .from('exercicios_treino')
+        .delete()
+        .in('treino_id', treinoIds);
+    }
+
+    // 3. Deletar treinos e mesociclos existentes
+    await supabase
+      .from('treinos')
+      .delete()
+      .eq('programa_id', programId);
+
+    await supabase
+      .from('mesociclos')
+      .delete()
+      .eq('programa_id', programId);
+
+    // 4. Recriar mesociclos e treinos com novos dados
+    await createMesocyclesAndWorkouts(programId);
+  };
+
+  const createMesocyclesAndWorkouts = async (programaId: string) => {
+    // 2. Criar os mesociclos
+    for (let i = 0; i < mesocycles; i++) {
+      const mesocicloNumero = i + 1;
+      const { data: mesociclo, error: mesocicloError } = await supabase
+        .from('mesociclos')
+        .insert({
+          programa_id: programaId,
+          numero: mesocicloNumero,
+          duracao_semanas: mesocycleDurations[i]
+        } as any)
+        .select()
+        .single();
+
+      if (mesocicloError || !mesociclo) {
+        throw new Error(`Erro ao criar mesociclo ${mesocicloNumero}: ${mesocicloError?.message}`);
+      }
+
+      const mesocicloKey = `mesocycle-${mesocicloNumero}`;
+      const mesocicloExercises = exercisesPerDay[mesocicloKey] || {};
+      
+      // Criar treinos para cada dia do cronograma
+      if (savedSchedules.length > 0) {
+        const schedule = savedSchedules[0];
+        
+        for (let semana = 1; semana <= mesocycleDurations[i]; semana++) {
+          for (let diaIdx = 0; diaIdx < schedule.length; diaIdx++) {
+            const diaSemana = schedule[diaIdx];
+            const nomeTreino = `Dia ${diaIdx + 1}`;
+            
+            // 3. Criar o treino
+            const { data: treino, error: treinoError } = await supabase
+              .from('treinos')
+              .insert({
+                programa_id: programaId,
+                mesociclo_id: mesociclo.id,
+                nome: nomeTreino,
+                dia_semana: diaSemana,
+                ordem_semana: semana
+              } as any)
+              .select()
+              .single();
+
+            if (treinoError || !treino) {
+              throw new Error(`Erro ao criar treino ${nomeTreino}: ${treinoError?.message}`);
+            }
+
+            // 4. Inserir exercícios do treino
+            const exerciciosDia = mesocicloExercises[diaSemana] || [];
+            if (exerciciosDia.length > 0) {
+              const exerciciosToInsert = await Promise.all(
+                exerciciosDia.map(async (ex, index) => {
+                  let exercicioOriginalId = null;
+                  
+                  if (ex.name && ex.name !== "Novo Exercício") {
+                    const { data: exercicioOriginal } = await supabase
+                      .from('exercicios_iniciantes')
+                      .select('id')
+                      .eq('nome', ex.name)
+                      .single();
+                    
+                    if (exercicioOriginal) {
+                      exercicioOriginalId = exercicioOriginal.id;
+                    }
+                  }
+
+                  return {
+                    treino_id: treino.id,
+                    nome: ex.name,
+                    grupo_muscular: ex.muscleGroup,
+                    series: ex.sets,
+                    repeticoes: ex.reps ? String(ex.reps) : null,
+                    oculto: ex.hidden || false,
+                    ordem: index + 1,
+                    exercicio_original_id: exercicioOriginalId,
+                    allow_multiple_groups: ex.allowMultipleGroups || false,
+                    available_groups: ex.allowMultipleGroups ? ex.availableGroups : null
+                  };
+                })
+              );
+
+              const { error: exerciciosError } = await supabase
+                .from('exercicios_treino')
+                .insert(exerciciosToInsert as any[]);
+
+              if (exerciciosError) {
+                throw new Error(`Erro ao inserir exercícios: ${exerciciosError.message}`);
+              }
+            }
+          }
+        }
+      }
     }
   };
 
@@ -249,7 +327,7 @@ export default function ProgramExercisesForm({
   return (
     <div className="space-y-8">
       <div className="bg-muted/30 p-4 rounded-lg">
-        <h2 className="font-medium">Detalhes do programa</h2>
+        <h2 className="font-medium">{isEditing ? "Editando programa" : "Detalhes do programa"}</h2>
         <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
           <div>
             <span className="text-muted-foreground">Nome:</span> {programName}
@@ -269,6 +347,7 @@ export default function ProgramExercisesForm({
       <WeeklyScheduleForm 
         weeklyFrequency={weeklyFrequency} 
         onSaveSchedule={handleSaveSchedule}
+        initialSchedule={savedSchedules.length > 0 ? savedSchedules[0] : undefined}
       />
       
       {currentMesocycle > 1 && (
@@ -291,6 +370,7 @@ export default function ProgramExercisesForm({
         mesocycleDuration={mesocycleDurations[currentMesocycle - 1]}
         onDurationChange={handleMesocycleDurationChange}
         onExercisesUpdate={(dayId, exercises) => handleExercisesUpdate(dayId, exercises, currentMesocycle)}
+        initialExercises={exercisesPerDay[`mesocycle-${currentMesocycle}`]}
       />
 
       <div className="flex justify-between pt-6">
@@ -313,14 +393,14 @@ export default function ProgramExercisesForm({
             className="mr-2"
             disabled={isSaving}
           >
-            {isSaving ? "Salvando..." : "Salvar"}
+            {isSaving ? "Salvando..." : isEditing ? "Atualizar" : "Salvar"}
           </Button>
           <Button 
             type="button" 
             onClick={handleNext}
             disabled={isSaving}
           >
-            {currentMesocycle < mesocycles ? "Próximo Mesociclo" : "Finalizar"}
+            {currentMesocycle < mesocycles ? "Próximo Mesociclo" : isEditing ? "Finalizar Edição" : "Finalizar"}
           </Button>
         </div>
       </div>
