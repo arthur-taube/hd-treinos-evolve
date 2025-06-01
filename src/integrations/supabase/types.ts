@@ -45,6 +45,45 @@ export type Database = {
       exercicios_iniciantes: {
         Row: {
           created_at: string
+          grupo_muscular: string[]
+          id: string
+          nome: string
+          primary_muscle: string | null
+          quaternary_muscle: string | null
+          secondary_muscle: string | null
+          tertiary_muscle: string | null
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          grupo_muscular: string[]
+          id?: string
+          nome: string
+          primary_muscle?: string | null
+          quaternary_muscle?: string | null
+          secondary_muscle?: string | null
+          tertiary_muscle?: string | null
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          grupo_muscular?: string[]
+          id?: string
+          nome?: string
+          primary_muscle?: string | null
+          quaternary_muscle?: string | null
+          secondary_muscle?: string | null
+          tertiary_muscle?: string | null
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
+      exercicios_iniciantes_2: {
+        Row: {
+          created_at: string
           grupo_muscular: string
           id: string
           nome: string
@@ -84,6 +123,7 @@ export type Database = {
       exercicios_treino: {
         Row: {
           created_at: string
+          exercicio_original_id: string | null
           grupo_muscular: string
           id: string
           nome: string
@@ -95,6 +135,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          exercicio_original_id?: string | null
           grupo_muscular: string
           id?: string
           nome: string
@@ -106,6 +147,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          exercicio_original_id?: string | null
           grupo_muscular?: string
           id?: string
           nome?: string
@@ -116,6 +158,13 @@ export type Database = {
           treino_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "exercicios_treino_exercicio_original_id_fkey"
+            columns: ["exercicio_original_id"]
+            isOneToOne: false
+            referencedRelation: "exercicios_iniciantes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "exercicios_treino_treino_id_fkey"
             columns: ["treino_id"]
@@ -203,7 +252,7 @@ export type Database = {
             foreignKeyName: "exercicios_treino_usuario_exercicio_original_id_fkey"
             columns: ["exercicio_original_id"]
             isOneToOne: false
-            referencedRelation: "exercicios_treino"
+            referencedRelation: "exercicios_iniciantes"
             referencedColumns: ["id"]
           },
           {
@@ -470,6 +519,50 @@ export type Database = {
           },
         ]
       }
+      series_exercicio_usuario: {
+        Row: {
+          concluida: boolean
+          created_at: string | null
+          exercicio_usuario_id: string
+          id: string
+          numero_serie: number
+          peso: number
+          repeticoes: number
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          concluida?: boolean
+          created_at?: string | null
+          exercicio_usuario_id: string
+          id?: string
+          numero_serie: number
+          peso?: number
+          repeticoes?: number
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          concluida?: boolean
+          created_at?: string | null
+          exercicio_usuario_id?: string
+          id?: string
+          numero_serie?: number
+          peso?: number
+          repeticoes?: number
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_exercicio_usuario"
+            columns: ["exercicio_usuario_id"]
+            isOneToOne: false
+            referencedRelation: "exercicios_treino_usuario"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       treinos: {
         Row: {
           created_at: string
@@ -673,7 +766,40 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      ensure_series_table: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      get_distinct_muscle_groups: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          grupo_muscular: string
+        }[]
+      }
+      get_series_by_exercise: {
+        Args: { exercise_id: string }
+        Returns: {
+          concluida: boolean
+          created_at: string | null
+          exercicio_usuario_id: string
+          id: string
+          numero_serie: number
+          peso: number
+          repeticoes: number
+          updated_at: string | null
+          user_id: string | null
+        }[]
+      }
+      save_series: {
+        Args: {
+          p_exercicio_id: string
+          p_numero_serie: number
+          p_peso: number
+          p_repeticoes: number
+          p_concluida: boolean
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
