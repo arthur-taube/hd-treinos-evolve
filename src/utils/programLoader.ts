@@ -66,46 +66,64 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       return null;
     }
 
-    // Organizar exercícios por mesociclo e treino
-    const exercisesPerDay: Record<string, Record<string, any[]>> = {};
-
-    mesociclos?.forEach(mesociclo => {
-      const mesocicloKey = `mesociclo-${mesociclo.numero}`;
-      exercisesPerDay[mesocicloKey] = {};
-
-      const treinosMesociclo = treinos?.filter(t => t.mesociclo_id === mesociclo.id) || [];
-      
-      treinosMesociclo.forEach(treino => {
-        const treinoKey = `day-${treino.ordem_semana}`;
-        const exerciciosTreino = exercicios?.filter(e => e.treino_id === treino.id) || [];
-        
-        exercisesPerDay[mesocicloKey][treinoKey] = exerciciosTreino.map(exercicio => ({
-          id: exercicio.id,
-          name: exercicio.nome,
-          muscleGroup: exercicio.grupo_muscular,
-          series: exercicio.series,
-          reps: exercicio.repeticoes,
-          hidden: exercicio.oculto,
-          originalId: exercicio.exercicio_original_id
-        }));
-      });
-    });
-
-    // Buscar cronogramas recomendados do primeiro mesociclo - FIX: handle both string[] and string[][]
+    // Buscar cronogramas recomendados do primeiro mesociclo
     let savedSchedules: string[][] = [];
     if (mesociclos && mesociclos.length > 0 && mesociclos[0].cronogramas_recomendados) {
       const cronogramas = mesociclos[0].cronogramas_recomendados;
-      // Check if it's already string[][] or if it's string[]
       if (Array.isArray(cronogramas) && cronogramas.length > 0) {
         if (Array.isArray(cronogramas[0])) {
-          // It's already string[][]
           savedSchedules = cronogramas as string[][];
         } else {
-          // It's string[], wrap it in an array
           savedSchedules = [cronogramas as string[]];
         }
       }
     }
+
+    console.log('Cronogramas carregados:', savedSchedules);
+
+    // Organizar exercícios por mesociclo e treino
+    const exercisesPerDay: Record<string, Record<string, any[]>> = {};
+
+    mesociclos?.forEach(mesociclo => {
+      const mesocicloKey = `mesocycle-${mesociclo.numero}`;
+      exercisesPerDay[mesocicloKey] = {};
+
+      const treinosMesociclo = treinos?.filter(t => t.mesociclo_id === mesociclo.id) || [];
+      
+      // Obter o cronograma para este mesociclo (usar o primeiro cronograma como padrão)
+      const cronogramaMesociclo = savedSchedules.length > 0 ? savedSchedules[0] : [];
+      
+      treinosMesociclo.forEach(treino => {
+        // Encontrar o índice do dia da semana no cronograma
+        const dayIndex = cronogramaMesociclo.findIndex(day => day === treino.dia_semana);
+        
+        if (dayIndex !== -1) {
+          // Usar o dia real do cronograma como chave
+          const dayKey = treino.dia_semana;
+          const exerciciosTreino = exercicios?.filter(e => e.treino_id === treino.id) || [];
+          
+          if (!exercisesPerDay[mesocicloKey][dayKey]) {
+            exercisesPerDay[mesocicloKey][dayKey] = [];
+          }
+          
+          const exerciciosFormatados = exerciciosTreino.map(exercicio => ({
+            id: exercicio.id,
+            name: exercicio.nome,
+            muscleGroup: exercicio.grupo_muscular,
+            sets: exercicio.series,
+            reps: exercicio.repeticoes,
+            hidden: exercicio.oculto,
+            originalId: exercicio.exercicio_original_id,
+            allowMultipleGroups: exercicio.allow_multiple_groups || false,
+            availableGroups: exercicio.available_groups || undefined
+          }));
+          
+          exercisesPerDay[mesocicloKey][dayKey].push(...exerciciosFormatados);
+        }
+      });
+    });
+
+    console.log('Exercícios organizados:', exercisesPerDay);
 
     // Extrair durações dos mesociclos
     const mesocycleDurations = mesociclos?.map(m => m.duracao_semanas) || [];
