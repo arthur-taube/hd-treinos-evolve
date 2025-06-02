@@ -189,7 +189,7 @@ export type Database = {
           configuracao_inicial: boolean | null
           created_at: string
           data_avaliacao: string | null
-          exercicio_original_id: string
+          exercicio_original_id: string | null
           grupo_muscular: string
           id: string
           incremento_minimo: number | null
@@ -213,7 +213,7 @@ export type Database = {
           configuracao_inicial?: boolean | null
           created_at?: string
           data_avaliacao?: string | null
-          exercicio_original_id: string
+          exercicio_original_id?: string | null
           grupo_muscular: string
           id?: string
           incremento_minimo?: number | null
@@ -237,7 +237,7 @@ export type Database = {
           configuracao_inicial?: boolean | null
           created_at?: string
           data_avaliacao?: string | null
-          exercicio_original_id?: string
+          exercicio_original_id?: string | null
           grupo_muscular?: string
           id?: string
           incremento_minimo?: number | null

@@ -20,6 +20,7 @@ import History from "./pages/History";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import ProgramEditor from "./pages/ProgramEditor";
+import ProgramEditorEdit from "./pages/ProgramEditorEdit";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +81,14 @@ const App = () => (
               element={
                 <AppLayout>
                   <ProgramEditor />
+                </AppLayout>
+              }
+            />
+            <Route
+              path="/programs/edit/:programId"
+              element={
+                <AppLayout>
+                  <ProgramEditorEdit />
                 </AppLayout>
               }
             />

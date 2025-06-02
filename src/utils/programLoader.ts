@@ -24,7 +24,10 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       .eq('id', programId)
       .single();
 
-    if (programaError) throw programaError;
+    if (programaError || !programa) {
+      console.error('Erro ao carregar programa:', programaError);
+      return null;
+    }
 
     // Buscar mesociclos
     const { data: mesociclos, error: mesociclosError } = await supabase
@@ -33,81 +36,85 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       .eq('programa_id', programId)
       .order('numero');
 
-    if (mesociclosError) throw mesociclosError;
+    if (mesociclosError) {
+      console.error('Erro ao carregar mesociclos:', mesociclosError);
+      return null;
+    }
 
     // Buscar treinos
     const { data: treinos, error: treinosError } = await supabase
       .from('treinos')
       .select('*')
       .eq('programa_id', programId)
-      .order('mesociclo_id, ordem_semana, dia_semana');
+      .order('ordem_semana');
 
-    if (treinosError) throw treinosError;
+    if (treinosError) {
+      console.error('Erro ao carregar treinos:', treinosError);
+      return null;
+    }
 
-    // Buscar exercícios dos treinos
-    const treinoIds = treinos.map(t => t.id);
+    // Buscar exercícios de todos os treinos
+    const treinoIds = treinos?.map(t => t.id) || [];
     const { data: exercicios, error: exerciciosError } = await supabase
       .from('exercicios_treino')
       .select('*')
       .in('treino_id', treinoIds)
       .order('ordem');
 
-    if (exerciciosError) throw exerciciosError;
+    if (exerciciosError) {
+      console.error('Erro ao carregar exercícios:', exerciciosError);
+      return null;
+    }
 
-    // Organizar exercícios por treino
-    const exerciciosPorTreino: Record<string, any[]> = {};
-    exercicios.forEach(ex => {
-      if (!exerciciosPorTreino[ex.treino_id]) {
-        exerciciosPorTreino[ex.treino_id] = [];
-      }
-      exerciciosPorTreino[ex.treino_id].push(ex);
-    });
-
-    // Organizar treinos por mesociclo e dia
+    // Organizar exercícios por mesociclo e treino
     const exercisesPerDay: Record<string, Record<string, any[]>> = {};
-    
-    mesociclos.forEach(mesociclo => {
-      const mesocycleKey = `mesocycle-${mesociclo.numero}`;
-      exercisesPerDay[mesocycleKey] = {};
-      
-      // Agrupar treinos deste mesociclo por dia da semana
-      const treinosMesociclo = treinos.filter(t => t.mesociclo_id === mesociclo.id);
+
+    mesociclos?.forEach(mesociclo => {
+      const mesocicloKey = `mesociclo-${mesociclo.numero}`;
+      exercisesPerDay[mesocicloKey] = {};
+
+      const treinosMesociclo = treinos?.filter(t => t.mesociclo_id === mesociclo.id) || [];
       
       treinosMesociclo.forEach(treino => {
-        const diaSemana = treino.dia_semana;
-        if (!exercisesPerDay[mesocycleKey][diaSemana]) {
-          exercisesPerDay[mesocycleKey][diaSemana] = [];
-        }
+        const treinoKey = `day-${treino.ordem_semana}`;
+        const exerciciosTreino = exercicios?.filter(e => e.treino_id === treino.id) || [];
         
-        const exerciciosDoTreino = exerciciosPorTreino[treino.id] || [];
-        exercisesPerDay[mesocycleKey][diaSemana].push(...exerciciosDoTreino.map(ex => ({
-          id: ex.id,
-          name: ex.nome,
-          muscleGroup: ex.grupo_muscular,
-          sets: ex.series,
-          reps: ex.repeticoes,
-          hidden: ex.oculto,
-          allowMultipleGroups: ex.allow_multiple_groups,
-          availableGroups: ex.available_groups
-        })));
+        exercisesPerDay[mesocicloKey][treinoKey] = exerciciosTreino.map(exercicio => ({
+          id: exercicio.id,
+          name: exercicio.nome,
+          muscleGroup: exercicio.grupo_muscular,
+          series: exercicio.series,
+          reps: exercicio.repeticoes,
+          hidden: exercicio.oculto,
+          originalId: exercicio.exercicio_original_id
+        }));
       });
     });
 
-    // Buscar cronogramas recomendados do primeiro mesociclo - FIX: ensure it's string[][]
-    const savedSchedules: string[][] = mesociclos.length > 0 && mesociclos[0].cronogramas_recomendados 
-      ? (Array.isArray(mesociclos[0].cronogramas_recomendados[0]) 
-         ? mesociclos[0].cronogramas_recomendados as string[][]
-         : [mesociclos[0].cronogramas_recomendados as string[]])
-      : [];
+    // Buscar cronogramas recomendados do primeiro mesociclo - FIX: handle both string[] and string[][]
+    let savedSchedules: string[][] = [];
+    if (mesociclos && mesociclos.length > 0 && mesociclos[0].cronogramas_recomendados) {
+      const cronogramas = mesociclos[0].cronogramas_recomendados;
+      // Check if it's already string[][] or if it's string[]
+      if (Array.isArray(cronogramas) && cronogramas.length > 0) {
+        if (Array.isArray(cronogramas[0])) {
+          // It's already string[][]
+          savedSchedules = cronogramas as string[][];
+        } else {
+          // It's string[], wrap it in an array
+          savedSchedules = [cronogramas as string[]];
+        }
+      }
+    }
 
     // Extrair durações dos mesociclos
-    const mesocycleDurations = mesociclos.map(m => m.duracao_semanas);
+    const mesocycleDurations = mesociclos?.map(m => m.duracao_semanas) || [];
 
     return {
       programName: programa.nome,
       programLevel: programa.nivel,
       weeklyFrequency: programa.frequencia_semanal,
-      mesocycles: mesociclos.length,
+      mesocycles: mesociclos?.length || 0,
       programData: {
         duration: `${programa.duracao_semanas} semanas`,
         goals: programa.objetivo,
