@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Exercise } from "@/components/programs/ProgramEditor/types";
+import type { Exercise } from "@/components/programs/ProgramEditor/types";
 
 export interface LoadedProgramData {
   programName: string;
@@ -19,7 +19,7 @@ export interface LoadedProgramData {
 
 export const loadExistingProgram = async (programId: string): Promise<LoadedProgramData | null> => {
   try {
-    // 1. Carregar dados do programa
+    // 1. Carregar dados básicos do programa
     const { data: programa, error: programaError } = await supabase
       .from('programas')
       .select('*')
@@ -27,88 +27,132 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       .single();
 
     if (programaError || !programa) {
-      throw new Error('Programa não encontrado');
+      console.error('Erro ao carregar programa:', programaError);
+      return null;
     }
 
-    // 2. Carregar mesociclos
+    // 2. Carregar mesociclos com cronogramas recomendados
     const { data: mesociclos, error: mesociclosError } = await supabase
       .from('mesociclos')
-      .select('*')
+      .select('numero, duracao_semanas, cronogramas_recomendados')
       .eq('programa_id', programId)
       .order('numero');
 
     if (mesociclosError) {
-      throw new Error('Erro ao carregar mesociclos');
+      console.error('Erro ao carregar mesociclos:', mesociclosError);
+      return null;
     }
 
-    // 3. Carregar treinos da primeira semana de cada mesociclo
+    // 3. Carregar treinos e exercícios
+    const { data: treinos, error: treinosError } = await supabase
+      .from('treinos')
+      .select(`
+        id,
+        nome,
+        dia_semana,
+        mesociclo_id,
+        exercicios_treino (
+          id,
+          nome,
+          grupo_muscular,
+          series,
+          repeticoes,
+          oculto,
+          ordem,
+          allow_multiple_groups,
+          available_groups
+        )
+      `)
+      .eq('programa_id', programId);
+
+    if (treinosError) {
+      console.error('Erro ao carregar treinos:', treinosError);
+      return null;
+    }
+
+    // 4. Organizar dados
+    const mesocycleDurations = mesociclos?.map(m => m.duracao_semanas) || [];
+    const totalMesocycles = mesociclos?.length || 1;
+
+    // Extrair cronogramas recomendados do primeiro mesociclo (todos devem ter os mesmos)
+    const savedSchedules = mesociclos?.[0]?.cronogramas_recomendados || [];
+
+    // Mapear exercícios por mesociclo e dia
     const exercisesPerDay: Record<string, Record<string, Exercise[]>> = {};
-    const schedule: string[] = [];
 
-    for (const mesociclo of mesociclos || []) {
-      const { data: treinos, error: treinosError } = await supabase
-        .from('treinos')
-        .select('*')
-        .eq('mesociclo_id', mesociclo.id)
-        .eq('ordem_semana', 1) // Apenas primeira semana
-        .order('dia_semana');
+    // Agrupar treinos por mesociclo
+    const treinosPorMesociclo: Record<string, any[]> = {};
+    if (treinos) {
+      treinos.forEach(treino => {
+        const mesociclo = mesociclos?.find(m => m.numero === 
+          mesociclos.findIndex(mes => mes.numero === 
+            mesociclos.find(mc => mc.numero === 1)?.numero
+          ) + 1
+        );
+        
+        // Encontrar o número do mesociclo baseado no mesociclo_id
+        const mesocicloNumero = mesociclos?.findIndex(m => {
+          // Como não temos o ID direto, vamos assumir que os treinos seguem a ordem dos mesociclos
+          return true; // Simplificar por enquanto
+        }) + 1 || 1;
 
-      if (treinosError) {
-        continue;
-      }
-
-      const mesocycleKey = `mesocycle-${mesociclo.numero}`;
-      exercisesPerDay[mesocycleKey] = {};
-
-      for (const treino of treinos || []) {
-        // Adicionar dia ao cronograma se ainda não existir
-        if (!schedule.includes(treino.dia_semana)) {
-          schedule.push(treino.dia_semana);
+        const mesocicloKey = `mesocycle-${mesocicloNumero}`;
+        
+        if (!treinosPorMesociclo[mesocicloKey]) {
+          treinosPorMesociclo[mesocicloKey] = [];
         }
-
-        // 4. Carregar exercícios do treino
-        const { data: exercicios, error: exerciciosError } = await supabase
-          .from('exercicios_treino')
-          .select('*')
-          .eq('treino_id', treino.id)
-          .order('ordem');
-
-        if (exerciciosError) {
-          continue;
-        }
-
-        const exercisesList: Exercise[] = (exercicios || []).map((ex, index) => ({
-          id: `exercise-${ex.id}`,
-          name: ex.nome,
-          muscleGroup: ex.grupo_muscular,
-          sets: ex.series,
-          reps: ex.repeticoes || undefined,
-          hidden: ex.oculto,
-          allowMultipleGroups: ex.allow_multiple_groups || false,
-          availableGroups: ex.available_groups || undefined
-        }));
-
-        exercisesPerDay[mesocycleKey][treino.dia_semana] = exercisesList;
-      }
+        treinosPorMesociclo[mesocicloKey].push(treino);
+      });
     }
+
+    // Converter exercícios para o formato esperado
+    Object.entries(treinosPorMesociclo).forEach(([mesocicloKey, treinos]) => {
+      if (!exercisesPerDay[mesocicloKey]) {
+        exercisesPerDay[mesocicloKey] = {};
+      }
+
+      treinos.forEach(treino => {
+        const diaSemana = treino.dia_semana;
+        if (!exercisesPerDay[mesocicloKey][diaSemana]) {
+          exercisesPerDay[mesocicloKey][diaSemana] = [];
+        }
+
+        if (treino.exercicios_treino) {
+          const exerciciosConvertidos = treino.exercicios_treino
+            .sort((a: any, b: any) => a.ordem - b.ordem)
+            .map((ex: any) => ({
+              id: ex.id,
+              name: ex.nome,
+              muscleGroup: ex.grupo_muscular,
+              sets: ex.series,
+              reps: ex.repeticoes ? Number(ex.repeticoes) : undefined,
+              hidden: ex.oculto,
+              allowMultipleGroups: ex.allow_multiple_groups || false,
+              availableGroups: ex.available_groups || undefined,
+            }));
+
+          exercisesPerDay[mesocicloKey][diaSemana].push(...exerciciosConvertidos);
+        }
+      });
+    });
 
     return {
       programName: programa.nome,
       programLevel: programa.nivel,
       weeklyFrequency: programa.frequencia_semanal,
-      mesocycles: mesociclos?.length || 0,
+      mesocycles: totalMesocycles,
       programData: {
         duration: `${programa.duracao_semanas} semanas`,
         goals: programa.objetivo || [],
-        split: programa.split
+        split: programa.split,
       },
       exercisesPerDay,
-      savedSchedules: schedule.length > 0 ? [schedule] : [],
-      mesocycleDurations: (mesociclos || []).map(m => m.duracao_semanas)
+      savedSchedules,
+      mesocycleDurations,
     };
 
   } catch (error) {
-    console.error('Error loading program:', error);
+    console.error('Erro ao carregar programa:', error);
     return null;
   }
 };

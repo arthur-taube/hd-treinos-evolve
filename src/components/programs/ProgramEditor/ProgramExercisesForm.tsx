@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,7 @@ export default function ProgramExercisesForm({
   const navigate = useNavigate();
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
-  const [savedSchedules, setSavedSchedules] = useState<string[][]>(initialSavedSchedules);
+  const [scheduleOptions, setScheduleOptions] = useState<string[][]>(initialSavedSchedules);
   const [currentMesocycle, setCurrentMesocycle] = useState(1);
   const [mesocycleDurations, setMesocycleDurations] = useState<number[]>(
     initialMesocycleDurations.length > 0 ? initialMesocycleDurations : Array(mesocycles).fill(4)
@@ -77,8 +78,8 @@ export default function ProgramExercisesForm({
     }
   };
 
-  const handleSaveSchedule = (newSchedule: string[]) => {
-    setSavedSchedules([...savedSchedules, newSchedule]);
+  const handleSaveSchedules = (newSchedules: string[][]) => {
+    setScheduleOptions(newSchedules);
   };
 
   const handleExercisesUpdate = (dayId: string, exercises: Exercise[], mesocycleNumber: number) => {
@@ -202,7 +203,7 @@ export default function ProgramExercisesForm({
   };
 
   const createMesocyclesAndWorkouts = async (programaId: string) => {
-    // 2. Criar os mesociclos
+    // 2. Criar os mesociclos com cronogramas recomendados
     for (let i = 0; i < mesocycles; i++) {
       const mesocicloNumero = i + 1;
       const { data: mesociclo, error: mesocicloError } = await supabase
@@ -210,7 +211,8 @@ export default function ProgramExercisesForm({
         .insert({
           programa_id: programaId,
           numero: mesocicloNumero,
-          duracao_semanas: mesocycleDurations[i]
+          duracao_semanas: mesocycleDurations[i],
+          cronogramas_recomendados: scheduleOptions // Salvar as opções de cronograma
         } as any)
         .select()
         .single();
@@ -222,9 +224,9 @@ export default function ProgramExercisesForm({
       const mesocicloKey = `mesocycle-${mesocicloNumero}`;
       const mesocicloExercises = exercisesPerDay[mesocicloKey] || {};
       
-      // Criar treinos para cada dia do cronograma
-      if (savedSchedules.length > 0) {
-        const schedule = savedSchedules[0];
+      // Criar treinos para cada dia do cronograma (usando a primeira opção como padrão)
+      if (scheduleOptions.length > 0) {
+        const schedule = scheduleOptions[0]; // Usar primeira opção como padrão
         
         for (let semana = 1; semana <= mesocycleDurations[i]; semana++) {
           for (let diaIdx = 0; diaIdx < schedule.length; diaIdx++) {
@@ -346,8 +348,8 @@ export default function ProgramExercisesForm({
 
       <WeeklyScheduleForm 
         weeklyFrequency={weeklyFrequency} 
-        onSaveSchedule={handleSaveSchedule}
-        initialSchedule={savedSchedules.length > 0 ? savedSchedules[0] : undefined}
+        onSaveSchedules={handleSaveSchedules}
+        initialSchedules={scheduleOptions}
       />
       
       {currentMesocycle > 1 && (
@@ -364,7 +366,7 @@ export default function ProgramExercisesForm({
       
       <ExerciseKanban 
         weeklyFrequency={weeklyFrequency} 
-        daysSchedule={savedSchedules}
+        daysSchedule={scheduleOptions}
         currentMesocycle={currentMesocycle}
         totalMesocycles={mesocycles}
         mesocycleDuration={mesocycleDurations[currentMesocycle - 1]}

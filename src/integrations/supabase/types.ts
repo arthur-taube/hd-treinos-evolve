@@ -380,6 +380,7 @@ export type Database = {
       mesociclos: {
         Row: {
           created_at: string
+          cronogramas_recomendados: string[] | null
           duracao_semanas: number
           id: string
           numero: number
@@ -387,6 +388,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          cronogramas_recomendados?: string[] | null
           duracao_semanas: number
           id?: string
           numero: number
@@ -394,6 +396,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          cronogramas_recomendados?: string[] | null
           duracao_semanas?: number
           id?: string
           numero?: number
