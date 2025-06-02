@@ -1,7 +1,21 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
-export const loadProgramForEdit = async (programId: string) => {
+export interface LoadedProgramData {
+  programName: string;
+  programLevel: string;
+  weeklyFrequency: number;
+  mesocycles: number;
+  programData: {
+    duration: string;
+    goals: string[];
+    split: string;
+  };
+  exercisesPerDay: Record<string, Record<string, any[]>>;
+  savedSchedules: string[][];
+  mesocycleDurations: number[];
+}
+
+export const loadExistingProgram = async (programId: string): Promise<LoadedProgramData | null> => {
   try {
     // Buscar programa
     const { data: programa, error: programaError } = await supabase
@@ -79,21 +93,22 @@ export const loadProgramForEdit = async (programId: string) => {
       });
     });
 
-    // Buscar cronogramas recomendados do primeiro mesociclo
+    // Buscar cronogramas recomendados do primeiro mesociclo - FIX: ensure it's string[][]
     const savedSchedules: string[][] = mesociclos.length > 0 && mesociclos[0].cronogramas_recomendados 
-      ? mesociclos[0].cronogramas_recomendados 
+      ? (Array.isArray(mesociclos[0].cronogramas_recomendados[0]) 
+         ? mesociclos[0].cronogramas_recomendados as string[][]
+         : [mesociclos[0].cronogramas_recomendados as string[]])
       : [];
 
     // Extrair durações dos mesociclos
     const mesocycleDurations = mesociclos.map(m => m.duracao_semanas);
 
     return {
+      programName: programa.nome,
+      programLevel: programa.nivel,
+      weeklyFrequency: programa.frequencia_semanal,
+      mesocycles: mesociclos.length,
       programData: {
-        id: programa.id,
-        nome: programa.nome,
-        nivel: programa.nivel,
-        frequencia_semanal: programa.frequencia_semanal,
-        mesociclos: mesociclos.length,
         duration: `${programa.duracao_semanas} semanas`,
         goals: programa.objetivo,
         split: programa.split
@@ -104,6 +119,11 @@ export const loadProgramForEdit = async (programId: string) => {
     };
   } catch (error) {
     console.error('Erro ao carregar programa para edição:', error);
-    throw error;
+    return null;
   }
+};
+
+export const loadProgramForEdit = async (programId: string) => {
+  // Keep existing function for backward compatibility
+  return loadExistingProgram(programId);
 };
