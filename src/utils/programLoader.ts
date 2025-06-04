@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface LoadedProgramData {
@@ -41,11 +42,12 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       return null;
     }
 
-    // Buscar treinos
+    // Buscar treinos APENAS da semana 1 para o kanban
     const { data: treinos, error: treinosError } = await supabase
       .from('treinos')
       .select('*')
       .eq('programa_id', programId)
+      .eq('ordem_semana', 1) // Apenas semana 1
       .order('ordem_semana');
 
     if (treinosError) {
@@ -81,13 +83,14 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
 
     console.log('Cronogramas carregados:', savedSchedules);
 
-    // Organizar exercícios por mesociclo e treino
+    // Organizar exercícios por mesociclo e treino (apenas semana 1)
     const exercisesPerDay: Record<string, Record<string, any[]>> = {};
 
     mesociclos?.forEach(mesociclo => {
       const mesocicloKey = `mesocycle-${mesociclo.numero}`;
       exercisesPerDay[mesocicloKey] = {};
 
+      // Filtrar treinos da semana 1 para este mesociclo
       const treinosMesociclo = treinos?.filter(t => t.mesociclo_id === mesociclo.id) || [];
       
       // Obter o cronograma para este mesociclo (usar o primeiro cronograma como padrão)
@@ -123,7 +126,7 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       });
     });
 
-    console.log('Exercícios organizados:', exercisesPerDay);
+    console.log('Exercícios organizados (apenas semana 1):', exercisesPerDay);
 
     // Extrair durações dos mesociclos
     const mesocycleDurations = mesociclos?.map(m => m.duracao_semanas) || [];

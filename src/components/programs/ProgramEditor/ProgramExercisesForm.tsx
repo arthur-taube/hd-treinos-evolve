@@ -228,6 +228,7 @@ export default function ProgramExercisesForm({
       if (scheduleOptions.length > 0) {
         const schedule = scheduleOptions[0]; // Usar primeira opção como padrão
         
+        // Para cada semana do mesociclo, criar treinos aplicando as alterações do kanban
         for (let semana = 1; semana <= mesocycleDurations[i]; semana++) {
           for (let diaIdx = 0; diaIdx < schedule.length; diaIdx++) {
             const diaSemana = schedule[diaIdx];
@@ -250,7 +251,7 @@ export default function ProgramExercisesForm({
               throw new Error(`Erro ao criar treino ${nomeTreino}: ${treinoError?.message}`);
             }
 
-            // 4. Inserir exercícios do treino
+            // 4. Inserir exercícios do treino (aplicar exercícios do kanban para todas as semanas)
             const exerciciosDia = mesocicloExercises[diaSemana] || [];
             if (exerciciosDia.length > 0) {
               const exerciciosToInsert = await Promise.all(
