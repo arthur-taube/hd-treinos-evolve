@@ -11,6 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Check, Youtube, MoreHorizontal, ChevronDown, Play, Edit, X } from "lucide-react";
 import { FeedbackDialog } from "./FeedbackDialog";
 import { useExerciseFeedback, DIFFICULTY_OPTIONS, FATIGUE_OPTIONS, PAIN_OPTIONS, INCREMENT_OPTIONS } from "@/hooks/use-exercise-feedback";
+import { updateMissingMuscleData, propagateIncrementoMinimo } from "@/utils/muscleDataLoader";
+import { calculateProgression, getIncrementoMinimo } from "@/utils/progressionCalculator";
 
 interface ExerciseCardProps {
   exercise: {
@@ -94,12 +96,103 @@ export function ExerciseCard({
     checkNeedsPainEvaluation
   } = useExerciseFeedback(exercise.id);
 
-  // Check for initial configuration when exercise card is opened
+  // Verificar e atualizar dados musculares quando necessário
   useEffect(() => {
+    const updateMuscleDataIfNeeded = async () => {
+      if ((!exercise.primary_muscle || !exercise.secondary_muscle) && exercise.exercicio_original_id) {
+        const updated = await updateMissingMuscleData(exercise.id, exercise.exercicio_original_id);
+        if (updated) {
+          console.log('Dados musculares atualizados para o exercício:', exercise.nome);
+        }
+      }
+    };
+
+    updateMuscleDataIfNeeded();
+  }, [exercise.id, exercise.exercicio_original_id, exercise.primary_muscle, exercise.secondary_muscle]);
+
+  // Verificar configuração inicial e aplicar progressão automática
+  useEffect(() => {
+    const applyAutomaticProgression = async () => {
+      if (isOpen && exercise.exercicio_original_id) {
+        // Buscar avaliações do treino anterior para calcular progressão
+        try {
+          const { data: avaliacoesAnteriores } = await supabase
+            .from('exercicios_treino_usuario')
+            .select('avaliacao_dificuldade, avaliacao_fadiga, avaliacao_dor, peso, series, repeticoes, incremento_minimo')
+            .eq('exercicio_original_id', exercise.exercicio_original_id)
+            .eq('concluido', true)
+            .order('updated_at', { ascending: false })
+            .limit(1);
+
+          if (avaliacoesAnteriores && avaliacoesAnteriores.length > 0) {
+            const ultimaAvaliacao = avaliacoesAnteriores[0];
+            
+            // Buscar incremento mínimo se não estiver definido
+            let incrementoMinimo = ultimaAvaliacao.incremento_minimo;
+            if (!incrementoMinimo && exercise.exercicio_original_id) {
+              // Buscar de outros exercícios do mesmo tipo no programa
+              const { data: treinoUsuario } = await supabase
+                .from('treinos_usuario')
+                .select('programa_usuario_id')
+                .eq('id', (await supabase
+                  .from('exercicios_treino_usuario')
+                  .select('treino_usuario_id')
+                  .eq('id', exercise.id)
+                  .single()).data?.treino_usuario_id || '')
+                .single();
+
+              if (treinoUsuario) {
+                incrementoMinimo = await getIncrementoMinimo(
+                  exercise.exercicio_original_id,
+                  treinoUsuario.programa_usuario_id
+                );
+              }
+            }
+
+            // Calcular progressão se temos dados suficientes
+            if (ultimaAvaliacao.avaliacao_dificuldade && incrementoMinimo) {
+              const progressao = await calculateProgression({
+                exerciseId: exercise.id,
+                currentWeight: ultimaAvaliacao.peso || 0,
+                currentReps: ultimaAvaliacao.repeticoes || exercise.repeticoes || 10,
+                currentSets: ultimaAvaliacao.series || exercise.series,
+                incrementoMinimo: incrementoMinimo,
+                avaliacaoDificuldade: ultimaAvaliacao.avaliacao_dificuldade,
+                avaliacaoFadiga: ultimaAvaliacao.avaliacao_fadiga,
+                avaliacaoDor: ultimaAvaliacao.avaliacao_dor
+              });
+
+              // Aplicar progressão calculada aos sets
+              setSets(prevSets => 
+                Array.from({ length: progressao.newSets }, (_, i) => ({
+                  number: i + 1,
+                  weight: progressao.newWeight,
+                  reps: typeof progressao.newReps === 'string' 
+                    ? parseInt(progressao.newReps.split('-')[0]) // Usar mínimo da faixa
+                    : Number(progressao.newReps),
+                  completed: false
+                }))
+              );
+
+              // Atualizar peso do exercício
+              if (progressao.newWeight !== exercise.peso) {
+                onWeightUpdate(exercise.id, progressao.newWeight);
+              }
+
+              console.log('Progressão aplicada:', progressao);
+            }
+          }
+        } catch (error) {
+          console.error('Erro ao aplicar progressão automática:', error);
+        }
+      }
+    };
+
     if (isOpen && !exercise.configuracao_inicial) {
       checkInitialConfiguration();
+      applyAutomaticProgression();
     }
-  }, [isOpen, exercise.configuracao_inicial]);
+  }, [isOpen, exercise.configuracao_inicial, exercise.exercicio_original_id]);
 
   // Check if pain evaluation is needed when starting the exercise
   useEffect(() => {
@@ -108,7 +201,7 @@ export function ExerciseCard({
     }
   }, [isOpen, exercise.primary_muscle]);
 
-  // Carregar séries anteriores do mesmo exercício (usando exercicio_original_id)
+  // Carregar séries anteriores do mesmo exercício
   useEffect(() => {
     if (isOpen && exercise.exercicio_original_id) {
       fetchPreviousSeries();
@@ -222,7 +315,6 @@ export function ExerciseCard({
       const newSets = [...prevSets];
       newSets[index].weight = weight;
 
-      // Atualizar o peso do exercício na base de dados
       if (index === 0) {
         onWeightUpdate(exercise.id, weight);
       }
@@ -240,10 +332,8 @@ export function ExerciseCard({
 
   const handleExerciseComplete = async () => {
     try {
-      // Create the series table if it doesn't exist yet
       await supabase.rpc('ensure_series_table');
       
-      // Salvar dados de todas as séries usando RPC
       for (let i = 0; i < sets.length; i++) {
         const set = sets[i];
         await supabase.rpc('save_series', {
@@ -255,11 +345,9 @@ export function ExerciseCard({
         });
       }
       
-      // Marcar exercício como concluído
       await onExerciseComplete(exercise.id, true);
       setIsOpen(false);
 
-      // Show difficulty dialog after completing the exercise
       setShowDifficultyDialog(true);
       
     } catch (error: any) {
@@ -268,6 +356,36 @@ export function ExerciseCard({
         description: error.message,
         variant: "destructive"
       });
+    }
+  };
+
+  // Enhanced saveIncrementSetting to propagate to future exercises
+  const handleSaveIncrementSetting = async (value: number) => {
+    await saveIncrementSetting(value);
+    
+    // Propagar para exercícios futuros se temos exercicio_original_id
+    if (exercise.exercicio_original_id) {
+      try {
+        const { data: treinoUsuario } = await supabase
+          .from('treinos_usuario')
+          .select('programa_usuario_id')
+          .eq('id', (await supabase
+            .from('exercicios_treino_usuario')
+            .select('treino_usuario_id')
+            .eq('id', exercise.id)
+            .single()).data?.treino_usuario_id || '')
+          .single();
+
+        if (treinoUsuario) {
+          await propagateIncrementoMinimo(
+            exercise.exercicio_original_id,
+            treinoUsuario.programa_usuario_id,
+            value
+          );
+        }
+      } catch (error) {
+        console.error('Erro ao propagar incremento mínimo:', error);
+      }
     }
   };
   
@@ -298,27 +416,22 @@ export function ExerciseCard({
   const skipIncompleteSets = async () => {
     await onExerciseComplete(exercise.id, true);
     setIsOpen(false);
-
-    // Show difficulty dialog after completing the exercise
     setShowDifficultyDialog(true);
   };
   
   const replaceExerciseThisWorkout = async () => {
-    // Implementação para substituir o exercício apenas neste treino
     toast({
       description: "Funcionalidade a ser implementada: Substituir exercício neste treino"
     });
   };
   
   const replaceExerciseAllWorkouts = async () => {
-    // Implementação para substituir o exercício em todos os treinos futuros
     toast({
       description: "Funcionalidade a ser implementada: Substituir exercício em todos os treinos"
     });
   };
   
   const addNote = () => {
-    // Implementação para adicionar uma nota ao exercício
     toast({
       description: "Nota adicionada ao exercício"
     });
@@ -401,7 +514,6 @@ export function ExerciseCard({
             <AccordionTrigger className="hidden">Séries</AccordionTrigger>
             <AccordionContent>
               <div className="px-4 py-2">
-                {/* Histórico de séries anteriores */}
                 {previousSeries.length > 0 && (
                   <div className="mb-4 p-3 bg-gray-50 rounded-md">
                     <h4 className="text-sm font-medium mb-2">Histórico recente:</h4>
@@ -503,7 +615,7 @@ export function ExerciseCard({
       <FeedbackDialog 
         isOpen={showIncrementDialog} 
         onClose={() => setShowIncrementDialog(false)} 
-        onSubmit={saveIncrementSetting} 
+        onSubmit={handleSaveIncrementSetting} 
         title="Defina a carga incremental mínima" 
         description="Antes de começar, informe qual o incremento mínimo de peso que você consegue adicionar no equipamento usado para o exercício {exerciseName}." 
         options={INCREMENT_OPTIONS} 

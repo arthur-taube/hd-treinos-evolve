@@ -47,7 +47,7 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       .from('treinos')
       .select('*')
       .eq('programa_id', programId)
-      .eq('ordem_semana', 1) // Apenas semana 1
+      .eq('ordem_semana', 1)
       .order('ordem_semana');
 
     if (treinosError) {
@@ -68,14 +68,16 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       return null;
     }
 
-    // Buscar cronogramas recomendados do primeiro mesociclo
+    // Buscar cronogramas recomendados do primeiro mesociclo - CORREÇÃO DO ERRO
     let savedSchedules: string[][] = [];
     if (mesociclos && mesociclos.length > 0 && mesociclos[0].cronogramas_recomendados) {
       const cronogramas = mesociclos[0].cronogramas_recomendados;
       if (Array.isArray(cronogramas) && cronogramas.length > 0) {
+        // Verificar se é array de arrays ou array simples
         if (Array.isArray(cronogramas[0])) {
           savedSchedules = cronogramas as string[][];
         } else {
+          // Se for array simples, converter para array de arrays
           savedSchedules = [cronogramas as string[]];
         }
       }
