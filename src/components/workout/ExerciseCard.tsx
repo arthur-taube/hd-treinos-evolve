@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +12,7 @@ import { Check, Youtube, MoreHorizontal, ChevronDown, Play, Edit, X } from "luci
 import { FeedbackDialog } from "./FeedbackDialog";
 import { useExerciseFeedback, DIFFICULTY_OPTIONS, FATIGUE_OPTIONS, PAIN_OPTIONS, INCREMENT_OPTIONS } from "@/hooks/use-exercise-feedback";
 import { updateMissingMuscleData, propagateIncrementoMinimo } from "@/utils/muscleDataLoader";
-import { calculateProgression, getIncrementoMinimo } from "@/utils/progressionCalculator";
+import { calculateProgression, getIncrementoMinimo, getBestExecutedReps } from "@/utils/progressionCalculator";
 
 interface ExerciseCardProps {
   exercise: {
@@ -21,7 +20,7 @@ interface ExerciseCardProps {
     nome: string;
     grupo_muscular: string;
     primary_muscle: string;
-    secondary_muscle?: string; // Added this missing property
+    secondary_muscle?: string;
     exercicio_original_id: string;
     series: number;
     repeticoes: string | null;
@@ -132,7 +131,6 @@ export function ExerciseCard({
             // Buscar incremento mínimo se não estiver definido
             let incrementoMinimo = ultimaAvaliacao.incremento_minimo;
             if (!incrementoMinimo && exercise.exercicio_original_id) {
-              // Buscar de outros exercícios do mesmo tipo no programa
               const { data: treinoUsuario } = await supabase
                 .from('treinos_usuario')
                 .select('programa_usuario_id')
@@ -151,12 +149,16 @@ export function ExerciseCard({
               }
             }
 
+            // Buscar repetições executadas do último treino
+            const executedReps = await getBestExecutedReps(exercise.id);
+
             // Calcular progressão se temos dados suficientes
-            if (ultimaAvaliacao.avaliacao_dificuldade && incrementoMinimo) {
+            if (ultimaAvaliacao.avaliacao_dificuldade && incrementoMinimo && executedReps !== null) {
               const progressao = await calculateProgression({
                 exerciseId: exercise.id,
                 currentWeight: ultimaAvaliacao.peso || 0,
-                currentReps: ultimaAvaliacao.repeticoes || exercise.repeticoes || 10,
+                programmedReps: ultimaAvaliacao.repeticoes || exercise.repeticoes || "10", // Repetições programadas
+                executedReps: executedReps, // Repetições executadas de fato
                 currentSets: ultimaAvaliacao.series || exercise.series,
                 incrementoMinimo: incrementoMinimo,
                 avaliacaoDificuldade: ultimaAvaliacao.avaliacao_dificuldade,
@@ -170,7 +172,7 @@ export function ExerciseCard({
                   number: i + 1,
                   weight: progressao.newWeight,
                   reps: typeof progressao.newReps === 'string' 
-                    ? parseInt(progressao.newReps.split('-')[0]) // Usar mínimo da faixa
+                    ? parseInt(progressao.newReps.split('-')[0]) // Usar mínimo da faixa para progressão dupla
                     : Number(progressao.newReps),
                   completed: false
                 }))

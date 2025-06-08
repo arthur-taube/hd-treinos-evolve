@@ -1,235 +1,267 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-export interface ProgressionInput {
+export interface ProgressionParams {
   exerciseId: string;
   currentWeight: number;
-  currentReps: string | number;
+  programmedReps: string; // Repetições programadas (pode ser faixa: "8-12")
+  executedReps: number; // Repetições executadas de fato (número específico)
   currentSets: number;
   incrementoMinimo: number;
-  avaliacaoDificuldade?: string;
+  avaliacaoDificuldade: string;
   avaliacaoFadiga?: number;
   avaliacaoDor?: number;
 }
 
-export interface ProgressionOutput {
+export interface ProgressionResult {
   newWeight: number;
   newReps: string | number;
   newSets: number;
+  progressionType: 'linear' | 'double';
   isDeload: boolean;
+  reasoning: string;
 }
 
-// Detectar se é progressão linear ou dupla
-export const detectProgressionType = (reps: string | number): 'linear' | 'dupla' => {
-  if (typeof reps === 'string' && reps.includes('-')) {
-    return 'dupla';
-  }
-  return 'linear';
-};
-
-// Extrair faixa de repetições (ex: "8-12" -> {min: 8, max: 12})
-export const parseRepsRange = (reps: string): {min: number, max: number} => {
-  if (typeof reps === 'string' && reps.includes('-')) {
-    const [min, max] = reps.split('-').map(Number);
+// Função para extrair min e max de uma faixa de repetições
+export const parseRepsRange = (repsRange: string): { min: number, max: number } => {
+  if (repsRange.includes('-')) {
+    const [min, max] = repsRange.split('-').map(r => parseInt(r.trim()));
     return { min, max };
   }
-  return { min: Number(reps), max: Number(reps) };
+  const reps = parseInt(repsRange);
+  return { min: reps, max: reps };
 };
 
-// Calcular progressão de séries baseado em fadiga e dor
-export const calculateSeriesProgression = (
-  currentSets: number,
-  fadiga: number = 0,
-  dor: number = 0
-): number => {
-  const newSets = currentSets + fadiga + dor;
-  // Arredondamento: até 0.51 para baixo
-  return Math.floor(newSets + 0.49);
+// Função para determinar se um exercício usa progressão dupla
+export const isDoubleProgression = (programmedReps: string): boolean => {
+  return programmedReps.includes('-');
 };
 
-// Calcular progressão de carga (progressão linear)
+// Calcular progressão linear (peso fixo, repetições fixas)
 export const calculateLinearProgression = (
   currentWeight: number,
+  executedReps: number,
+  programmedReps: number, // Número fixo de repetições programadas
   dificuldade: string,
   incrementoMinimo: number
-): { newWeight: number, isDeload: boolean } => {
-  let percentage = 0;
-  let isDeload = false;
+): { newWeight: number, newReps: number, isDeload: boolean } => {
+  console.log('Calculando progressão linear:', {
+    currentWeight,
+    executedReps,
+    programmedReps,
+    dificuldade,
+    incrementoMinimo
+  });
 
-  switch (dificuldade) {
-    case 'Muito Leve':
-      percentage = 0.05; // +5%
-      break;
-    case 'Bom':
-    case 'Pesado':
-      percentage = 0.025; // +2.5%
-      break;
-    case 'Muito Pesado':
-      percentage = 0; // Mantém
-      break;
-    case 'Errei na carga':
-      percentage = -0.025; // -2.5%
-      break;
-    case 'Socorro, estagnei':
-      percentage = -0.04; // -4%
-      isDeload = true;
-      break;
-    default:
-      percentage = 0;
+  // Se o usuário conseguiu fazer as repetições programadas
+  if (executedReps >= programmedReps) {
+    switch (dificuldade) {
+      case 'muito_facil':
+        return {
+          newWeight: currentWeight + (incrementoMinimo * 2),
+          newReps: programmedReps,
+          isDeload: false
+        };
+      case 'facil':
+        return {
+          newWeight: currentWeight + incrementoMinimo,
+          newReps: programmedReps,
+          isDeload: false
+        };
+      case 'moderado':
+        return {
+          newWeight: currentWeight + incrementoMinimo,
+          newReps: programmedReps,
+          isDeload: false
+        };
+      case 'dificil':
+        return {
+          newWeight: currentWeight,
+          newReps: programmedReps,
+          isDeload: false
+        };
+      case 'muito_dificil':
+        return {
+          newWeight: Math.max(0, currentWeight - incrementoMinimo),
+          newReps: programmedReps,
+          isDeload: true
+        };
+      default:
+        return {
+          newWeight: currentWeight,
+          newReps: programmedReps,
+          isDeload: false
+        };
+    }
+  } else {
+    // Se não conseguiu fazer as repetições programadas, manter peso e tentar novamente
+    return {
+      newWeight: currentWeight,
+      newReps: programmedReps,
+      isDeload: false
+    };
   }
-
-  const percentageChange = currentWeight * percentage;
-  const minIncrementChange = incrementoMinimo * (percentage > 0 ? 1 : percentage < 0 ? -1 : 0);
-  
-  // Usar o maior entre percentual e incremento mínimo
-  const change = Math.abs(percentageChange) > Math.abs(minIncrementChange) 
-    ? percentageChange 
-    : minIncrementChange;
-
-  const rawNewWeight = currentWeight + change;
-  
-  // Arredondar para o incremento mínimo mais próximo
-  const newWeight = Math.round(rawNewWeight / incrementoMinimo) * incrementoMinimo;
-  
-  return { 
-    newWeight: Math.max(0, newWeight), 
-    isDeload 
-  };
 };
 
-// Calcular progressão dupla
+// Calcular progressão dupla (peso e repetições variam)
 export const calculateDoubleProgression = (
   currentWeight: number,
-  currentReps: string,
+  programmedReps: string, // Faixa de repetições programadas (ex: "8-12")
+  executedReps: number, // Repetições executadas de fato (ex: 9)
   dificuldade: string,
   incrementoMinimo: number
 ): { newWeight: number, newReps: string, isDeload: boolean } => {
-  const { min, max } = parseRepsRange(currentReps);
-  const currentRepsNum = typeof currentReps === 'string' && currentReps.includes('-') 
-    ? min // Assumir que está no mínimo se for faixa
-    : Number(currentReps);
-    
-  let isDeload = false;
-  let newWeight = currentWeight;
-  let newRepsNum = currentRepsNum;
+  console.log('Calculando progressão dupla:', {
+    currentWeight,
+    programmedReps,
+    executedReps,
+    dificuldade,
+    incrementoMinimo
+  });
 
+  const { min, max } = parseRepsRange(programmedReps);
+
+  // Lógica de progressão dupla baseada na dificuldade e repetições executadas
   switch (dificuldade) {
-    case 'Muito Leve': {
-      const increment = 2;
-      if (currentRepsNum + increment <= max) {
-        // Pode aumentar as repetições
-        newRepsNum = currentRepsNum + increment;
-      } else {
-        // Precisa aumentar carga
-        const unitsForWeight = Math.ceil((currentRepsNum + increment - max) / 1);
-        const unitsForReps = increment - unitsForWeight;
-        
-        newWeight += incrementoMinimo * unitsForWeight;
-        newRepsNum = min + unitsForReps;
-      }
-      break;
-    }
-    case 'Bom':
-    case 'Pesado': {
-      if (currentRepsNum + 1 <= max) {
-        newRepsNum = currentRepsNum + 1;
-      } else {
-        newWeight += incrementoMinimo;
-        newRepsNum = min;
-      }
-      break;
-    }
-    case 'Muito Pesado':
-      // Mantém tudo igual
-      break;
-    case 'Errei na carga': {
-      const { newWeight: calculatedWeight } = calculateLinearProgression(currentWeight, dificuldade, incrementoMinimo);
-      newWeight = calculatedWeight;
-      // Mantém repetições
-      break;
-    }
-    case 'Socorro, estagnei': {
-      const { newWeight: calculatedWeight } = calculateLinearProgression(currentWeight, dificuldade, incrementoMinimo);
-      newWeight = calculatedWeight;
-      newRepsNum = Math.floor(currentRepsNum / 2);
-      isDeload = true;
-      break;
-    }
-  }
+    case 'muito_facil':
+      // Se está muito fácil, aumentar peso significativamente
+      return {
+        newWeight: currentWeight + (incrementoMinimo * 2),
+        newReps: `${min}-${max}`, // Manter faixa
+        isDeload: false
+      };
 
-  const newReps = `${min}-${max}`;
-  return { newWeight, newReps, isDeload };
+    case 'facil':
+      // Se conseguiu fazer próximo ao máximo da faixa, aumentar peso
+      if (executedReps >= max - 1) {
+        return {
+          newWeight: currentWeight + incrementoMinimo,
+          newReps: `${min}-${max}`, // Manter faixa
+          isDeload: false
+        };
+      } else {
+        // Tentar mais repetições primeiro
+        return {
+          newWeight: currentWeight,
+          newReps: `${Math.min(executedReps + 1, max)}-${max}`, // Aumentar mínimo da faixa
+          isDeload: false
+        };
+      }
+
+    case 'moderado':
+      // Se conseguiu fazer no topo da faixa, aumentar peso
+      if (executedReps >= max) {
+        return {
+          newWeight: currentWeight + incrementoMinimo,
+          newReps: `${min}-${max}`, // Manter faixa
+          isDeload: false
+        };
+      } else if (executedReps >= min) {
+        // Tentar mais repetições
+        return {
+          newWeight: currentWeight,
+          newReps: `${Math.min(executedReps + 1, max)}-${max}`,
+          isDeload: false
+        };
+      } else {
+        // Não conseguiu nem o mínimo, manter tudo igual
+        return {
+          newWeight: currentWeight,
+          newReps: programmedReps,
+          isDeload: false
+        };
+      }
+
+    case 'dificil':
+      // Manter peso e repetições
+      return {
+        newWeight: currentWeight,
+        newReps: programmedReps,
+        isDeload: false
+      };
+
+    case 'muito_dificil':
+      // Reduzir peso
+      return {
+        newWeight: Math.max(0, currentWeight - incrementoMinimo),
+        newReps: programmedReps,
+        isDeload: true
+      };
+
+    default:
+      return {
+        newWeight: currentWeight,
+        newReps: programmedReps,
+        isDeload: false
+      };
+  }
 };
 
-// Função principal de cálculo de progressão
-export const calculateProgression = async (input: ProgressionInput): Promise<ProgressionOutput> => {
+// Função principal para calcular progressão
+export const calculateProgression = async (params: ProgressionParams): Promise<ProgressionResult> => {
   const {
+    exerciseId,
     currentWeight,
-    currentReps,
+    programmedReps,
+    executedReps,
     currentSets,
     incrementoMinimo,
     avaliacaoDificuldade,
-    avaliacaoFadiga = 0,
-    avaliacaoDor = 0
-  } = input;
+    avaliacaoFadiga,
+    avaliacaoDor
+  } = params;
 
-  // Calcular novas séries
-  const newSets = calculateSeriesProgression(currentSets, avaliacaoFadiga, avaliacaoDor);
+  console.log('Calculando progressão com parâmetros:', params);
+
+  // Determinar tipo de progressão baseado nas repetições programadas
+  const useDoubleProgression = isDoubleProgression(programmedReps);
   
-  // REGRA 1: Se séries aumentaram, manter carga e reps iguais
-  if (newSets > currentSets) {
-    return {
-      newWeight: currentWeight,
-      newReps: currentReps,
-      newSets,
-      isDeload: false
-    };
-  }
+  let result: ProgressionResult;
 
-  // Se não há avaliação de dificuldade, manter valores atuais
-  if (!avaliacaoDificuldade) {
-    return {
-      newWeight: currentWeight,
-      newReps: currentReps,
-      newSets: newSets,
-      isDeload: false
-    };
-  }
-
-  // Detectar tipo de progressão e calcular
-  const progressionType = detectProgressionType(currentReps);
-  
-  if (progressionType === 'linear') {
-    const { newWeight, isDeload } = calculateLinearProgression(
+  if (useDoubleProgression) {
+    // Progressão dupla
+    const progression = calculateDoubleProgression(
       currentWeight,
+      programmedReps,
+      executedReps,
       avaliacaoDificuldade,
       incrementoMinimo
     );
-    
-    return {
-      newWeight,
-      newReps: currentReps,
-      newSets: isDeload ? Math.max(2, Math.floor(newSets / 2)) : newSets,
-      isDeload
+
+    result = {
+      newWeight: progression.newWeight,
+      newReps: progression.newReps,
+      newSets: currentSets, // Manter número de séries
+      progressionType: 'double',
+      isDeload: progression.isDeload,
+      reasoning: `Progressão dupla aplicada baseada na dificuldade: ${avaliacaoDificuldade}`
     };
   } else {
-    const { newWeight, newReps, isDeload } = calculateDoubleProgression(
+    // Progressão linear
+    const programmedRepsNum = parseInt(programmedReps);
+    const progression = calculateLinearProgression(
       currentWeight,
-      currentReps as string,
+      executedReps,
+      programmedRepsNum,
       avaliacaoDificuldade,
       incrementoMinimo
     );
-    
-    return {
-      newWeight,
-      newReps,
-      newSets: isDeload ? Math.max(2, Math.floor(newSets / 2)) : newSets,
-      isDeload
+
+    result = {
+      newWeight: progression.newWeight,
+      newReps: progression.newReps,
+      newSets: currentSets, // Manter número de séries
+      progressionType: 'linear',
+      isDeload: progression.isDeload,
+      reasoning: `Progressão linear aplicada baseada na dificuldade: ${avaliacaoDificuldade}`
     };
   }
+
+  console.log('Resultado da progressão:', result);
+  return result;
 };
 
-// Buscar incremento mínimo de exercícios anteriores do mesmo tipo
+// Função para buscar incremento mínimo de exercícios similares no programa
 export const getIncrementoMinimo = async (
   exercicioOriginalId: string,
   programaUsuarioId: string
@@ -240,12 +272,42 @@ export const getIncrementoMinimo = async (
       .select('incremento_minimo')
       .eq('exercicio_original_id', exercicioOriginalId)
       .not('incremento_minimo', 'is', null)
-      .limit(1)
-      .single();
-      
-    return data?.incremento_minimo || 1.0;
+      .limit(1);
+
+    if (data && data.length > 0) {
+      return data[0].incremento_minimo;
+    }
+
+    // Valor padrão se não encontrar
+    return 2.5;
   } catch (error) {
     console.error('Erro ao buscar incremento mínimo:', error);
-    return 1.0;
+    return 2.5; // Valor padrão
+  }
+};
+
+// Função para buscar a melhor série de exercícios anteriores
+export const getBestExecutedReps = async (exerciseId: string): Promise<number | null> => {
+  try {
+    const { data } = await supabase.rpc(
+      'get_series_by_exercise',
+      { exercise_id: exerciseId }
+    );
+
+    if (!data || data.length === 0) {
+      return null;
+    }
+
+    // Encontrar a melhor série (maior volume: peso * repetições)
+    const bestSeries = data.reduce((best, current) => {
+      const bestVolume = best.peso * best.repeticoes;
+      const currentVolume = current.peso * current.repeticoes;
+      return currentVolume > bestVolume ? current : best;
+    }, data[0]);
+
+    return bestSeries.repeticoes;
+  } catch (error) {
+    console.error('Erro ao buscar repetições executadas:', error);
+    return null;
   }
 };
