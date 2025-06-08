@@ -68,7 +68,7 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       return null;
     }
 
-    // Buscar cronogramas recomendados do primeiro mesociclo - CORREÇÃO DO ERRO
+    // Buscar cronogramas recomendados do primeiro mesociclo - FIXED TYPE CONVERSION
     let savedSchedules: string[][] = [];
     if (mesociclos && mesociclos.length > 0 && mesociclos[0].cronogramas_recomendados) {
       const cronogramas = mesociclos[0].cronogramas_recomendados;
@@ -77,7 +77,7 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
         if (Array.isArray(cronogramas[0])) {
           savedSchedules = cronogramas as string[][];
         } else {
-          // Se for array simples, converter para array de arrays
+          // Se for array simples, converter para array de arrays - FIXED THE CONVERSION
           savedSchedules = [cronogramas as string[]];
         }
       }

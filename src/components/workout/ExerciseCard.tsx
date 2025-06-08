@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,7 @@ interface ExerciseCardProps {
     nome: string;
     grupo_muscular: string;
     primary_muscle: string;
+    secondary_muscle?: string; // Added this missing property
     exercicio_original_id: string;
     series: number;
     repeticoes: string | null;
