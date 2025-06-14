@@ -1,159 +1,162 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
 
-export interface LoadedProgramData {
-  programName: string;
-  programLevel: string;
-  weeklyFrequency: number;
-  mesocycles: number;
-  programData: {
-    duration: string;
-    goals: string[];
-    split: string;
-  };
-  exercisesPerDay: Record<string, Record<string, any[]>>;
-  savedSchedules: string[][];
-  mesocycleDurations: number[];
+export interface ProgramStructure {
+  id: string;
+  nome: string;
+  descricao: string;
+  semanas: number;
+  dias_semana: number;
+  treinos: WorkoutStructure[];
 }
 
-export const loadExistingProgram = async (programId: string): Promise<LoadedProgramData | null> => {
+export interface WorkoutStructure {
+  id: string;
+  nome: string;
+  dia_semana: number;
+  exercicios: ExerciseStructure[];
+}
+
+export interface ExerciseStructure {
+  id: string;
+  nome: string;
+  musculo_primario: string;
+  musculos_secundarios: string[];
+  series: string[];
+  descanso: number;
+  observacoes?: string;
+}
+
+export const copyProgramToUser = async (programId: string, userId: string) => {
+  console.log("Iniciando cópia do programa:", programId, "para usuário:", userId);
+  
   try {
-    // Buscar programa
-    const { data: programa, error: programaError } = await supabase
+    // 1. Buscar o programa original
+    const { data: programa, error: programError } = await supabase
       .from('programas')
       .select('*')
       .eq('id', programId)
       .single();
 
-    if (programaError || !programa) {
-      console.error('Erro ao carregar programa:', programaError);
-      return null;
-    }
+    if (programError) throw programError;
+    if (!programa) throw new Error('Programa não encontrado');
 
-    // Buscar mesociclos
-    const { data: mesociclos, error: mesociclosError } = await supabase
-      .from('mesociclos')
-      .select('*')
-      .eq('programa_id', programId)
-      .order('numero');
+    console.log("Programa encontrado:", programa);
 
-    if (mesociclosError) {
-      console.error('Erro ao carregar mesociclos:', mesociclosError);
-      return null;
-    }
+    // 2. Desativar programa ativo atual do usuário
+    await supabase
+      .from('programas_usuario')
+      .update({ ativo: false })
+      .eq('usuario_id', userId)
+      .eq('ativo', true);
 
-    // Buscar treinos APENAS da semana 1 para o kanban
-    const { data: treinos, error: treinosError } = await supabase
+    // 3. Criar nova entrada em programas_usuario
+    const { data: programaUsuario, error: programaUsuarioError } = await supabase
+      .from('programas_usuario')
+      .insert({
+        usuario_id: userId,
+        programa_id: programId,
+        ativo: true
+      })
+      .select()
+      .single();
+
+    if (programaUsuarioError) throw programaUsuarioError;
+    
+    console.log("Programa do usuário criado:", programaUsuario);
+
+    // 4. Buscar treinos do programa original
+    const { data: treinosOriginais, error: treinosError } = await supabase
       .from('treinos')
       .select('*')
       .eq('programa_id', programId)
-      .eq('ordem_semana', 1)
-      .order('ordem_semana');
+      .order('dia_semana');
 
-    if (treinosError) {
-      console.error('Erro ao carregar treinos:', treinosError);
-      return null;
-    }
+    if (treinosError) throw treinosError;
+    
+    console.log("Treinos originais encontrados:", treinosOriginais);
 
-    // Buscar exercícios de todos os treinos
-    const treinoIds = treinos?.map(t => t.id) || [];
-    const { data: exercicios, error: exerciciosError } = await supabase
-      .from('exercicios_treino')
-      .select('*')
-      .in('treino_id', treinoIds)
-      .order('ordem');
+    // 5. Copiar treinos para o usuário
+    for (const treinoOriginal of treinosOriginais) {
+      const { data: treinoUsuario, error: treinoError } = await supabase
+        .from('treinos_usuario')
+        .insert({
+          programa_usuario_id: programaUsuario.id,
+          treino_original_id: treinoOriginal.id,
+          nome: treinoOriginal.nome,
+          dia_semana: treinoOriginal.dia_semana,
+          semana_atual: 1,
+          concluido: false
+        })
+        .select()
+        .single();
 
-    if (exerciciosError) {
-      console.error('Erro ao carregar exercícios:', exerciciosError);
-      return null;
-    }
+      if (treinoError) throw treinoError;
+      
+      console.log("Treino do usuário criado:", treinoUsuario);
 
-    // Buscar cronogramas recomendados do primeiro mesociclo - FIXED TYPE CONVERSION
-    let savedSchedules: string[][] = [];
-    if (mesociclos && mesociclos.length > 0 && mesociclos[0].cronogramas_recomendados) {
-      const cronogramas = mesociclos[0].cronogramas_recomendados;
-      if (Array.isArray(cronogramas) && cronogramas.length > 0) {
-        // Verificar se é array de arrays ou array simples
-        if (Array.isArray(cronogramas[0])) {
-          savedSchedules = cronogramas as string[][];
-        } else {
-          // Se for array simples, converter para array de arrays - FIXED TYPE CONVERSION
-          savedSchedules = [cronogramas as unknown as string[]];
+      // 6. Buscar exercícios do treino original
+      const { data: exerciciosOriginais, error: exerciciosError } = await supabase
+        .from('exercicios')
+        .select('*')
+        .eq('treino_id', treinoOriginal.id)
+        .order('ordem');
+
+      if (exerciciosError) throw exerciciosError;
+      
+      console.log("Exercícios originais encontrados:", exerciciosOriginais);
+
+      // 7. Copiar exercícios para o usuário
+      for (const exercicioOriginal of exerciciosOriginais) {
+        // Parse the series data correctly
+        let seriesParsed: string[][];
+        try {
+          if (typeof exercicioOriginal.series === 'string') {
+            seriesParsed = JSON.parse(exercicioOriginal.series);
+          } else if (Array.isArray(exercicioOriginal.series)) {
+            // Check if it's already a 2D array
+            if (exercicioOriginal.series.length > 0 && Array.isArray(exercicioOriginal.series[0])) {
+              seriesParsed = exercicioOriginal.series as string[][];
+            } else {
+              // Convert 1D array to 2D array format
+              seriesParsed = (exercicioOriginal.series as string[]).map(serie => [serie]);
+            }
+          } else {
+            seriesParsed = [['8-12']]; // default fallback
+          }
+        } catch (error) {
+          console.error("Erro ao fazer parse das séries:", error);
+          seriesParsed = [['8-12']]; // default fallback
         }
+
+        const { data: exercicioUsuario, error: exercicioError } = await supabase
+          .from('exercicios_usuario')
+          .insert({
+            treino_usuario_id: treinoUsuario.id,
+            exercicio_original_id: exercicioOriginal.id,
+            nome: exercicioOriginal.nome,
+            musculo_primario: exercicioOriginal.musculo_primario,
+            musculos_secundarios: exercicioOriginal.musculos_secundarios,
+            series: seriesParsed,
+            descanso: exercicioOriginal.descanso,
+            observacoes: exercicioOriginal.observacoes,
+            ordem: exercicioOriginal.ordem,
+            concluido: false
+          })
+          .select()
+          .single();
+
+        if (exercicioError) throw exercicioError;
+        
+        console.log("Exercício do usuário criado:", exercicioUsuario);
       }
     }
 
-    console.log('Cronogramas carregados:', savedSchedules);
-
-    // Organizar exercícios por mesociclo e treino (apenas semana 1)
-    const exercisesPerDay: Record<string, Record<string, any[]>> = {};
-
-    mesociclos?.forEach(mesociclo => {
-      const mesocicloKey = `mesocycle-${mesociclo.numero}`;
-      exercisesPerDay[mesocicloKey] = {};
-
-      // Filtrar treinos da semana 1 para este mesociclo
-      const treinosMesociclo = treinos?.filter(t => t.mesociclo_id === mesociclo.id) || [];
-      
-      // Obter o cronograma para este mesociclo (usar o primeiro cronograma como padrão)
-      const cronogramaMesociclo = savedSchedules.length > 0 ? savedSchedules[0] : [];
-      
-      treinosMesociclo.forEach(treino => {
-        // Encontrar o índice do dia da semana no cronograma
-        const dayIndex = cronogramaMesociclo.findIndex(day => day === treino.dia_semana);
-        
-        if (dayIndex !== -1) {
-          // Usar o dia real do cronograma como chave
-          const dayKey = treino.dia_semana;
-          const exerciciosTreino = exercicios?.filter(e => e.treino_id === treino.id) || [];
-          
-          if (!exercisesPerDay[mesocicloKey][dayKey]) {
-            exercisesPerDay[mesocicloKey][dayKey] = [];
-          }
-          
-          const exerciciosFormatados = exerciciosTreino.map(exercicio => ({
-            id: exercicio.id,
-            name: exercicio.nome,
-            muscleGroup: exercicio.grupo_muscular,
-            sets: exercicio.series,
-            reps: exercicio.repeticoes,
-            hidden: exercicio.oculto,
-            originalId: exercicio.exercicio_original_id,
-            allowMultipleGroups: exercicio.allow_multiple_groups || false,
-            availableGroups: exercicio.available_groups || undefined
-          }));
-          
-          exercisesPerDay[mesocicloKey][dayKey].push(...exerciciosFormatados);
-        }
-      });
-    });
-
-    console.log('Exercícios organizados (apenas semana 1):', exercisesPerDay);
-
-    // Extrair durações dos mesociclos
-    const mesocycleDurations = mesociclos?.map(m => m.duracao_semanas) || [];
-
-    return {
-      programName: programa.nome,
-      programLevel: programa.nivel,
-      weeklyFrequency: programa.frequencia_semanal,
-      mesocycles: mesociclos?.length || 0,
-      programData: {
-        duration: `${programa.duracao_semanas} semanas`,
-        goals: programa.objetivo,
-        split: programa.split
-      },
-      exercisesPerDay,
-      savedSchedules,
-      mesocycleDurations
-    };
+    console.log("Programa copiado com sucesso!");
+    return programaUsuario;
+    
   } catch (error) {
-    console.error('Erro ao carregar programa para edição:', error);
-    return null;
+    console.error("Erro ao copiar programa:", error);
+    throw error;
   }
-};
-
-export const loadProgramForEdit = async (programId: string) => {
-  // Keep existing function for backward compatibility
-  return loadExistingProgram(programId);
 };
