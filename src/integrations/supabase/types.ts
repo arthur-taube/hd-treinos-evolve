@@ -200,6 +200,7 @@ export type Database = {
           peso: number | null
           primary_muscle: string | null
           repeticoes: string | null
+          reps_programadas: number | null
           secondary_muscle: string | null
           series: number
           treino_usuario_id: string
@@ -225,6 +226,7 @@ export type Database = {
           peso?: number | null
           primary_muscle?: string | null
           repeticoes?: string | null
+          reps_programadas?: number | null
           secondary_muscle?: string | null
           series: number
           treino_usuario_id: string
@@ -250,6 +252,7 @@ export type Database = {
           peso?: number | null
           primary_muscle?: string | null
           repeticoes?: string | null
+          reps_programadas?: number | null
           secondary_muscle?: string | null
           series?: number
           treino_usuario_id?: string

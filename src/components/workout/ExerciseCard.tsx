@@ -12,7 +12,7 @@ import { Check, Youtube, MoreHorizontal, ChevronDown, Play, Edit, X } from "luci
 import { FeedbackDialog } from "./FeedbackDialog";
 import { useExerciseFeedback, DIFFICULTY_OPTIONS, FATIGUE_OPTIONS, PAIN_OPTIONS, INCREMENT_OPTIONS } from "@/hooks/use-exercise-feedback";
 import { updateMissingMuscleData, propagateIncrementoMinimo } from "@/utils/muscleDataLoader";
-import { calculateProgression, getIncrementoMinimo, getBestExecutedReps } from "@/utils/progressionCalculator";
+import { calculateProgression, getIncrementoMinimo, updateRepsProgramadas, getCurrentRepsProgramadas } from "@/utils/progressionCalculator";
 
 interface ExerciseCardProps {
   exercise: {
@@ -29,6 +29,7 @@ interface ExerciseCardProps {
     observacao?: string | null;
     video_url?: string | null;
     configuracao_inicial?: boolean;
+    reps_programadas?: number | null;
   };
   onExerciseComplete: (exerciseId: string, isCompleted: boolean) => Promise<void>;
   onWeightUpdate: (exerciseId: string, weight: number) => Promise<void>;
@@ -111,10 +112,28 @@ export function ExerciseCard({
     updateMuscleDataIfNeeded();
   }, [exercise.id, exercise.exercicio_original_id, exercise.primary_muscle, exercise.secondary_muscle]);
 
+  // Verificar se é primeira semana do exercício
+  const checkIsFirstWeek = async (): Promise<boolean> => {
+    try {
+      const currentRepsProgramadas = await getCurrentRepsProgramadas(exercise.id);
+      return currentRepsProgramadas === null;
+    } catch (error) {
+      console.error('Erro ao verificar primeira semana:', error);
+      return true; // Assumir primeira semana em caso de erro
+    }
+  };
+
   // Verificar configuração inicial e aplicar progressão automática
   useEffect(() => {
     const applyAutomaticProgression = async () => {
       if (isOpen && exercise.exercicio_original_id) {
+        const isFirstWeek = await checkIsFirstWeek();
+        
+        if (isFirstWeek) {
+          console.log('Primeira semana detectada - usando valores padrão');
+          return;
+        }
+
         // Buscar avaliações do treino anterior para calcular progressão
         try {
           const { data: avaliacoesAnteriores } = await supabase
@@ -149,31 +168,48 @@ export function ExerciseCard({
               }
             }
 
-            // Buscar repetições executadas do último treino
-            const executedReps = await getBestExecutedReps(exercise.id);
+            // Buscar repetições executadas (melhor série) do último treino
+            const { data: seriesAnteriores } = await supabase.rpc(
+              'get_series_by_exercise',
+              { exercise_id: exercise.id }
+            );
+
+            let executedReps = 0;
+            if (seriesAnteriores && seriesAnteriores.length > 0) {
+              const bestSeries = seriesAnteriores.reduce((best, current) => {
+                const bestVolume = best.peso * best.repeticoes;
+                const currentVolume = current.peso * current.repeticoes;
+                return currentValue > bestValue ? current : best;
+              }, seriesAnteriores[0]);
+              executedReps = bestSeries.repeticoes;
+            }
 
             // Calcular progressão se temos dados suficientes
-            if (ultimaAvaliacao.avaliacao_dificuldade && incrementoMinimo && executedReps !== null) {
+            if (ultimaAvaliacao.avaliacao_dificuldade && incrementoMinimo && executedReps > 0) {
               const progressao = await calculateProgression({
                 exerciseId: exercise.id,
                 currentWeight: ultimaAvaliacao.peso || 0,
-                programmedReps: ultimaAvaliacao.repeticoes || exercise.repeticoes || "10", // Repetições programadas
-                executedReps: executedReps, // Repetições executadas de fato
+                programmedReps: ultimaAvaliacao.repeticoes || exercise.repeticoes || "10",
+                executedReps: executedReps,
                 currentSets: ultimaAvaliacao.series || exercise.series,
                 incrementoMinimo: incrementoMinimo,
                 avaliacaoDificuldade: ultimaAvaliacao.avaliacao_dificuldade,
                 avaliacaoFadiga: ultimaAvaliacao.avaliacao_fadiga,
-                avaliacaoDor: ultimaAvaliacao.avaliacao_dor
+                avaliacaoDor: ultimaAvaliacao.avaliacao_dor,
+                isFirstWeek: false
               });
 
               // Aplicar progressão calculada aos sets
+              const targetReps = progressao.reps_programadas || 
+                (typeof progressao.newReps === 'string' 
+                  ? parseInt(progressao.newReps.split('-')[0]) 
+                  : Number(progressao.newReps));
+
               setSets(prevSets => 
                 Array.from({ length: progressao.newSets }, (_, i) => ({
                   number: i + 1,
                   weight: progressao.newWeight,
-                  reps: typeof progressao.newReps === 'string' 
-                    ? parseInt(progressao.newReps.split('-')[0]) // Usar mínimo da faixa para progressão dupla
-                    : Number(progressao.newReps),
+                  reps: targetReps,
                   completed: false
                 }))
               );
@@ -181,6 +217,11 @@ export function ExerciseCard({
               // Atualizar peso do exercício
               if (progressao.newWeight !== exercise.peso) {
                 onWeightUpdate(exercise.id, progressao.newWeight);
+              }
+
+              // Atualizar reps_programadas se necessário
+              if (progressao.reps_programadas !== undefined) {
+                await updateRepsProgramadas(exercise.id, progressao.reps_programadas);
               }
 
               console.log('Progressão aplicada:', progressao);
@@ -348,6 +389,18 @@ export function ExerciseCard({
           p_concluida: set.completed
         });
       }
+
+      // Verificar se é primeira semana e salvar reps_programadas
+      const isFirstWeek = await checkIsFirstWeek();
+      if (isFirstWeek) {
+        // Encontrar a pior série (menor repetições) das séries completadas
+        const completedSets = sets.filter(set => set.completed && set.reps !== null);
+        if (completedSets.length > 0) {
+          const worstReps = Math.min(...completedSets.map(set => set.reps!));
+          await updateRepsProgramadas(exercise.id, worstReps);
+          console.log(`Primeira semana concluída - reps_programadas definidas como: ${worstReps}`);
+        }
+      }
       
       await onExerciseComplete(exercise.id, true);
       setIsOpen(false);
@@ -360,6 +413,61 @@ export function ExerciseCard({
         description: error.message,
         variant: "destructive"
       });
+    }
+  };
+
+  // Enhanced saveDifficultyFeedback to apply progression
+  const handleSaveDifficultyFeedback = async (value: string) => {
+    await saveDifficultyFeedback(value);
+    
+    // Aplicar progressão após salvar avaliação de dificuldade
+    if (exercise.exercicio_original_id) {
+      try {
+        const isFirstWeek = exercise.reps_programadas === null;
+        
+        // Buscar dados necessários para progressão
+        const { data: treinoUsuario } = await supabase
+          .from('treinos_usuario')
+          .select('programa_usuario_id')
+          .eq('id', (await supabase
+            .from('exercicios_treino_usuario')
+            .select('treino_usuario_id')
+            .eq('id', exercise.id)
+            .single()).data?.treino_usuario_id || '')
+          .single();
+
+        if (treinoUsuario) {
+          const incrementoMinimo = await getIncrementoMinimo(
+            exercise.exercicio_original_id,
+            treinoUsuario.programa_usuario_id
+          );
+
+          // Buscar melhor série executada
+          const completedSets = sets.filter(set => set.completed && set.reps !== null);
+          if (completedSets.length > 0) {
+            const bestReps = Math.max(...completedSets.map(set => set.reps!));
+            
+            const progressao = await calculateProgression({
+              exerciseId: exercise.id,
+              currentWeight: exercise.peso || 0,
+              programmedReps: exercise.repeticoes || "10",
+              executedReps: bestReps,
+              currentSets: exercise.series,
+              incrementoMinimo: incrementoMinimo,
+              avaliacaoDificuldade: value,
+              isFirstWeek: isFirstWeek
+            });
+
+            // Atualizar reps_programadas para próxima semana
+            if (progressao.reps_programadas !== undefined) {
+              await updateRepsProgramadas(exercise.id, progressao.reps_programadas);
+              console.log('Progressão aplicada para próxima semana:', progressao);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao aplicar progressão:', error);
+      }
     }
   };
 
@@ -488,6 +596,9 @@ export function ExerciseCard({
               <p className="text-sm text-muted-foreground">
                 {exercise.series} x {exercise.repeticoes || "10-12"} 
                 {exercise.peso ? ` @ ${exercise.peso}kg` : ""}
+                {exercise.reps_programadas && (
+                  <span className="text-blue-600 font-medium"> (Target: {exercise.reps_programadas} reps)</span>
+                )}
               </p>
               
               {observation && <div className="mt-2 p-1.5 border border-yellow-200 rounded-md text-sm bg-[#aea218]/70">
@@ -588,7 +699,7 @@ export function ExerciseCard({
       <FeedbackDialog 
         isOpen={showDifficultyDialog} 
         onClose={() => setShowDifficultyDialog(false)} 
-        onSubmit={saveDifficultyFeedback} 
+        onSubmit={handleSaveDifficultyFeedback} 
         title="Como foi o exercício?" 
         description="Avalie a dificuldade do exercício {exerciseName}" 
         options={DIFFICULTY_OPTIONS} 
