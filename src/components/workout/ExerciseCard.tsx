@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -179,7 +180,7 @@ export function ExerciseCard({
               const bestSeries = seriesAnteriores.reduce((best, current) => {
                 const bestVolume = best.peso * best.repeticoes;
                 const currentVolume = current.peso * current.repeticoes;
-                return currentValue > bestValue ? current : best;
+                return currentVolume > bestVolume ? current : best;
               }, seriesAnteriores[0]);
               executedReps = bestSeries.repeticoes;
             }
