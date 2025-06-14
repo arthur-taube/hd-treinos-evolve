@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "@/components/layout/PageHeader";
@@ -10,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import ProgramCatalogOptionsMenu from "@/components/programs/ProgramCatalogOptionsMenu";
+import ProgramSelectionLoadingDialog from "@/components/programs/ProgramSelectionLoadingDialog";
 
 interface Program {
   id: string;
@@ -30,6 +30,8 @@ export default function ProgramCatalog() {
   const navigate = useNavigate();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSelectingProgram, setIsSelectingProgram] = useState(false);
+  const [selectedProgramName, setSelectedProgramName] = useState("");
   const { user } = useAuth();
   
   // Check if current user is the developer
@@ -61,6 +63,9 @@ export default function ProgramCatalog() {
   }, []);
 
   const selectProgram = async (program: Program) => {
+    setIsSelectingProgram(true);
+    setSelectedProgramName(program.nome);
+    
     try {
       // Verificar se o usuário está logado
       const { data: { user } } = await supabase.auth.getUser();
@@ -189,6 +194,9 @@ export default function ProgramCatalog() {
         description: error.message || "Não foi possível selecionar o programa.",
         variant: "destructive"
       });
+    } finally {
+      setIsSelectingProgram(false);
+      setSelectedProgramName("");
     }
   };
 
@@ -406,6 +414,11 @@ export default function ProgramCatalog() {
         </Button>
       </PageHeader>
 
+      <ProgramSelectionLoadingDialog 
+        open={isSelectingProgram}
+        programName={selectedProgramName}
+      />
+
       {loading ? (
         <div className="flex justify-center my-8">
           <p>Carregando programas disponíveis...</p>
@@ -446,8 +459,9 @@ export default function ProgramCatalog() {
                 <Button 
                   onClick={() => selectProgram(program)} 
                   className="flex-grow"
+                  disabled={isSelectingProgram}
                 >
-                  Selecionar Programa
+                  {isSelectingProgram ? "Configurando..." : "Selecionar Programa"}
                 </Button>
                 
                 {isDeveloper && (
