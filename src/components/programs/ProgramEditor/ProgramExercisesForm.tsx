@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
@@ -91,7 +91,7 @@ export default function ProgramExercisesForm({
     }
   };
 
-  const handleSaveSchedules = (newSchedules: string[][]) => {
+  const handleSaveSchedules = useCallback((newSchedules: string[][]) => {
     console.log('handleSaveSchedules - recebido:', newSchedules);
     try {
       setScheduleOptions(newSchedules);
@@ -100,13 +100,22 @@ export default function ProgramExercisesForm({
       console.error('Erro em handleSaveSchedules:', error);
       throw error;
     }
-  };
+  }, []);
 
-  const handleExercisesUpdate = (dayId: string, exercises: Exercise[], mesocycleNumber: number) => {
-    console.log('handleExercisesUpdate:', { dayId, exercises, mesocycleNumber });
+  const handleExercisesUpdate = useCallback((dayId: string, exercises: Exercise[]) => {
+    console.log('handleExercisesUpdate:', { dayId, exercises, mesocycleNumber: currentMesocycle });
     
     setExercisesPerDay(prevState => {
-      const mesocycleKey = `mesocycle-${mesocycleNumber}`;
+      const mesocycleKey = `mesocycle-${currentMesocycle}`;
+      
+      // Verificar se realmente houve mudança
+      const currentExercises = prevState[mesocycleKey]?.[dayId] || [];
+      const exercisesHash = JSON.stringify(exercises);
+      const currentHash = JSON.stringify(currentExercises);
+      
+      if (exercisesHash === currentHash) {
+        return prevState; // Não atualizar se não houve mudança
+      }
       
       return {
         ...prevState,
@@ -116,7 +125,7 @@ export default function ProgramExercisesForm({
         }
       };
     });
-  };
+  }, [currentMesocycle]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -394,7 +403,7 @@ export default function ProgramExercisesForm({
         totalMesocycles={mesocycles}
         mesocycleDuration={mesocycleDurations[currentMesocycle - 1]}
         onDurationChange={handleMesocycleDurationChange}
-        onExercisesUpdate={(dayId, exercises) => handleExercisesUpdate(dayId, exercises, currentMesocycle)}
+        onExercisesUpdate={handleExercisesUpdate}
         initialExercises={exercisesPerDay[`mesocycle-${currentMesocycle}`]}
       />
 

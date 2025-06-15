@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -33,19 +33,23 @@ export default function WeeklyScheduleForm({
   const [newSchedule, setNewSchedule] = useState<string[]>(Array(weeklyFrequency).fill(""));
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [selectedDefault, setSelectedDefault] = useState<number>(0);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   console.log('WeeklyScheduleForm - Props:', { weeklyFrequency, initialSchedules });
   console.log('WeeklyScheduleForm - State:', { scheduleOptions, newSchedule, isAddingNew });
 
-  // Atualizar quando initialSchedules muda
+  // Atualizar quando initialSchedules muda - OTIMIZADO
   useEffect(() => {
     console.log('WeeklyScheduleForm - useEffect initialSchedules:', initialSchedules);
-    if (initialSchedules.length > 0) {
+    if (initialSchedules.length > 0 && !hasInitialized) {
       setScheduleOptions(initialSchedules);
-      // Se há cronogramas iniciais, salvar automaticamente
+      setHasInitialized(true);
+      
+      // Só salvar automaticamente na primeira inicialização
+      console.log('WeeklyScheduleForm - salvando cronogramas iniciais automaticamente');
       onSaveSchedules(initialSchedules);
     }
-  }, [initialSchedules, onSaveSchedules]);
+  }, [initialSchedules, onSaveSchedules, hasInitialized]);
 
   const generateScheduleName = (schedule: string[]) => {
     const dayNames = schedule.map(day => {
@@ -138,7 +142,7 @@ export default function WeeklyScheduleForm({
     });
   };
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     console.log('handleSave - scheduleOptions:', scheduleOptions);
     
     if (scheduleOptions.length === 0) {
@@ -165,7 +169,7 @@ export default function WeeklyScheduleForm({
         variant: "destructive"
       });
     }
-  };
+  }, [scheduleOptions, onSaveSchedules]);
 
   return (
     <Card>

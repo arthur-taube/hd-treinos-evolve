@@ -78,7 +78,7 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
         if (Array.isArray(cronogramas[0])) {
           savedSchedules = cronogramas as string[][];
         } else {
-          // Se for array simples, converter para array de arrays
+          // Se for array simples, converter para array de arrays - CORRIGIDO
           savedSchedules = [cronogramas as string[]];
         }
       }
