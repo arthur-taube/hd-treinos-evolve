@@ -47,6 +47,16 @@ export default function ExerciseKanban({
   const [muscleGroupDialogOpen, setMuscleGroupDialogOpen] = useState(false);
   const [currentDay, setCurrentDay] = useState<string>("");
 
+  // Inicializar títulos padrão com numeração sequencial
+  useEffect(() => {
+    schedule.forEach((day, index) => {
+      const dayNumber = index + 1;
+      if (!dayTitles[day] || dayTitles[day] === `Dia ${day}`) {
+        updateDayTitle(day, dayNumber.toString());
+      }
+    });
+  }, [schedule, dayTitles, updateDayTitle]);
+
   // Inicializar exercícios quando initialExercises muda
   useEffect(() => {
     if (Object.keys(initialExercises).length > 0) {

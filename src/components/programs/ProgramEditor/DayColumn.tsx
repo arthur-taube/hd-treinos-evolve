@@ -27,16 +27,35 @@ export function DayColumn({
   onDeleteExercise,
   dayLabel,
 }: DayColumnProps) {
+  // Extrair nome e nome personalizado do título atual
+  const [workoutName, customName] = title.includes(' - ') ? title.split(' - ') : [title, ''];
+
+  const handleWorkoutNameChange = (newWorkoutName: string) => {
+    const newTitle = customName ? `${newWorkoutName} - ${customName}` : newWorkoutName;
+    onTitleChange(newTitle);
+  };
+
+  const handleCustomNameChange = (newCustomName: string) => {
+    const newTitle = newCustomName ? `${workoutName} - ${newCustomName}` : workoutName;
+    onTitleChange(newTitle);
+  };
+
   return (
     <div className="flex flex-col">
-      <div className="bg-muted p-2 rounded-t-md">
+      <div className="bg-muted p-2 rounded-t-md space-y-2">
         <Input
-          value={title}
-          onChange={(e) => onTitleChange(e.target.value)}
+          value={workoutName || ''}
+          onChange={(e) => handleWorkoutNameChange(e.target.value)}
           className="font-medium text-center bg-transparent border-none focus-visible:ring-0"
-          placeholder={`Dia ${dayId}`}
+          placeholder={`Treino ${dayId.replace('day', '')}`}
         />
-        <div className="text-xs text-center text-muted-foreground mt-0.5">
+        <Input
+          value={customName || ''}
+          onChange={(e) => handleCustomNameChange(e.target.value)}
+          className="text-center bg-transparent border-none focus-visible:ring-0 text-sm"
+          placeholder="Nome personalizado (opcional)"
+        />
+        <div className="text-xs text-center text-muted-foreground">
           {dayLabel}
         </div>
       </div>
