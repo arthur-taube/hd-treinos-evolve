@@ -34,8 +34,12 @@ export default function WeeklyScheduleForm({
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [selectedDefault, setSelectedDefault] = useState<number>(0);
 
+  console.log('WeeklyScheduleForm - Props:', { weeklyFrequency, initialSchedules });
+  console.log('WeeklyScheduleForm - State:', { scheduleOptions, newSchedule, isAddingNew });
+
   // Atualizar quando initialSchedules muda
   useEffect(() => {
+    console.log('WeeklyScheduleForm - useEffect initialSchedules:', initialSchedules);
     if (initialSchedules.length > 0) {
       setScheduleOptions(initialSchedules);
       // Se há cronogramas iniciais, salvar automaticamente
@@ -52,12 +56,15 @@ export default function WeeklyScheduleForm({
   };
 
   const handleDayChange = (index: number, day: string) => {
+    console.log('handleDayChange:', { index, day });
     const updated = [...newSchedule];
     updated[index] = day;
     setNewSchedule(updated);
   };
 
   const handleAddSchedule = () => {
+    console.log('handleAddSchedule - newSchedule:', newSchedule);
+    
     if (newSchedule.some(day => !day)) {
       toast({
         title: "Cronograma incompleto",
@@ -94,6 +101,7 @@ export default function WeeklyScheduleForm({
     }
 
     const updatedOptions = [...scheduleOptions, newSchedule];
+    console.log('handleAddSchedule - updatedOptions:', updatedOptions);
     setScheduleOptions(updatedOptions);
     setNewSchedule(Array(weeklyFrequency).fill(""));
     setIsAddingNew(false);
@@ -105,6 +113,8 @@ export default function WeeklyScheduleForm({
   };
 
   const handleRemoveSchedule = (index: number) => {
+    console.log('handleRemoveSchedule:', index);
+    
     if (scheduleOptions.length <= 1) {
       toast({
         title: "Não é possível remover",
@@ -129,6 +139,8 @@ export default function WeeklyScheduleForm({
   };
 
   const handleSave = () => {
+    console.log('handleSave - scheduleOptions:', scheduleOptions);
+    
     if (scheduleOptions.length === 0) {
       toast({
         title: "Nenhum cronograma",
@@ -138,11 +150,21 @@ export default function WeeklyScheduleForm({
       return;
     }
 
-    onSaveSchedules(scheduleOptions);
-    toast({
-      title: "Cronogramas salvos",
-      description: `${scheduleOptions.length} opção(ões) de cronograma foram salvas!`,
-    });
+    try {
+      console.log('handleSave - chamando onSaveSchedules com:', scheduleOptions);
+      onSaveSchedules(scheduleOptions);
+      toast({
+        title: "Cronogramas salvos",
+        description: `${scheduleOptions.length} opção(ões) de cronograma foram salvas!`,
+      });
+    } catch (error) {
+      console.error('Erro ao salvar cronogramas:', error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Ocorreu um erro ao salvar os cronogramas.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -59,6 +58,20 @@ export default function ProgramExercisesForm({
   const [isSaving, setIsSaving] = useState(false);
   const [exercisesPerDay, setExercisesPerDay] = useState<Record<string, Record<string, Exercise[]>>>(initialExercisesPerDay);
 
+  console.log('ProgramExercisesForm - Props:', {
+    programName,
+    weeklyFrequency,
+    mesocycles,
+    initialSavedSchedules,
+    initialExercisesPerDay
+  });
+
+  console.log('ProgramExercisesForm - State:', {
+    scheduleOptions,
+    currentMesocycle,
+    exercisesPerDay
+  });
+
   const handleBack = () => {
     setShowExitDialog(true);
   };
@@ -79,10 +92,19 @@ export default function ProgramExercisesForm({
   };
 
   const handleSaveSchedules = (newSchedules: string[][]) => {
-    setScheduleOptions(newSchedules);
+    console.log('handleSaveSchedules - recebido:', newSchedules);
+    try {
+      setScheduleOptions(newSchedules);
+      console.log('handleSaveSchedules - scheduleOptions atualizado para:', newSchedules);
+    } catch (error) {
+      console.error('Erro em handleSaveSchedules:', error);
+      throw error;
+    }
   };
 
   const handleExercisesUpdate = (dayId: string, exercises: Exercise[], mesocycleNumber: number) => {
+    console.log('handleExercisesUpdate:', { dayId, exercises, mesocycleNumber });
+    
     setExercisesPerDay(prevState => {
       const mesocycleKey = `mesocycle-${mesocycleNumber}`;
       

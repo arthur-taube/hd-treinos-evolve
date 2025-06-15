@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface LoadedProgramData {
@@ -68,22 +67,24 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       return null;
     }
 
-    // Buscar cronogramas recomendados do primeiro mesociclo - FIXED TYPE CONVERSION
+    // Buscar cronogramas recomendados do primeiro mesociclo - CORRIGIDO
     let savedSchedules: string[][] = [];
     if (mesociclos && mesociclos.length > 0 && mesociclos[0].cronogramas_recomendados) {
       const cronogramas = mesociclos[0].cronogramas_recomendados;
+      console.log('Cronogramas raw:', cronogramas);
+      
       if (Array.isArray(cronogramas) && cronogramas.length > 0) {
         // Verificar se é array de arrays ou array simples
         if (Array.isArray(cronogramas[0])) {
           savedSchedules = cronogramas as string[][];
         } else {
-          // Se for array simples, converter para array de arrays - FIXED TYPE CONVERSION
-          savedSchedules = [cronogramas as unknown[] as string[]];
+          // Se for array simples, converter para array de arrays
+          savedSchedules = [cronogramas as string[]];
         }
       }
     }
 
-    console.log('Cronogramas carregados:', savedSchedules);
+    console.log('Cronogramas processados:', savedSchedules);
 
     // Organizar exercícios por mesociclo e treino (apenas semana 1)
     const exercisesPerDay: Record<string, Record<string, any[]>> = {};
