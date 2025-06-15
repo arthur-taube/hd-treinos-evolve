@@ -93,7 +93,7 @@ export default function ActiveProgram() {
 
         setProgramaOriginal(programaOriginalData);
 
-        // Buscar treinos do usuário
+        // Buscar treinos do usuário - CORRIGIDO: manter ordem cronológica sempre
         const { data: treinosData, error: treinosError } = await supabase
           .from('treinos_usuario')
           .select('*')
@@ -199,7 +199,7 @@ export default function ActiveProgram() {
             </div>
           </div>
 
-          {/* Lista de treinos */}
+          {/* Lista de treinos - MANTENDO SEMPRE A ORDEM CRONOLÓGICA */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Treinos</h3>
             
@@ -210,7 +210,7 @@ export default function ActiveProgram() {
                   <Card 
                     key={treino.id} 
                     className={`p-4 hover:bg-muted/10 transition-colors cursor-pointer ${
-                      treino.concluido ? "border-green-200" : ""
+                      treino.concluido ? "border-green-200 bg-green-50/50" : ""
                     }`}
                     onClick={() => navigateToWorkout(treino.id)}
                   >
