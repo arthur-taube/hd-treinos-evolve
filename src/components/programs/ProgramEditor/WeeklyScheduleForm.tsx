@@ -29,27 +29,26 @@ export default function WeeklyScheduleForm({
   onSaveSchedules, 
   initialSchedules = [] 
 }: WeeklyScheduleFormProps) {
-  const [scheduleOptions, setScheduleOptions] = useState<string[][]>(initialSchedules);
+  const [scheduleOptions, setScheduleOptions] = useState<string[][]>([]);
   const [newSchedule, setNewSchedule] = useState<string[]>(Array(weeklyFrequency).fill(""));
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [selectedDefault, setSelectedDefault] = useState<number>(0);
-  const [hasInitialized, setHasInitialized] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   console.log('WeeklyScheduleForm - Props:', { weeklyFrequency, initialSchedules });
   console.log('WeeklyScheduleForm - State:', { scheduleOptions, newSchedule, isAddingNew });
 
-  // Atualizar quando initialSchedules muda - OTIMIZADO
+  // Inicializar APENAS UMA VEZ quando initialSchedules tem dados válidos
   useEffect(() => {
-    console.log('WeeklyScheduleForm - useEffect initialSchedules:', initialSchedules);
-    if (initialSchedules.length > 0 && !hasInitialized) {
+    if (initialSchedules.length > 0 && !isInitialized) {
+      console.log('WeeklyScheduleForm - Inicializando com:', initialSchedules);
       setScheduleOptions(initialSchedules);
-      setHasInitialized(true);
+      setIsInitialized(true);
       
-      // Só salvar automaticamente na primeira inicialização
-      console.log('WeeklyScheduleForm - salvando cronogramas iniciais automaticamente');
+      // Salvar automaticamente apenas na primeira inicialização
       onSaveSchedules(initialSchedules);
     }
-  }, [initialSchedules, onSaveSchedules, hasInitialized]);
+  }, [initialSchedules, isInitialized, onSaveSchedules]);
 
   const generateScheduleName = (schedule: string[]) => {
     const dayNames = schedule.map(day => {

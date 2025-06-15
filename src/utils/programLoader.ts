@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface LoadedProgramData {
@@ -74,12 +75,17 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       console.log('Cronogramas raw:', cronogramas);
       
       if (Array.isArray(cronogramas) && cronogramas.length > 0) {
-        // Verificar se é array de arrays ou array simples
-        if (Array.isArray(cronogramas[0])) {
+        // Verificar se é array de arrays ou array simples - CORREÇÃO FINAL
+        if (cronogramas.every(item => Array.isArray(item))) {
+          // É array de arrays
           savedSchedules = cronogramas as string[][];
-        } else {
-          // Se for array simples, converter para array de arrays - CORRIGIDO
+        } else if (cronogramas.every(item => typeof item === 'string')) {
+          // É array simples de strings, converter para array de arrays
           savedSchedules = [cronogramas as string[]];
+        } else {
+          // Formato misto ou inválido, usar array vazio como fallback
+          console.warn('Formato de cronogramas inválido:', cronogramas);
+          savedSchedules = [];
         }
       }
     }

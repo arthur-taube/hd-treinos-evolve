@@ -46,7 +46,7 @@ export default function ExerciseKanban({
 
   const [muscleGroupDialogOpen, setMuscleGroupDialogOpen] = useState(false);
   const [currentDay, setCurrentDay] = useState<string>("");
-  const [lastExercisesUpdate, setLastExercisesUpdate] = useState<string>("");
+  const [lastNotifiedHash, setLastNotifiedHash] = useState<string>("");
 
   // Inicializar títulos padrão com numeração sequencial
   useEffect(() => {
@@ -66,29 +66,29 @@ export default function ExerciseKanban({
     }
   }, [initialExercises, initializeExercises]);
 
-  // Criar um hash dos exercícios para evitar updates desnecessários
+  // Criar um hash dos exercícios para detectar mudanças
   const createExercisesHash = useCallback((exercisesData: Record<string, Exercise[]>) => {
     return JSON.stringify(exercisesData);
   }, []);
 
-  // Enviar os exercícios atualizados para o componente pai - OTIMIZADO
+  // Enviar TODAS as atualizações de uma vez - CORRIGIDO para evitar loop infinito
   useEffect(() => {
     if (onExercisesUpdate && Object.keys(exercises).length > 0) {
       const exercisesHash = createExercisesHash(exercises);
       
-      // Só atualizar se realmente houve mudança
-      if (exercisesHash !== lastExercisesUpdate) {
-        console.log('ExerciseKanban - Enviando exercícios atualizados:', exercises);
+      // Só notificar se realmente houve mudança
+      if (exercisesHash !== lastNotifiedHash) {
+        console.log('ExerciseKanban - Enviando BATCH de exercícios atualizados:', exercises);
         
-        // Para cada dia, enviar os exercícios atualizados
+        // Enviar todos os exercícios de uma vez
         Object.entries(exercises).forEach(([day, dayExercises]) => {
           onExercisesUpdate(day, dayExercises);
         });
         
-        setLastExercisesUpdate(exercisesHash);
+        setLastNotifiedHash(exercisesHash);
       }
     }
-  }, [exercises, onExercisesUpdate, createExercisesHash, lastExercisesUpdate]);
+  }, [exercises, onExercisesUpdate, createExercisesHash, lastNotifiedHash]);
 
   const handleAddExercise = (day: string) => {
     setCurrentDay(day);
