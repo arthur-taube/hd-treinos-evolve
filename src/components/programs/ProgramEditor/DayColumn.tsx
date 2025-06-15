@@ -25,8 +25,13 @@ export function DayColumn({
   onExerciseUpdate,
   onDeleteExercise,
 }: DayColumnProps) {
+  // Proteção contra título undefined/null - usar valor padrão
+  const safeTitle = title || `Treino ${dayId.replace('day', '')}`;
+  
   // Extrair nome e nome personalizado do título atual
-  const [workoutName, customName] = title.includes(' - ') ? title.split(' - ') : [title, ''];
+  const [workoutName, customName] = safeTitle.includes(' - ') 
+    ? safeTitle.split(' - ') 
+    : [safeTitle, ''];
 
   const handleWorkoutNameChange = (newWorkoutName: string) => {
     const newTitle = customName ? `${newWorkoutName} - ${customName}` : newWorkoutName;

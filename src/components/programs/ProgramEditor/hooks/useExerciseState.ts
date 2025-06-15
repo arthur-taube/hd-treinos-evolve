@@ -17,7 +17,8 @@ export function useExerciseState(schedule: string[], initialExercises?: Record<s
   const [dayTitles, setDayTitles] = useState<Record<string, string>>(() => {
     const initialTitles: Record<string, string> = {};
     schedule.forEach((day, index) => {
-      initialTitles[day] = `Dia ${index + 1}`;
+      // Garantir que sempre há um título válido inicialmente
+      initialTitles[day] = `${index + 1}`;
     });
     return initialTitles;
   });
@@ -32,11 +33,11 @@ export function useExerciseState(schedule: string[], initialExercises?: Record<s
     });
   }, [schedule]);
 
-  const updateDayTitle = (day: string, title: string) => {
-    setDayTitles((prev) => ({ ...prev, [day]: title }));
-  };
+  const updateDayTitle = useCallback((day: string, title: string) => {
+    setDayTitles((prev) => ({ ...prev, [day]: title || `Treino ${day.replace('day', '')}` }));
+  }, []);
 
-  const addExercise = (day: string, newExercise: Exercise) => {
+  const addExercise = useCallback((day: string, newExercise: Exercise) => {
     const defaultExercise = {
       ...newExercise,
       sets: 2,
@@ -48,16 +49,16 @@ export function useExerciseState(schedule: string[], initialExercises?: Record<s
       ...prev,
       [day]: [...(prev[day] || []), defaultExercise]
     }));
-  };
+  }, []);
 
-  const deleteExercise = (day: string, exerciseId: string) => {
+  const deleteExercise = useCallback((day: string, exerciseId: string) => {
     setExercises((prev) => ({
       ...prev,
       [day]: prev[day].filter((ex) => ex.id !== exerciseId)
     }));
-  };
+  }, []);
 
-  const updateExercise = (day: string, exerciseId: string, field: keyof Exercise, value: string | number | boolean) => {
+  const updateExercise = useCallback((day: string, exerciseId: string, field: keyof Exercise, value: string | number | boolean) => {
     setExercises((prev) => ({
       ...prev,
       [day]: prev[day].map((ex) =>
@@ -66,7 +67,7 @@ export function useExerciseState(schedule: string[], initialExercises?: Record<s
           : ex
       )
     }));
-  };
+  }, []);
 
   const setAllExercises = setExercises;
 

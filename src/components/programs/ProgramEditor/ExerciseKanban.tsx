@@ -29,7 +29,7 @@ export default function ExerciseKanban({
       ? daysSchedule[0]
       : Array(weeklyFrequency)
           .fill("")
-          .map((_, i) => `dia${i + 1}`);
+          .map((_, i) => `day${i + 1}`);
 
   const {
     exercises,
@@ -48,15 +48,16 @@ export default function ExerciseKanban({
   const [currentDay, setCurrentDay] = useState<string>("");
   const [lastNotifiedHash, setLastNotifiedHash] = useState<string>("");
 
-  // Inicializar títulos padrão com numeração sequencial
+  // Inicializar títulos IMEDIATAMENTE com numeração sequencial
   useEffect(() => {
     schedule.forEach((day, index) => {
       const dayNumber = index + 1;
-      if (!dayTitles[day] || dayTitles[day] === `Dia ${day}`) {
+      // Garantir que sempre há um título válido
+      if (!dayTitles[day]) {
         updateDayTitle(day, dayNumber.toString());
       }
     });
-  }, [schedule, dayTitles, updateDayTitle]);
+  }, [schedule, updateDayTitle]); // Removido dayTitles da dependência para evitar loop
 
   // Inicializar exercícios quando initialExercises muda
   useEffect(() => {
@@ -137,7 +138,7 @@ export default function ExerciseKanban({
               <DayColumn
                 key={day}
                 dayId={day}
-                title={dayTitles[day]}
+                title={dayTitles[day] || `Treino ${day.replace('day', '')}`}
                 exercises={exercises[day] || []}
                 onTitleChange={(title) => updateDayTitle(day, title)}
                 onAddExercise={() => handleAddExercise(day)}
