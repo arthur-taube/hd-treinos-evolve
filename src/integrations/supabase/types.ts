@@ -581,28 +581,31 @@ export type Database = {
       treinos: {
         Row: {
           created_at: string
-          dia_semana: string
+          dia_semana: string | null
           id: string
           mesociclo_id: string
           nome: string
+          nome_personalizado: string | null
           ordem_semana: number
           programa_id: string
         }
         Insert: {
           created_at?: string
-          dia_semana: string
+          dia_semana?: string | null
           id?: string
           mesociclo_id: string
           nome: string
+          nome_personalizado?: string | null
           ordem_semana: number
           programa_id: string
         }
         Update: {
           created_at?: string
-          dia_semana?: string
+          dia_semana?: string | null
           id?: string
           mesociclo_id?: string
           nome?: string
+          nome_personalizado?: string | null
           ordem_semana?: number
           programa_id?: string
         }

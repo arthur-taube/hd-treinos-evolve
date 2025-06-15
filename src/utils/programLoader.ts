@@ -94,9 +94,6 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       // Filtrar treinos da semana 1 para este mesociclo
       const treinosMesociclo = treinos?.filter(t => t.mesociclo_id === mesociclo.id) || [];
       
-      // Obter o cronograma para este mesociclo (usar o primeiro cronograma como padrão)
-      const cronogramaMesociclo = savedSchedules.length > 0 ? savedSchedules[0] : [];
-      
       treinosMesociclo.forEach((treino, index) => {
         // Usar o índice como chave do dia ao invés de dia_semana
         const dayKey = `day${index + 1}`;

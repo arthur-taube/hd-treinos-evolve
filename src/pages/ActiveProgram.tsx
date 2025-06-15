@@ -37,11 +37,17 @@ interface TreinoUsuario {
   data_concluido: string | null;
 }
 
+interface TreinoOriginal {
+  id: string;
+  nome_personalizado: string | null;
+}
+
 export default function ActiveProgram() {
   const navigate = useNavigate();
   const [programaUsuario, setProgramaUsuario] = useState<ProgramaUsuario | null>(null);
   const [programaOriginal, setProgramaOriginal] = useState<ProgramaOriginal | null>(null);
   const [treinos, setTreinos] = useState<TreinoUsuario[]>([]);
+  const [treinosOriginais, setTreinosOriginais] = useState<TreinoOriginal[]>([]);
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
@@ -69,7 +75,6 @@ export default function ActiveProgram() {
 
         if (programaError) {
           if (programaError.code === 'PGRST116') {
-            // Código específico para "não encontrado"
             toast({
               title: "Nenhum programa ativo",
               description: "Você ainda não selecionou um programa de treino.",
@@ -93,7 +98,7 @@ export default function ActiveProgram() {
 
         setProgramaOriginal(programaOriginalData);
 
-        // Buscar treinos do usuário - CORRIGIDO: manter ordem cronológica sempre
+        // Buscar treinos do usuário - ordem cronológica
         const { data: treinosData, error: treinosError } = await supabase
           .from('treinos_usuario')
           .select('*')
@@ -103,6 +108,19 @@ export default function ActiveProgram() {
         if (treinosError) throw treinosError;
 
         setTreinos(treinosData || []);
+
+        // Buscar treinos originais para obter nome_personalizado
+        if (treinosData && treinosData.length > 0) {
+          const treinoOriginalIds = treinosData.map(t => t.treino_original_id);
+          const { data: treinosOriginaisData, error: treinosOriginaisError } = await supabase
+            .from('treinos')
+            .select('id, nome_personalizado')
+            .in('id', treinoOriginalIds);
+
+          if (treinosOriginaisError) throw treinosOriginaisError;
+
+          setTreinosOriginais(treinosOriginaisData || []);
+        }
       } catch (error: any) {
         console.error(error);
         toast({
@@ -139,6 +157,24 @@ export default function ActiveProgram() {
 
   const getWeekNumber = (index: number, frequenciaSemanal: number) => {
     return Math.floor(index / frequenciaSemanal) + 1;
+  };
+
+  const getTreinoDisplayName = (treino: TreinoUsuario, index: number) => {
+    if (!programaOriginal) return treino.nome;
+    
+    // Buscar nome personalizado do treino original
+    const treinoOriginal = treinosOriginais.find(t => t.id === treino.treino_original_id);
+    const nomePersonalizado = treinoOriginal?.nome_personalizado;
+    
+    // Calcular número do dia (baseado na sequência cronológica)
+    const dayNumber = (index % programaOriginal.frequencia_semanal) + 1;
+    
+    // Lógica: usar nome_personalizado se existir, senão usar formato padrão
+    if (nomePersonalizado) {
+      return `Dia ${dayNumber}: ${nomePersonalizado}`;
+    } else {
+      return `Dia ${dayNumber}: ${treino.nome}`;
+    }
   };
 
   return (
@@ -199,13 +235,15 @@ export default function ActiveProgram() {
             </div>
           </div>
 
-          {/* Lista de treinos - MANTENDO SEMPRE A ORDEM CRONOLÓGICA */}
+          {/* Lista de treinos - ordem cronológica com nova nomenclatura */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Treinos</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {treinos.map((treino, index) => {
                 const weekNumber = getWeekNumber(index, programaOriginal.frequencia_semanal);
+                const displayName = getTreinoDisplayName(treino, index);
+                
                 return (
                   <Card 
                     key={treino.id} 
@@ -216,7 +254,7 @@ export default function ActiveProgram() {
                   >
                     <div className="flex justify-between items-start">
                       <div>
-                        <h4 className="font-medium">Dia {(index % programaOriginal.frequencia_semanal) + 1}: {treino.nome}</h4>
+                        <h4 className="font-medium">{displayName}</h4>
                         <p className="text-sm text-muted-foreground">Semana {weekNumber}</p>
                       </div>
                       {treino.concluido && (
