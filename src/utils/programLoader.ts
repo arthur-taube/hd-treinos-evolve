@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface LoadedProgramData {
@@ -98,33 +97,29 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       // Obter o cronograma para este mesociclo (usar o primeiro cronograma como padrão)
       const cronogramaMesociclo = savedSchedules.length > 0 ? savedSchedules[0] : [];
       
-      treinosMesociclo.forEach(treino => {
-        // Encontrar o índice do dia da semana no cronograma
-        const dayIndex = cronogramaMesociclo.findIndex(day => day === treino.dia_semana);
+      treinosMesociclo.forEach((treino, index) => {
+        // Usar o índice como chave do dia ao invés de dia_semana
+        const dayKey = `day${index + 1}`;
         
-        if (dayIndex !== -1) {
-          // Usar o dia real do cronograma como chave
-          const dayKey = treino.dia_semana;
-          const exerciciosTreino = exercicios?.filter(e => e.treino_id === treino.id) || [];
-          
-          if (!exercisesPerDay[mesocicloKey][dayKey]) {
-            exercisesPerDay[mesocicloKey][dayKey] = [];
-          }
-          
-          const exerciciosFormatados = exerciciosTreino.map(exercicio => ({
-            id: exercicio.id,
-            name: exercicio.nome,
-            muscleGroup: exercicio.grupo_muscular,
-            sets: exercicio.series,
-            reps: exercicio.repeticoes,
-            hidden: exercicio.oculto,
-            originalId: exercicio.exercicio_original_id,
-            allowMultipleGroups: exercicio.allow_multiple_groups || false,
-            availableGroups: exercicio.available_groups || undefined
-          }));
-          
-          exercisesPerDay[mesocicloKey][dayKey].push(...exerciciosFormatados);
+        const exerciciosTreino = exercicios?.filter(e => e.treino_id === treino.id) || [];
+        
+        if (!exercisesPerDay[mesocicloKey][dayKey]) {
+          exercisesPerDay[mesocicloKey][dayKey] = [];
         }
+        
+        const exerciciosFormatados = exerciciosTreino.map(exercicio => ({
+          id: exercicio.id,
+          name: exercicio.nome,
+          muscleGroup: exercicio.grupo_muscular,
+          sets: exercicio.series,
+          reps: exercicio.repeticoes,
+          hidden: exercicio.oculto,
+          originalId: exercicio.exercicio_original_id,
+          allowMultipleGroups: exercicio.allow_multiple_groups || false,
+          availableGroups: exercicio.available_groups || undefined
+        }));
+        
+        exercisesPerDay[mesocicloKey][dayKey].push(...exerciciosFormatados);
       });
     });
 
