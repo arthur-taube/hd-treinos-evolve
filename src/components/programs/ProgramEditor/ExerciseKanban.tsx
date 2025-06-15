@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { DragDropContext } from "react-beautiful-dnd";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,7 @@ import MuscleGroupDialog from "./MuscleGroupDialog";
 import type { Exercise, ExerciseKanbanProps } from "./types";
 import { useExerciseState } from "./hooks/useExerciseState";
 import { useExerciseDrag } from "./hooks/useExerciseDrag";
-import { getDayLabel, getDayRows } from "./hooks/useScheduleHelpers";
+import { getDayRows } from "./hooks/useScheduleHelpers";
 
 interface ExtendedExerciseKanbanProps extends ExerciseKanbanProps {
   initialExercises?: Record<string, Exercise[]>;
@@ -129,7 +128,6 @@ export default function ExerciseKanban({
                   updateExercise(day, exerciseId, field, value)
                 }
                 onDeleteExercise={(exerciseId) => deleteExercise(day, exerciseId)}
-                dayLabel={getDayLabel(day)}
               />
             ))}
           </div>

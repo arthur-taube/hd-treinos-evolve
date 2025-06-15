@@ -14,7 +14,6 @@ interface DayColumnProps {
   onAddExercise: () => void;
   onExerciseUpdate: (exerciseId: string, field: keyof Exercise, value: string | number | boolean) => void;
   onDeleteExercise: (exerciseId: string) => void;
-  dayLabel: string;
 }
 
 export function DayColumn({
@@ -25,7 +24,6 @@ export function DayColumn({
   onAddExercise,
   onExerciseUpdate,
   onDeleteExercise,
-  dayLabel,
 }: DayColumnProps) {
   // Extrair nome e nome personalizado do título atual
   const [workoutName, customName] = title.includes(' - ') ? title.split(' - ') : [title, ''];
@@ -55,9 +53,6 @@ export function DayColumn({
           className="text-center bg-transparent border-none focus-visible:ring-0 text-sm"
           placeholder="Nome personalizado (opcional)"
         />
-        <div className="text-xs text-center text-muted-foreground">
-          {dayLabel}
-        </div>
       </div>
       
       <div className="bg-muted/50 rounded-b-md p-2 flex-1 min-h-[400px] flex flex-col">
