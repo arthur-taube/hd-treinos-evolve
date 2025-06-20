@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "@/components/layout/PageHeader";
@@ -39,6 +38,7 @@ interface TreinoUsuario {
 
 interface TreinoOriginal {
   id: string;
+  nome: string;
   nome_personalizado: string | null;
 }
 
@@ -109,12 +109,12 @@ export default function ActiveProgram() {
 
         setTreinos(treinosData || []);
 
-        // Buscar treinos originais para obter nome_personalizado
+        // Buscar treinos originais para obter nome e nome_personalizado
         if (treinosData && treinosData.length > 0) {
           const treinoOriginalIds = treinosData.map(t => t.treino_original_id);
           const { data: treinosOriginaisData, error: treinosOriginaisError } = await supabase
             .from('treinos')
-            .select('id, nome_personalizado')
+            .select('id, nome, nome_personalizado')
             .in('id', treinoOriginalIds);
 
           if (treinosOriginaisError) throw treinosOriginaisError;
@@ -159,22 +159,29 @@ export default function ActiveProgram() {
     return Math.floor(index / frequenciaSemanal) + 1;
   };
 
-  const getTreinoDisplayName = (treino: TreinoUsuario, index: number) => {
+  const getTreinoDisplayName = (treino: TreinoUsuario, absoluteIndex: number) => {
     if (!programaOriginal) return treino.nome;
     
-    // Buscar nome personalizado do treino original
+    // Buscar nome e nome_personalizado do treino original
     const treinoOriginal = treinosOriginais.find(t => t.id === treino.treino_original_id);
+    const nome = treinoOriginal?.nome;
     const nomePersonalizado = treinoOriginal?.nome_personalizado;
     
-    // Calcular número do dia (baseado na sequência cronológica)
-    const dayNumber = (index % programaOriginal.frequencia_semanal) + 1;
+    // Calcular número absoluto do dia (sequência contínua)
+    const dayNumber = absoluteIndex + 1;
     
-    // Lógica: usar nome_personalizado se existir, senão usar formato padrão
-    if (nomePersonalizado) {
-      return `Dia ${dayNumber}: ${nomePersonalizado}`;
-    } else {
-      return `Dia ${dayNumber}: ${treino.nome}`;
+    // Lógica: "Dia [sequência absoluta]: [nome] - [nome_personalizado]"
+    let displayName = `Dia ${dayNumber}`;
+    
+    if (nome) {
+      displayName += `: ${nome}`;
     }
+    
+    if (nomePersonalizado) {
+      displayName += ` - ${nomePersonalizado}`;
+    }
+    
+    return displayName;
   };
 
   return (

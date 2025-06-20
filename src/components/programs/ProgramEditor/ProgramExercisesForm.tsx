@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,7 @@ export default function ProgramExercisesForm({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [exercisesPerDay, setExercisesPerDay] = useState<Record<string, Record<string, Exercise[]>>>(initialExercisesPerDay);
+  const [dayTitles, setDayTitles] = useState<Record<string, string>>({});
 
   console.log('ProgramExercisesForm - Props:', {
     programName,
@@ -69,7 +71,8 @@ export default function ProgramExercisesForm({
   console.log('ProgramExercisesForm - State:', {
     scheduleOptions,
     currentMesocycle,
-    exercisesPerDay
+    exercisesPerDay,
+    dayTitles
   });
 
   const handleBack = () => {
@@ -126,6 +129,11 @@ export default function ProgramExercisesForm({
       };
     });
   }, [currentMesocycle]);
+
+  const handleDayTitlesUpdate = useCallback((titles: Record<string, string>) => {
+    console.log('handleDayTitlesUpdate:', titles);
+    setDayTitles(titles);
+  }, []);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -263,7 +271,12 @@ export default function ProgramExercisesForm({
         for (let semana = 1; semana <= mesocycleDurations[i]; semana++) {
           for (let diaIdx = 0; diaIdx < schedule.length; diaIdx++) {
             const diaSemana = schedule[diaIdx];
-            const nomeTreino = `Dia ${diaIdx + 1}`;
+            
+            // Extrair nome e nome personalizado do dayTitles
+            const dayTitle = dayTitles[diaSemana] || `${diaIdx + 1}`;
+            const [nome, nomePersonalizado] = dayTitle.includes(' - ') 
+              ? dayTitle.split(' - ') 
+              : [dayTitle, null];
             
             // 3. Criar o treino
             const { data: treino, error: treinoError } = await supabase
@@ -271,7 +284,8 @@ export default function ProgramExercisesForm({
               .insert({
                 programa_id: programaId,
                 mesociclo_id: mesociclo.id,
-                nome: nomeTreino,
+                nome: nome.trim(), // Salvar apenas o primeiro campo (ex: "A", "1")
+                nome_personalizado: nomePersonalizado?.trim() || null, // Salvar o segundo campo (ex: "Full Body A")
                 dia_semana: diaSemana,
                 ordem_semana: semana
               } as any)
@@ -279,7 +293,7 @@ export default function ProgramExercisesForm({
               .single();
 
             if (treinoError || !treino) {
-              throw new Error(`Erro ao criar treino ${nomeTreino}: ${treinoError?.message}`);
+              throw new Error(`Erro ao criar treino ${nome}: ${treinoError?.message}`);
             }
 
             // 4. Inserir exercícios do treino (aplicar exercícios do kanban para todas as semanas)
@@ -404,6 +418,7 @@ export default function ProgramExercisesForm({
         mesocycleDuration={mesocycleDurations[currentMesocycle - 1]}
         onDurationChange={handleMesocycleDurationChange}
         onExercisesUpdate={handleExercisesUpdate}
+        onDayTitlesUpdate={handleDayTitlesUpdate}
         initialExercises={exercisesPerDay[`mesocycle-${currentMesocycle}`]}
       />
 

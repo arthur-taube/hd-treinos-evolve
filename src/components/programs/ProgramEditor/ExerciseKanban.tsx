@@ -12,6 +12,7 @@ import { getDayRows } from "./hooks/useScheduleHelpers";
 
 interface ExtendedExerciseKanbanProps extends ExerciseKanbanProps {
   initialExercises?: Record<string, Exercise[]>;
+  onDayTitlesUpdate?: (dayTitles: Record<string, string>) => void;
 }
 
 export default function ExerciseKanban({
@@ -22,6 +23,7 @@ export default function ExerciseKanban({
   mesocycleDuration = 4,
   onDurationChange,
   onExercisesUpdate,
+  onDayTitlesUpdate,
   initialExercises = {},
 }: ExtendedExerciseKanbanProps) {
   const schedule =
@@ -58,6 +60,13 @@ export default function ExerciseKanban({
       }
     });
   }, [schedule, updateDayTitle]); // Removido dayTitles da dependência para evitar loop
+
+  // Enviar dayTitles para o componente pai sempre que mudarem
+  useEffect(() => {
+    if (onDayTitlesUpdate && Object.keys(dayTitles).length > 0) {
+      onDayTitlesUpdate(dayTitles);
+    }
+  }, [dayTitles, onDayTitlesUpdate]);
 
   // Inicializar exercícios quando initialExercises muda
   useEffect(() => {

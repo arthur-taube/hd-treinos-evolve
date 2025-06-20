@@ -18,6 +18,7 @@ export interface ExerciseKanbanProps {
   mesocycleDuration?: number;
   onDurationChange?: (duration: number) => void;
   onExercisesUpdate?: (dayId: string, exercises: Exercise[]) => void;
+  onDayTitlesUpdate?: (dayTitles: Record<string, string>) => void;
 }
 
 export interface RepsRange {
