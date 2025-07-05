@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -68,7 +67,6 @@ export const PAIN_OPTIONS = [
   }
 ];
 
-// We'll keep these for backward compatibility, but they won't be used in the new numeric input version
 export const INCREMENT_OPTIONS = [
   { value: 1, label: "1 kg", description: "Incremento mínimo de 1 kg" },
   { value: 2.5, label: "2.5 kg", description: "Incremento mínimo de 2.5 kg (recomendado)" },
@@ -80,6 +78,32 @@ export function useExerciseFeedback(exerciseId: string) {
   const [showFatigueDialog, setShowFatigueDialog] = useState(false);
   const [showPainDialog, setShowPainDialog] = useState(false);
   const [showIncrementDialog, setShowIncrementDialog] = useState(false);
+  
+  const checkInitialConfiguration = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('exercicios_treino_usuario')
+        .select('configuracao_inicial')
+        .eq('id', exerciseId)
+        .single();
+      
+      if (error) throw error;
+      
+      // Se o exercício já foi configurado, não mostrar o diálogo
+      if (data && data.configuracao_inicial === true) {
+        console.log('Exercício já configurado, não mostrando diálogo de incremento');
+        return;
+      }
+      
+      // Se exercise hasn't been configured yet, show dialog
+      if (data && !data.configuracao_inicial) {
+        setShowIncrementDialog(true);
+      }
+      
+    } catch (error: any) {
+      console.error("Erro ao verificar configuração inicial:", error);
+    }
+  };
   
   const saveDifficultyFeedback = async (difficulty: string) => {
     try {
@@ -93,7 +117,6 @@ export function useExerciseFeedback(exerciseId: string) {
       
       if (error) throw error;
       
-      // Show fatigue dialog after difficulty
       setShowDifficultyDialog(false);
       setShowFatigueDialog(true);
       
@@ -190,55 +213,31 @@ export function useExerciseFeedback(exerciseId: string) {
     }
   };
   
-  const checkInitialConfiguration = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('exercicios_treino_usuario')
-        .select('configuracao_inicial')
-        .eq('id', exerciseId)
-        .single();
-      
-      if (error) throw error;
-      
-      // If exercise hasn't been configured yet
-      if (data && !data.configuracao_inicial) {
-        setShowIncrementDialog(true);
-      }
-      
-    } catch (error: any) {
-      console.error("Erro ao verificar configuração inicial:", error);
-    }
-  };
-  
   const checkNeedsPainEvaluation = async (primaryMuscle: string) => {
     if (!primaryMuscle) return false;
     
     try {
-      // Verificar se o usuário já treinou este músculo primário antes
       const { data: previousExercises, error } = await supabase
         .from('exercicios_treino_usuario')
         .select('id, treino_usuario_id, data_avaliacao')
         .eq('primary_muscle', primaryMuscle)
         .eq('concluido', true)
-        .neq('id', exerciseId)  // Excluir o exercício atual
+        .neq('id', exerciseId)
         .order('updated_at', { ascending: false })
         .limit(5);
       
       if (error) throw error;
       
-      // Se não há exercícios prévios com este músculo primário, não precisamos avaliar dor
       if (!previousExercises || previousExercises.length === 0) {
         return false;
       }
       
-      // Se há exercícios prévios, verificamos se há uma avaliação recente
       const hasRecentEvaluation = previousExercises.some(ex => 
         ex.id !== exerciseId && 
         ex.data_avaliacao !== null && 
         new Date(ex.data_avaliacao).getTime() > (Date.now() - 7 * 24 * 60 * 60 * 1000)
       );
       
-      // Se não há avaliação recente e existem exercícios anteriores, mostramos o diálogo
       if (!hasRecentEvaluation && previousExercises.length > 0) {
         setShowPainDialog(true);
         return true;
