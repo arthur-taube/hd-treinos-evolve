@@ -17,7 +17,7 @@ const BottomNav = () => {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border/40 py-2 px-4 z-10">
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-center gap-8">
         <Link
           to="/dashboard"
           className={`flex flex-col items-center w-16 py-1 ${
