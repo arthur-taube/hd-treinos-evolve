@@ -35,6 +35,30 @@ export function ExerciseHeader({
   replaceExerciseThisWorkout,
   replaceExerciseAllWorkouts
 }: ExerciseHeaderProps) {
+  // Função para formatar a exibição das séries/reps/peso
+  const formatExerciseDisplay = () => {
+    const series = exercise.series;
+    const peso = exercise.peso ? `${exercise.peso}kg` : '';
+    
+    // Se temos reps_programadas, usar esse valor ao invés da faixa
+    let repsDisplay;
+    if (exercise.reps_programadas) {
+      repsDisplay = exercise.reps_programadas.toString();
+    } else if (exercise.repeticoes) {
+      repsDisplay = exercise.repeticoes;
+    } else {
+      repsDisplay = "10-12";
+    }
+    
+    // Montar o texto final
+    let displayText = `${series} x ${repsDisplay}`;
+    if (peso) {
+      displayText += ` @ ${peso}`;
+    }
+    
+    return displayText;
+  };
+
   return (
     <div className="p-4">
       <div className="flex justify-between items-start mb-2">
@@ -83,10 +107,9 @@ export function ExerciseHeader({
         <div>
           <h3 className="text-lg font-medium">{exercise.nome}</h3>
           <p className="text-sm text-muted-foreground">
-            {exercise.series} x {exercise.repeticoes || "10-12"} 
-            {exercise.peso ? ` @ ${exercise.peso}kg` : ""}
+            {formatExerciseDisplay()}
             {exercise.reps_programadas && (
-              <span className="text-blue-600 font-medium"> (Target: {exercise.reps_programadas} reps)</span>
+              <span className="text-blue-600 font-medium ml-2">(Target: {exercise.reps_programadas} reps)</span>
             )}
           </p>
           

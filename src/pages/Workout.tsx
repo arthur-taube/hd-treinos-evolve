@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PageHeader from "@/components/layout/PageHeader";
@@ -9,6 +8,7 @@ import { ChevronLeft, CheckCircle, ChevronRight } from "lucide-react";
 import { ExerciseCard } from "@/components/workout/ExerciseCard";
 import { FeedbackDialog } from "@/components/workout/FeedbackDialog";
 import { useExerciseFeedback } from "@/hooks/use-exercise-feedback";
+import { applyWorkoutProgression } from "@/utils/workoutProgressionLoader";
 
 interface TreinoUsuario {
   id: string;
@@ -21,8 +21,8 @@ interface ExercicioUsuario {
   id: string;
   nome: string;
   grupo_muscular: string;
-  primary_muscle: string;  // Adicionado primary_muscle
-  exercicio_original_id: string;  // Adicionado ID do exercício original
+  primary_muscle: string;
+  exercicio_original_id: string;
   series: number;
   repeticoes: string | null;
   oculto: boolean;
@@ -32,6 +32,7 @@ interface ExercicioUsuario {
   observacao?: string | null;
   video_url?: string | null;
   configuracao_inicial?: boolean;
+  reps_programadas?: number | null;
 }
 
 export default function Workout() {
@@ -47,6 +48,9 @@ export default function Workout() {
       if (!treinoId) return;
 
       try {
+        // Aplicar progressão automática primeiro
+        await applyWorkoutProgression(treinoId);
+
         // Buscar dados do treino
         const { data: treinoData, error: treinoError } = await supabase
           .from('treinos_usuario')
@@ -75,7 +79,8 @@ export default function Workout() {
             peso, 
             observacao, 
             video_url,
-            configuracao_inicial
+            configuracao_inicial,
+            reps_programadas
           `)
           .eq('treino_usuario_id', treinoId)
           .order('ordem', { ascending: true });

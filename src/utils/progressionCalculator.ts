@@ -353,6 +353,13 @@ export const calculateProgression = async (params: ProgressionParams): Promise<P
       reps_programadas: previousData.repsProgramadas
     };
   }
+
+  // No final, onde retornamos o resultado, vamos arredondar o peso para inteiro se for próximo
+  const finalizeWeight = (weight: number): number => {
+    // Se o peso está muito próximo de um número inteiro, arredondar
+    const rounded = Math.round(weight);
+    return Math.abs(weight - rounded) < 0.1 ? rounded : weight;
+  };
 };
 
 // Função para buscar a pior série (menor repetições) executada no exercício
