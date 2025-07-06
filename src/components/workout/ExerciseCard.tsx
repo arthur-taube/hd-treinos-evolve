@@ -13,6 +13,7 @@ import { FeedbackDialog } from "./FeedbackDialog";
 import { useExerciseFeedback, DIFFICULTY_OPTIONS, FATIGUE_OPTIONS, PAIN_OPTIONS, INCREMENT_OPTIONS } from "@/hooks/use-exercise-feedback";
 import { updateMissingMuscleData, propagateIncrementoMinimo } from "@/utils/muscleDataLoader";
 import { calculateProgression, getIncrementoMinimo, updateRepsProgramadas, getCurrentRepsProgramadas } from "@/utils/progressionCalculator";
+
 interface ExerciseCardProps {
   exercise: {
     id: string;
@@ -33,12 +34,14 @@ interface ExerciseCardProps {
   onExerciseComplete: (exerciseId: string, isCompleted: boolean) => Promise<void>;
   onWeightUpdate: (exerciseId: string, weight: number) => Promise<void>;
 }
+
 interface SetData {
   number: number;
   weight: number | null;
   reps: number | null;
   completed: boolean;
 }
+
 interface SeriesData {
   date: string;
   weight: number;
@@ -56,6 +59,7 @@ interface SeriesRecord {
   created_at: string;
   updated_at: string;
 }
+
 export function ExerciseCard({
   exercise,
   onExerciseComplete,
@@ -207,9 +211,17 @@ export function ExerciseCard({
         }
       }
     };
-    if (isOpen && !exercise.configuracao_inicial) {
-      checkInitialConfiguration();
-      applyAutomaticProgression();
+
+    if (isOpen) {
+      // Separar as duas lógicas conforme o plano:
+      // Se configuracao_inicial é false (não configurado ainda): verificar configuração inicial
+      if (exercise.configuracao_inicial === false) {
+        checkInitialConfiguration();
+      }
+      // Se configuracao_inicial é true (já configurado): aplicar progressão automática
+      else if (exercise.configuracao_inicial === true) {
+        applyAutomaticProgression();
+      }
     }
   }, [isOpen, exercise.configuracao_inicial, exercise.exercicio_original_id]);
 
@@ -226,6 +238,7 @@ export function ExerciseCard({
       fetchPreviousSeries();
     }
   }, [isOpen, exercise.exercicio_original_id]);
+
   const fetchPreviousSeries = async () => {
     setIsLoadingSeries(true);
     try {
@@ -310,6 +323,7 @@ export function ExerciseCard({
       setIsLoadingSeries(false);
     }
   };
+
   const handleSetComplete = (index: number) => {
     setSets(prevSets => {
       const newSets = [...prevSets];
@@ -317,6 +331,7 @@ export function ExerciseCard({
       return newSets;
     });
   };
+
   const handleWeightChange = (index: number, weight: number) => {
     setSets(prevSets => {
       const newSets = [...prevSets];
@@ -327,6 +342,7 @@ export function ExerciseCard({
       return newSets;
     });
   };
+
   const handleRepsChange = (index: number, reps: number) => {
     setSets(prevSets => {
       const newSets = [...prevSets];
@@ -334,6 +350,7 @@ export function ExerciseCard({
       return newSets;
     });
   };
+
   const handleExerciseComplete = async () => {
     try {
       await supabase.rpc('ensure_series_table');
@@ -433,6 +450,7 @@ export function ExerciseCard({
       }
     }
   };
+
   const saveObservation = async () => {
     try {
       const {
@@ -454,28 +472,34 @@ export function ExerciseCard({
       });
     }
   };
+
   const skipIncompleteSets = async () => {
     await onExerciseComplete(exercise.id, true);
     setIsOpen(false);
     setShowDifficultyDialog(true);
   };
+
   const replaceExerciseThisWorkout = async () => {
     toast({
       description: "Funcionalidade a ser implementada: Substituir exercício neste treino"
     });
   };
+
   const replaceExerciseAllWorkouts = async () => {
     toast({
       description: "Funcionalidade a ser implementada: Substituir exercício em todos os treinos"
     });
   };
+
   const addNote = () => {
     toast({
       description: "Nota adicionada ao exercício"
     });
     setShowNoteInput(false);
   };
+
   const allSetsCompleted = sets.every(set => set.completed);
+
   return <>
       <Card className="mb-4 overflow-hidden">
         <div className="p-4">
