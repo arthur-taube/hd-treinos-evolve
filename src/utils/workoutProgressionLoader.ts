@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { calculateProgression, getCurrentRepsProgramadas, getIncrementoMinimo } from "./progressionCalculator";
 import { updateMissingMuscleData } from "./muscleDataLoader";
@@ -12,6 +11,8 @@ interface ExerciseData {
   series: number;
   reps_programadas: number | null;
   configuracao_inicial: boolean | null;
+  primary_muscle: string | null;
+  secondary_muscle: string | null;
 }
 
 export const applyWorkoutProgression = async (treinoId: string): Promise<void> => {
