@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Youtube, MoreHorizontal, Check, Play } from "lucide-react";
+import { roundSetsForDisplay } from "@/utils/progressionCalculator";
 
 interface ExerciseHeaderProps {
   exercise: {
@@ -37,7 +38,8 @@ export function ExerciseHeader({
 }: ExerciseHeaderProps) {
   // Função para formatar a exibição das séries/reps/peso
   const formatExerciseDisplay = () => {
-    const series = exercise.series;
+    // Arredondar séries para exibição (valores decimais arredondados)
+    const displaySeries = roundSetsForDisplay(exercise.series);
     const peso = exercise.peso ? `${exercise.peso}kg` : '';
     
     // Se temos reps_programadas, usar esse valor ao invés da faixa
@@ -51,7 +53,7 @@ export function ExerciseHeader({
     }
     
     // Montar o texto final
-    let displayText = `${series} x ${repsDisplay}`;
+    let displayText = `${displaySeries} x ${repsDisplay}`;
     if (peso) {
       displayText += ` @ ${peso}`;
     }

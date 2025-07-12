@@ -214,7 +214,7 @@ const calculateDoubleProgressionReps = (
   return Math.max(min, newReps);
 };
 
-// Calcular novas séries
+// Calcular novas séries com valores decimais exatos
 const calculateNewSets = (
   previousSets: number,
   dificuldade: string,
@@ -223,21 +223,25 @@ const calculateNewSets = (
 ): number => {
   const diffValue = getDifficultyValue(dificuldade);
   
-  // Socorro! (Deload)
+  // Socorro! (Deload) - Regra superior
   if (diffValue === -2) {
-    return Math.ceil(previousSets / 2);
+    return previousSets / 2; // Retorna valor exato, incluindo decimais
   }
   
-  // Regra geral
-  const adjustment = avaliacaoFadiga + avaliacaoDor;
-  const newSets = previousSets + adjustment;
+  // Regra geral: X = S + F + D
+  const newSets = previousSets + avaliacaoFadiga + avaliacaoDor;
   
-  // Arredondamento: até 0.5 para baixo, de 0.51 em diante para cima
-  const fractional = newSets - Math.floor(newSets);
+  // Retorna o valor exato (com decimais) - será salvo na database
+  return Math.max(0.5, newSets); // Mínimo de 0.5 séries
+};
+
+// Função auxiliar para arredondar séries para exibição
+export const roundSetsForDisplay = (sets: number): number => {
+  const fractional = sets - Math.floor(sets);
   if (fractional <= 0.5) {
-    return Math.floor(newSets);
+    return Math.floor(sets);
   } else {
-    return Math.ceil(newSets);
+    return Math.ceil(sets);
   }
 };
 
@@ -282,7 +286,7 @@ export const calculateProgression = async (params: ProgressionParams): Promise<P
 
   const useDoubleProgression = isDoubleProgression(previousData.repeticoes);
   
-  // Calcular novas séries primeiro (REGRA MAIOR)
+  // Calcular novas séries primeiro (REGRA MAIOR) - mantém valor decimal exato
   const newSets = calculateNewSets(
     previousData.sets,
     avaliacaoDificuldade,
@@ -295,7 +299,7 @@ export const calculateProgression = async (params: ProgressionParams): Promise<P
     return {
       newWeight: previousData.weight,
       newReps: useDoubleProgression ? previousData.repeticoes : previousData.repsProgramadas,
-      newSets: newSets,
+      newSets: newSets, // Valor exato com decimais
       progressionType: useDoubleProgression ? 'double' : 'linear',
       isDeload: getDifficultyValue(avaliacaoDificuldade) === -2,
       reasoning: 'Séries aumentaram - mantendo peso e reps anteriores',
@@ -322,7 +326,7 @@ export const calculateProgression = async (params: ProgressionParams): Promise<P
     return {
       newWeight: newWeight,
       newReps: previousData.repeticoes,
-      newSets: newSets,
+      newSets: newSets, // Valor exato com decimais
       progressionType: 'double',
       isDeload: getDifficultyValue(avaliacaoDificuldade) === -2,
       reasoning: 'Progressão dupla aplicada',
@@ -346,20 +350,13 @@ export const calculateProgression = async (params: ProgressionParams): Promise<P
     return {
       newWeight: newWeight,
       newReps: previousData.repsProgramadas,
-      newSets: newSets,
+      newSets: newSets, // Valor exato com decimais
       progressionType: 'linear',
       isDeload: diffValue === -2,
       reasoning: 'Progressão linear aplicada',
       reps_programadas: previousData.repsProgramadas
     };
   }
-
-  // No final, onde retornamos o resultado, vamos arredondar o peso para inteiro se for próximo
-  const finalizeWeight = (weight: number): number => {
-    // Se o peso está muito próximo de um número inteiro, arredondar
-    const rounded = Math.round(weight);
-    return Math.abs(weight - rounded) < 0.1 ? rounded : weight;
-  };
 };
 
 // Função para buscar a pior série (menor repetições) executada no exercício

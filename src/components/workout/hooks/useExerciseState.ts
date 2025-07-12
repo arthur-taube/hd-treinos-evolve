@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { updateMissingMuscleData, propagateIncrementoMinimo } from "@/utils/muscleDataLoader";
-import { calculateProgression, getIncrementoMinimo, updateRepsProgramadas, getCurrentRepsProgramadas } from "@/utils/progressionCalculator";
+import { calculateProgression, getIncrementoMinimo, updateRepsProgramadas, getCurrentRepsProgramadas, roundSetsForDisplay } from "@/utils/progressionCalculator";
 import { useExerciseFeedback } from "@/hooks/use-exercise-feedback";
 
 export interface SetData {
@@ -46,14 +46,18 @@ export function useExerciseState(
   const [showObservationInput, setShowObservationInput] = useState(false);
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [exerciseNote, setExerciseNote] = useState("");
+  
+  // Usar o número de séries arredondado para criar os sets no frontend
+  const displaySets = roundSetsForDisplay(exercise.series);
   const [sets, setSets] = useState<SetData[]>(Array.from({
-    length: exercise.series
+    length: displaySets
   }, (_, i) => ({
     number: i + 1,
     weight: exercise.peso || null,
     reps: exercise.repeticoes ? parseInt(exercise.repeticoes) : null,
     completed: false
   })));
+  
   const [isLoadingSeries, setIsLoadingSeries] = useState(false);
   const [previousSeries, setPreviousSeries] = useState<SeriesData[]>([]);
 
@@ -164,24 +168,45 @@ export function useExerciseState(
               isFirstWeek: false
             });
 
-            const targetReps = progressao.reps_programadas || (typeof progressao.newReps === 'string' ? parseInt(progressao.newReps.split('-')[0]) : Number(progressao.newReps));
-            setSets(prevSets => Array.from({
-              length: progressao.newSets
-            }, (_, i) => ({
-              number: i + 1,
-              weight: progressao.newWeight,
-              reps: targetReps,
-              completed: false
-            })));
+            // Salvar valor exato de séries na database (com decimais)
+            const { error: updateError } = await supabase
+              .from('exercicios_treino_usuario')
+              .update({ 
+                series: progressao.newSets, // Valor exato com decimais
+                peso: progressao.newWeight 
+              })
+              .eq('id', exercise.id);
 
-            if (progressao.newWeight !== exercise.peso) {
-              onWeightUpdate(exercise.id, progressao.newWeight);
-            }
+            if (updateError) {
+              console.error('Erro ao atualizar exercício:', updateError);
+            } else {
+              // Usar valor arredondado apenas para criar os sets no frontend
+              const displaySets = roundSetsForDisplay(progressao.newSets);
+              const targetReps = progressao.reps_programadas || (typeof progressao.newReps === 'string' ? parseInt(progressao.newReps.split('-')[0]) : Number(progressao.newReps));
+              
+              setSets(prevSets => Array.from({
+                length: displaySets
+              }, (_, i) => ({
+                number: i + 1,
+                weight: progressao.newWeight,
+                reps: targetReps,
+                completed: false
+              })));
 
-            if (progressao.reps_programadas !== undefined) {
-              await updateRepsProgramadas(exercise.id, progressao.reps_programadas);
+              if (progressao.newWeight !== exercise.peso) {
+                onWeightUpdate(exercise.id, progressao.newWeight);
+              }
+
+              if (progressao.reps_programadas !== undefined) {
+                await updateRepsProgramadas(exercise.id, progressao.reps_programadas);
+              }
+              
+              console.log('Progressão aplicada:', {
+                ...progressao,
+                displaySets: displaySets,
+                exactSets: progressao.newSets
+              });
             }
-            console.log('Progressão aplicada:', progressao);
           }
         }
       } catch (error) {
@@ -207,6 +232,21 @@ export function useExerciseState(
       checkNeedsPainEvaluation(exercise.primary_muscle);
     }
   }, [isOpen, exercise.primary_muscle]);
+
+  // Update sets when exercise.series changes (to handle progression updates)
+  useEffect(() => {
+    const displaySets = roundSetsForDisplay(exercise.series);
+    if (sets.length !== displaySets) {
+      setSets(Array.from({
+        length: displaySets
+      }, (_, i) => ({
+        number: i + 1,
+        weight: exercise.peso || null,
+        reps: exercise.repeticoes ? parseInt(exercise.repeticoes) : null,
+        completed: false
+      })));
+    }
+  }, [exercise.series]);
 
   return {
     isOpen,

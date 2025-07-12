@@ -11,7 +11,7 @@ export const DIFFICULTY_OPTIONS = [
   },
   {
     value: "bom",
-    label: "Bom/Pesado",
+    label: "Bom/Pesado", 
     description: "Foi difícil, mas consegui completar todas as repetições de hoje com técnica perfeita."
   },
   {
@@ -33,7 +33,7 @@ export const DIFFICULTY_OPTIONS = [
 
 export const FATIGUE_OPTIONS = [
   {
-    value: 0.5,
+    value: 0.75,
     label: "Nem parece que treinei",
     description: "Este exercício não deixou meus músculos nem um pouco cansados hoje."
   },
@@ -43,7 +43,7 @@ export const FATIGUE_OPTIONS = [
     description: "Eu senti uma boa/razoável fadiga muscular com este exercício hoje."
   },
   {
-    value: -0.5,
+    value: -0.75,
     label: "Quase morri",
     description: "Meus músculos estão totalmente exaustos depois deste exercício hoje."
   }
@@ -51,7 +51,7 @@ export const FATIGUE_OPTIONS = [
 
 export const PAIN_OPTIONS = [
   {
-    value: 0.5,
+    value: 0.25,
     label: "Nunca fiquei dolorido",
     description: "Eu nunca tive nenhuma dor nesse(s) músculo(s) depois do último treino."
   },
@@ -61,7 +61,7 @@ export const PAIN_OPTIONS = [
     description: "Eu cheguei a ficar dolorido depois do treino passado, mas já me recuperei."
   },
   {
-    value: -0.5,
+    value: -0.25,
     label: "Ainda estou dolorido",
     description: "Tive bastante dor e ainda estou (ou passei vários dias) dolorido depois do último treino."
   }
