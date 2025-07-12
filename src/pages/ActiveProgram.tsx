@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "@/components/layout/PageHeader";
@@ -99,12 +98,12 @@ export default function ActiveProgram() {
 
         setProgramaOriginal(programaOriginalData);
 
-        // Buscar treinos do usuário - CORRIGIDO: ordem pela ordem_semana que representa a sequência cronológica
+        // Buscar treinos do usuário - ordem cronológica
         const { data: treinosData, error: treinosError } = await supabase
           .from('treinos_usuario')
           .select('*')
           .eq('programa_usuario_id', programaUsuarioData.id)
-          .order('ordem_semana', { ascending: true }); // Manter ordem cronológica fixa
+          .order('ordem_semana', { ascending: true });
 
         if (treinosError) throw treinosError;
 
@@ -160,8 +159,7 @@ export default function ActiveProgram() {
     return Math.floor(index / frequenciaSemanal) + 1;
   };
 
-  // CORRIGIDO: Usar índice baseado na ordem_semana para manter consistência na nomenclatura
-  const getTreinoDisplayName = (treino: TreinoUsuario) => {
+  const getTreinoDisplayName = (treino: TreinoUsuario, absoluteIndex: number) => {
     if (!programaOriginal) return treino.nome;
     
     // Buscar nome e nome_personalizado do treino original
@@ -169,10 +167,10 @@ export default function ActiveProgram() {
     const nome = treinoOriginal?.nome;
     const nomePersonalizado = treinoOriginal?.nome_personalizado;
     
-    // CORRIGIDO: Usar ordem_semana diretamente como número do dia para manter consistência
-    const dayNumber = treino.ordem_semana;
+    // Calcular número absoluto do dia (sequência contínua)
+    const dayNumber = absoluteIndex + 1;
     
-    // Lógica: "Dia [ordem_semana]: [nome] - [nome_personalizado]"
+    // Lógica: "Dia [sequência absoluta]: [nome] - [nome_personalizado]"
     let displayName = `Dia ${dayNumber}`;
     
     if (nome) {
@@ -244,14 +242,14 @@ export default function ActiveProgram() {
             </div>
           </div>
 
-          {/* Lista de treinos - CORRIGIDO: ordem cronológica fixa com nova nomenclatura */}
+          {/* Lista de treinos - ordem cronológica com nova nomenclatura */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Treinos</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {treinos.map((treino, index) => {
                 const weekNumber = getWeekNumber(index, programaOriginal.frequencia_semanal);
-                const displayName = getTreinoDisplayName(treino);
+                const displayName = getTreinoDisplayName(treino, index);
                 
                 return (
                   <Card 
