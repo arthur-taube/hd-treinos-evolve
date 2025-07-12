@@ -15,6 +15,7 @@ interface TreinoUsuario {
   nome: string;
   ordem_semana: number;
   programa_usuario_id: string;
+  concluido: boolean;
 }
 
 interface ExercicioUsuario {
@@ -87,10 +88,8 @@ export default function Workout() {
 
         if (exerciciosError) throw exerciciosError;
         
-        // Se o primary_muscle não estiver preenchido, fazer uma consulta adicional para obtê-lo
         const exerciciosProcessados = await Promise.all(
           exerciciosData.map(async (exercicio) => {
-            // Se não tivermos primary_muscle, vamos buscar do exercício original
             if (!exercicio.primary_muscle && exercicio.exercicio_original_id) {
               const { data, error } = await supabase
                 .from('exercicios_iniciantes')
@@ -99,10 +98,8 @@ export default function Workout() {
                 .single();
                 
               if (!error && data) {
-                // Atualizar o objeto atual
                 exercicio.primary_muscle = data.primary_muscle || exercicio.grupo_muscular;
                 
-                // Atualizar no banco de dados para futuros acessos
                 await supabase
                   .from('exercicios_treino_usuario')
                   .update({ primary_muscle: data.primary_muscle })
@@ -129,11 +126,9 @@ export default function Workout() {
     fetchWorkoutData();
   }, [treinoId]);
 
-  // Criar a função para garantir que a tabela series_exercicio_usuario existe
   useEffect(() => {
     async function ensureSeriesTable() {
       try {
-        // Vamos criar uma função RPC para criar a tabela se necessário
         await supabase.rpc('ensure_series_table').then(({ error }) => {
           if (error) {
             console.error("Erro ao verificar/criar tabela de séries:", error);
@@ -148,13 +143,11 @@ export default function Workout() {
   }, []);
 
   const toggleExerciseCompletion = async (exerciseId: string, isCompleted: boolean) => {
-    // Atualizar localmente primeiro para UI responsiva
     setExercicios(prev => 
       prev.map(ex => ex.id === exerciseId ? { ...ex, concluido: isCompleted } : ex)
     );
 
     try {
-      // Atualizar no banco de dados
       const { error } = await supabase
         .from('exercicios_treino_usuario')
         .update({ concluido: isCompleted })
@@ -168,7 +161,6 @@ export default function Workout() {
         variant: "destructive"
       });
       
-      // Reverter mudança local em caso de erro
       setExercicios(prev => 
         prev.map(ex => ex.id === exerciseId ? { ...ex, concluido: !isCompleted } : ex)
       );
@@ -176,13 +168,11 @@ export default function Workout() {
   };
 
   const updateExerciseWeight = async (exerciseId: string, weight: number) => {
-    // Atualizar localmente primeiro
     setExercicios(prev => 
       prev.map(ex => ex.id === exerciseId ? { ...ex, peso: weight } : ex)
     );
     
     try {
-      // Atualizar no banco de dados
       const { error } = await supabase
         .from('exercicios_treino_usuario')
         .update({ peso: weight })
@@ -203,15 +193,14 @@ export default function Workout() {
     
     setSaving(true);
     try {
-      // Marcar todos os exercícios como concluídos
+      const visibleExercises = exercicios.filter(ex => !ex.oculto);
       const { error: exerciciosError } = await supabase
         .from('exercicios_treino_usuario')
         .update({ concluido: true })
-        .eq('treino_usuario_id', treino.id);
+        .in('id', visibleExercises.map(ex => ex.id));
         
       if (exerciciosError) throw exerciciosError;
       
-      // Marcar o treino como concluído
       const { error: treinoError } = await supabase
         .from('treinos_usuario')
         .update({ 
@@ -222,15 +211,14 @@ export default function Workout() {
         
       if (treinoError) throw treinoError;
       
-      // Atualizar estado local
-      setExercicios(prev => prev.map(ex => ({ ...ex, concluido: true })));
+      setExercicios(prev => prev.map(ex => ex.oculto ? ex : { ...ex, concluido: true }));
+      setTreino(prev => prev ? { ...prev, concluido: true } : null);
       
       toast({
         title: "Treino concluído!",
         description: "Parabéns! Seu treino foi registrado como concluído."
       });
       
-      // Voltar para a página do programa ativo
       navigate('/active-program');
     } catch (error: any) {
       toast({
@@ -247,7 +235,6 @@ export default function Workout() {
     if (!treino) return null;
     
     try {
-      // Buscar todos os treinos do programa
       const { data: treinos } = await supabase
         .from('treinos_usuario')
         .select('*')
@@ -256,16 +243,13 @@ export default function Workout() {
         
       if (!treinos || treinos.length === 0) return null;
       
-      // Encontrar o índice do treino atual
       const currentIndex = treinos.findIndex(t => t.id === treino.id);
       if (currentIndex === -1) return null;
       
-      // Buscar o próximo ou anterior treino
       const targetIndex = direction === 'next' 
         ? currentIndex + 1 
         : currentIndex - 1;
         
-      // Verificar se o índice está dentro dos limites
       if (targetIndex < 0 || targetIndex >= treinos.length) return null;
       
       return treinos[targetIndex].id;
@@ -288,7 +272,12 @@ export default function Workout() {
   };
 
   const isAllExercisesCompleted = () => {
-    return exercicios.length > 0 && exercicios.every(ex => ex.concluido);
+    const visibleExercises = exercicios.filter(ex => !ex.oculto);
+    return visibleExercises.length > 0 && visibleExercises.every(ex => ex.concluido);
+  };
+
+  const isWorkoutAlreadyCompleted = () => {
+    return treino?.concluido === true;
   };
 
   return (
@@ -343,10 +332,12 @@ export default function Workout() {
             <Button 
               className="w-full" 
               onClick={completeWorkout} 
-              disabled={saving || isAllExercisesCompleted()}
+              disabled={saving || isWorkoutAlreadyCompleted() || !isAllExercisesCompleted()}
             >
-              {saving ? "Salvando..." : isAllExercisesCompleted() ? "Treino Concluído!" : "Concluir Treino"}
-              {isAllExercisesCompleted() && <CheckCircle className="ml-2 h-4 w-4" />}
+              {saving ? "Salvando..." : 
+               isWorkoutAlreadyCompleted() ? "Treino Já Concluído!" : 
+               isAllExercisesCompleted() ? "Concluir Treino" : "Complete todos os exercícios"}
+              {(isAllExercisesCompleted() || isWorkoutAlreadyCompleted()) && <CheckCircle className="ml-2 h-4 w-4" />}
             </Button>
           </div>
         </div>
