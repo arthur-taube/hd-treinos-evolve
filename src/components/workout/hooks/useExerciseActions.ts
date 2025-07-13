@@ -4,7 +4,6 @@ import { toast } from "@/hooks/use-toast";
 import { SetData } from "./useExerciseState";
 import { updateRepsProgramadas, getIncrementoMinimo } from "@/utils/progressionCalculator";
 import { calculateProgression } from "@/utils/progressionCalculator";
-import { propagateIncrementoMinimo } from "@/utils/muscleDataLoader";
 
 interface Exercise {
   id: string;
@@ -135,26 +134,35 @@ export function useExerciseActions(
   };
 
   const handleSaveIncrementSetting = async (value: number, saveIncrementSetting: (value: number) => Promise<void>) => {
-    await saveIncrementSetting(value);
+    try {
+      // Atualizar incremento_minimo e configuracao_inicial
+      const { error: updateError } = await supabase
+        .from('exercicios_treino_usuario')
+        .update({ 
+          incremento_minimo: value,
+          configuracao_inicial: true
+        })
+        .eq('id', exercise.id);
 
-    if (exercise.exercicio_original_id) {
-      try {
-        const { data: treinoUsuario } = await supabase
-          .from('treinos_usuario')
-          .select('programa_usuario_id')
-          .eq('id', (await supabase
-            .from('exercicios_treino_usuario')
-            .select('treino_usuario_id')
-            .eq('id', exercise.id)
-            .single()).data?.treino_usuario_id || '')
-          .single();
-        
-        if (treinoUsuario) {
-          await propagateIncrementoMinimo(exercise.exercicio_original_id, treinoUsuario.programa_usuario_id, value);
-        }
-      } catch (error) {
-        console.error('Erro ao propagar incremento mínimo:', error);
+      if (updateError) {
+        throw updateError;
       }
+
+      await saveIncrementSetting(value);
+
+      toast({
+        title: "Incremento mínimo atualizado",
+        description: `O incremento mínimo foi definido como ${value}kg e será aplicado às próximas semanas.`
+      });
+
+      console.log(`Incremento mínimo redefinido: ${value}kg para exercício ${exercise.nome}`);
+    } catch (error: any) {
+      console.error('Erro ao redefinir incremento mínimo:', error);
+      toast({
+        title: "Erro ao atualizar incremento",
+        description: error.message,
+        variant: "destructive"
+      });
     }
   };
 

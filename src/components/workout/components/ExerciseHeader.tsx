@@ -21,6 +21,7 @@ interface ExerciseHeaderProps {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   setShowObservationInput: (show: boolean) => void;
+  setShowIncrementDialog: (show: boolean) => void;
   skipIncompleteSets: () => void;
   replaceExerciseThisWorkout: () => void;
   replaceExerciseAllWorkouts: () => void;
@@ -32,6 +33,7 @@ export function ExerciseHeader({
   isOpen,
   setIsOpen,
   setShowObservationInput,
+  setShowIncrementDialog,
   skipIncompleteSets,
   replaceExerciseThisWorkout,
   replaceExerciseAllWorkouts
@@ -89,6 +91,9 @@ export function ExerciseHeader({
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setShowObservationInput(true)}>
                 Adicionar observações
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowIncrementDialog(true)}>
+                Redefinir incremento mínimo
               </DropdownMenuItem>
               <DropdownMenuItem onClick={skipIncompleteSets}>
                 Pular séries não concluídas

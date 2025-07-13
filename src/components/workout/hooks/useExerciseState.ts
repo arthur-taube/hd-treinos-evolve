@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -98,6 +97,32 @@ export function useExerciseState(
       return currentRepsProgramadas === null;
     } catch (error) {
       console.error('Erro ao verificar primeira semana:', error);
+      return true;
+    }
+  };
+
+  // Dupla checagem: verificar configuracao_inicial OU incremento_minimo
+  const checkNeedsIncrementConfiguration = async (): Promise<boolean> => {
+    try {
+      const { data: exerciseData } = await supabase
+        .from('exercicios_treino_usuario')
+        .select('configuracao_inicial, incremento_minimo')
+        .eq('id', exercise.id)
+        .single();
+
+      if (!exerciseData) return true;
+
+      // Se configuracao_inicial é TRUE OU incremento_minimo já está definido, não precisa configurar
+      const needsConfiguration = exerciseData.configuracao_inicial !== true && !exerciseData.incremento_minimo;
+      console.log('Verificação de configuração necessária:', {
+        configuracao_inicial: exerciseData.configuracao_inicial,
+        incremento_minimo: exerciseData.incremento_minimo,
+        needsConfiguration
+      });
+      
+      return needsConfiguration;
+    } catch (error) {
+      console.error('Erro ao verificar configuração de incremento:', error);
       return true;
     }
   };
@@ -218,13 +243,17 @@ export function useExerciseState(
   // Initial configuration and progression logic
   useEffect(() => {
     if (isOpen) {
-      if (exercise.configuracao_inicial === false) {
-        checkInitialConfiguration();
-      } else if (exercise.configuracao_inicial === true) {
-        applyAutomaticProgression();
-      }
+      const checkConfiguration = async () => {
+        const needsConfiguration = await checkNeedsIncrementConfiguration();
+        if (needsConfiguration) {
+          checkInitialConfiguration();
+        } else {
+          applyAutomaticProgression();
+        }
+      };
+      checkConfiguration();
     }
-  }, [isOpen, exercise.configuracao_inicial, exercise.exercicio_original_id]);
+  }, [isOpen, exercise.exercicio_original_id]);
 
   // Check for pain evaluation
   useEffect(() => {

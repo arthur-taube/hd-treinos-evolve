@@ -116,6 +116,7 @@ export function ExerciseCard({
           isOpen={isOpen}
           setIsOpen={setIsOpen}
           setShowObservationInput={setShowObservationInput}
+          setShowIncrementDialog={setShowIncrementDialog}
           skipIncompleteSets={skipIncompleteSets}
           replaceExerciseThisWorkout={replaceExerciseThisWorkout}
           replaceExerciseAllWorkouts={replaceExerciseAllWorkouts}
@@ -189,8 +190,8 @@ export function ExerciseCard({
         isOpen={showIncrementDialog} 
         onClose={() => setShowIncrementDialog(false)} 
         onSubmit={handleSaveIncrement} 
-        title="Defina a carga incremental mínima" 
-        description="Antes de começar, informe qual o incremento mínimo de peso que você consegue adicionar no equipamento usado para o exercício {exerciseName}." 
+        title="Redefinir incremento mínimo" 
+        description="Defina o novo incremento mínimo de peso para o exercício {exerciseName}." 
         options={INCREMENT_OPTIONS} 
         exerciseName={exercise.nome} 
         isNumericInput={true} 
