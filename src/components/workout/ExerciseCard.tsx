@@ -148,6 +148,7 @@ export function ExerciseCard({
                 handleExerciseComplete={handleExerciseComplete}
                 allSetsCompleted={allSetsCompleted}
                 exerciseConcluido={exercise.concluido}
+                exercise={exercise}
               />
             </AccordionContent>
           </AccordionItem>

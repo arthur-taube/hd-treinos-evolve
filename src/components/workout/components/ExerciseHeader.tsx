@@ -2,7 +2,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Youtube, MoreHorizontal, Check, Play } from "lucide-react";
+import { Youtube, MoreHorizontal, Check, Play, TrendingUp } from "lucide-react";
 import { roundSetsForDisplay } from "@/utils/progressionCalculator";
 
 interface ExerciseHeaderProps {
@@ -63,6 +63,9 @@ export function ExerciseHeader({
     return displayText;
   };
 
+  // Verificar se há progressão aplicada (peso > 0 indica que foi calculado)
+  const hasProgression = exercise.peso && exercise.peso > 0;
+
   return (
     <div className="p-4">
       <div className="flex justify-between items-start mb-2">
@@ -115,10 +118,25 @@ export function ExerciseHeader({
           <h3 className="text-lg font-medium">{exercise.nome}</h3>
           <p className="text-sm text-muted-foreground">
             {formatExerciseDisplay()}
-            {exercise.reps_programadas && (
-              <span className="text-blue-600 font-medium ml-2">(Target: {exercise.reps_programadas} reps)</span>
-            )}
           </p>
+          
+          {/* Indicador de progressão aplicada */}
+          {hasProgression && (
+            <div className="flex items-center gap-1 mt-1">
+              <TrendingUp className="h-3 w-3 text-green-600" />
+              <span className="text-xs text-green-600 font-medium">
+                Carga sugerida: {exercise.peso}kg
+              </span>
+            </div>
+          )}
+
+          {exercise.reps_programadas && (
+            <div className="mt-1">
+              <span className="text-xs text-blue-600 font-medium">
+                Meta: {exercise.reps_programadas} reps por série
+              </span>
+            </div>
+          )}
           
           {observation && (
             <div className="mt-2 p-1.5 border border-yellow-200 rounded-md text-sm bg-[#aea218]/70">
