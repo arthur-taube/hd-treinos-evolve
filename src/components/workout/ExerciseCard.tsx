@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { FeedbackDialog } from "./FeedbackDialog";
@@ -190,8 +189,8 @@ export function ExerciseCard({
         isOpen={showIncrementDialog} 
         onClose={() => setShowIncrementDialog(false)} 
         onSubmit={handleSaveIncrement} 
-        title="Redefinir incremento mínimo" 
-        description="Defina o novo incremento mínimo de peso para o exercício {exerciseName}." 
+        title="Defina a carga incremental mínima" 
+        description="Antes de começar, informe qual o incremento mínimo de peso que você consegue adicionar no equipamento usado para o exercício {exerciseName}." 
         options={INCREMENT_OPTIONS} 
         exerciseName={exercise.nome} 
         isNumericInput={true} 
