@@ -1,21 +1,16 @@
 
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { SetData } from "./useExerciseState";
-import { updateRepsProgramadas, getIncrementoMinimo } from "@/utils/progressionCalculator";
-import { calculateProgression } from "@/utils/progressionCalculator";
 
 interface Exercise {
   id: string;
   nome: string;
   exercicio_original_id: string;
-  peso: number | null;
-  repeticoes: string | null;
-  series: number;
-  reps_programadas?: number | null;
+  concluido: boolean;
 }
 
-export function useExerciseActions(
+export const useExerciseActions = (
   exercise: Exercise,
   sets: SetData[],
   setSets: React.Dispatch<React.SetStateAction<SetData[]>>,
@@ -24,162 +19,124 @@ export function useExerciseActions(
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>,
   setShowDifficultyDialog: React.Dispatch<React.SetStateAction<boolean>>,
   checkIsFirstWeek: () => Promise<boolean>
-) {
-  const handleSetComplete = (index: number) => {
-    setSets(prevSets => {
-      const newSets = [...prevSets];
-      newSets[index].completed = !newSets[index].completed;
-      return newSets;
-    });
+) => {
+  const handleSetComplete = async (index: number) => {
+    const newSets = [...sets];
+    const currentSet = newSets[index];
+    
+    if (!currentSet.weight || !currentSet.reps) {
+      toast({
+        title: "Dados incompletos",
+        description: "Por favor, preencha peso e repetições antes de marcar como concluída.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    currentSet.completed = !currentSet.completed;
+    setSets(newSets);
+
+    try {
+      await supabase.rpc('save_series', {
+        p_exercicio_id: exercise.id,
+        p_numero_serie: index + 1,
+        p_peso: currentSet.weight,
+        p_repeticoes: currentSet.reps,
+        p_concluida: currentSet.completed
+      });
+
+      console.log(`Serie ${index + 1} salva:`, currentSet);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao salvar série",
+        description: error.message,
+        variant: "destructive"
+      });
+      
+      currentSet.completed = !currentSet.completed;
+      setSets([...newSets]);
+    }
   };
 
   const handleWeightChange = (index: number, weight: number) => {
-    setSets(prevSets => {
-      const newSets = [...prevSets];
-      newSets[index].weight = weight;
-      if (index === 0) {
-        onWeightUpdate(exercise.id, weight);
-      }
-      return newSets;
-    });
+    const newSets = [...sets];
+    newSets[index].weight = weight;
+    setSets(newSets);
+
+    if (weight > 0) {
+      onWeightUpdate(exercise.id, weight);
+    }
   };
 
   const handleRepsChange = (index: number, reps: number) => {
-    setSets(prevSets => {
-      const newSets = [...prevSets];
-      newSets[index].reps = reps;
-      return newSets;
-    });
+    const newSets = [...sets];
+    newSets[index].reps = reps;
+    setSets(newSets);
   };
 
   const handleExerciseComplete = async () => {
-    try {
-      await supabase.rpc('ensure_series_table');
-      for (let i = 0; i < sets.length; i++) {
-        const set = sets[i];
-        await supabase.rpc('save_series', {
-          p_exercicio_id: exercise.id,
-          p_numero_serie: i + 1,
-          p_peso: set.weight || 0,
-          p_repeticoes: set.reps || 0,
-          p_concluida: set.completed
-        });
-      }
+    if (exercise.concluido) return;
 
-      const isFirstWeek = await checkIsFirstWeek();
-      if (isFirstWeek) {
-        const completedSets = sets.filter(set => set.completed && set.reps !== null);
-        if (completedSets.length > 0) {
-          const worstReps = Math.min(...completedSets.map(set => set.reps!));
-          await updateRepsProgramadas(exercise.id, worstReps);
-          console.log(`Primeira semana concluída - reps_programadas definidas como: ${worstReps}`);
-        }
-      }
-      
+    const completedSets = sets.filter(set => set.completed);
+    if (completedSets.length === 0) {
+      toast({
+        title: "Nenhuma série concluída",
+        description: "Complete pelo menos uma série antes de finalizar o exercício.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
       await onExerciseComplete(exercise.id, true);
       setIsOpen(false);
-      setShowDifficultyDialog(true);
+      
+      const isFirstWeek = await checkIsFirstWeek();
+      if (!isFirstWeek) {
+        setTimeout(() => {
+          setShowDifficultyDialog(true);
+        }, 1000);
+      }
     } catch (error: any) {
       toast({
-        title: "Erro ao salvar séries",
+        title: "Erro ao concluir exercício",
         description: error.message,
         variant: "destructive"
       });
     }
   };
 
-  const handleSaveDifficultyFeedback = async (value: string, saveDifficultyFeedback: (value: string) => Promise<void>) => {
+  const handleSaveDifficultyFeedback = async (
+    value: string, 
+    saveDifficultyFeedback: (value: string) => Promise<void>
+  ) => {
     await saveDifficultyFeedback(value);
-
-    if (exercise.exercicio_original_id) {
-      try {
-        const isFirstWeek = exercise.reps_programadas === null;
-        const { data: treinoUsuario } = await supabase
-          .from('treinos_usuario')
-          .select('programa_usuario_id')
-          .eq('id', (await supabase
-            .from('exercicios_treino_usuario')
-            .select('treino_usuario_id')
-            .eq('id', exercise.id)
-            .single()).data?.treino_usuario_id || '')
-          .single();
-        
-        if (treinoUsuario) {
-          const incrementoMinimo = await getIncrementoMinimo(exercise.exercicio_original_id, treinoUsuario.programa_usuario_id);
-          const completedSets = sets.filter(set => set.completed && set.reps !== null);
-          
-          if (completedSets.length > 0) {
-            const bestReps = Math.max(...completedSets.map(set => set.reps!));
-            const progressao = await calculateProgression({
-              exerciseId: exercise.id,
-              currentWeight: exercise.peso || 0,
-              programmedReps: exercise.repeticoes || "10",
-              executedReps: bestReps,
-              currentSets: exercise.series,
-              incrementoMinimo: incrementoMinimo,
-              avaliacaoDificuldade: value,
-              isFirstWeek: isFirstWeek
-            });
-
-            if (progressao.reps_programadas !== undefined) {
-              await updateRepsProgramadas(exercise.id, progressao.reps_programadas);
-              console.log('Progressão aplicada para próxima semana:', progressao);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Erro ao aplicar progressão:', error);
-      }
-    }
   };
 
-  const handleSaveIncrementSetting = async (value: number, saveIncrementSetting: (value: number) => Promise<void>) => {
-    try {
-      // Atualizar incremento_minimo e configuracao_inicial
-      const { error: updateError } = await supabase
-        .from('exercicios_treino_usuario')
-        .update({ 
-          incremento_minimo: value,
-          configuracao_inicial: true
-        })
-        .eq('id', exercise.id);
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      await saveIncrementSetting(value);
-
-      toast({
-        title: "Incremento mínimo atualizado",
-        description: `O incremento mínimo foi definido como ${value}kg e será aplicado às próximas semanas.`
-      });
-
-      console.log(`Incremento mínimo redefinido: ${value}kg para exercício ${exercise.nome}`);
-    } catch (error: any) {
-      console.error('Erro ao redefinir incremento mínimo:', error);
-      toast({
-        title: "Erro ao atualizar incremento",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
+  const handleSaveIncrementSetting = async (
+    value: number,
+    saveIncrementSetting: (value: number) => Promise<void>
+  ) => {
+    await saveIncrementSetting(value);
   };
 
-  const saveObservation = async (observation: string, setShowObservationInput: React.Dispatch<React.SetStateAction<boolean>>) => {
+  const saveObservation = async (
+    observation: string,
+    setShowObservationInput: React.Dispatch<React.SetStateAction<boolean>>
+  ) => {
     try {
       const { error } = await supabase
         .from('exercicios_treino_usuario')
         .update({ observacao: observation })
         .eq('id', exercise.id);
-      
+
       if (error) throw error;
       
+      setShowObservationInput(false);
       toast({
         title: "Observação salva",
-        description: "A observação foi salva com sucesso."
+        description: "Sua observação foi registrada com sucesso."
       });
-      setShowObservationInput(false);
     } catch (error: any) {
       toast({
         title: "Erro ao salvar observação",
@@ -190,28 +147,42 @@ export function useExerciseActions(
   };
 
   const skipIncompleteSets = async () => {
-    await onExerciseComplete(exercise.id, true);
-    setIsOpen(false);
-    setShowDifficultyDialog(true);
+    try {
+      await onExerciseComplete(exercise.id, true);
+      setIsOpen(false);
+      toast({
+        title: "Exercício finalizado",
+        description: "Exercício marcado como concluído."
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao finalizar exercício",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   };
 
   const replaceExerciseThisWorkout = async () => {
     toast({
-      description: "Funcionalidade a ser implementada: Substituir exercício neste treino"
+      title: "Funcionalidade em desenvolvimento",
+      description: "Em breve você poderá substituir exercícios."
     });
   };
 
   const replaceExerciseAllWorkouts = async () => {
     toast({
-      description: "Funcionalidade a ser implementada: Substituir exercício em todos os treinos"
+      title: "Funcionalidade em desenvolvimento", 
+      description: "Em breve você poderá substituir exercícios em todos os treinos."
     });
   };
 
-  const addNote = (setShowNoteInput: React.Dispatch<React.SetStateAction<boolean>>) => {
-    toast({
-      description: "Nota adicionada ao exercício"
-    });
+  const addNote = async (setShowNoteInput: React.Dispatch<React.SetStateAction<boolean>>) => {
     setShowNoteInput(false);
+    toast({
+      title: "Nota adicionada",
+      description: "Sua anotação foi salva."
+    });
   };
 
   return {
@@ -227,4 +198,4 @@ export function useExerciseActions(
     replaceExerciseAllWorkouts,
     addNote
   };
-}
+};

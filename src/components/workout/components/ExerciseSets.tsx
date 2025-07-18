@@ -3,7 +3,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Check, Target } from "lucide-react";
 import { SetData, SeriesData } from "../hooks/useExerciseState";
-import { useEffect } from "react";
 
 interface ExerciseSetsProps {
   sets: SetData[];
@@ -44,7 +43,7 @@ export function ExerciseSets({
   exerciseConcluido,
   exercise
 }: ExerciseSetsProps) {
-  // Pré-preencher os campos com valores sugeridos
+  // Get suggested values from progression or exercise data
   const suggestedWeight = exercise?.peso || 0;
   const suggestedReps = exercise?.reps_programadas || 
     (exercise?.repeticoes ? parseInt(exercise.repeticoes.split('-')[0]) : 10);
@@ -98,52 +97,61 @@ export function ExerciseSets({
         <div></div>
       </div>
       
-      {sets.map((set, index) => (
-        <div key={index} className={`grid grid-cols-4 gap-2 items-center py-2 ${index !== sets.length - 1 ? "border-b" : ""}`}>
-          <div>{set.number}</div>
-          <div className="flex items-center">
-            <Input 
-              type="number" 
-              value={set.weight || (index === 0 && suggestedWeight > 0 ? suggestedWeight : "")} 
-              onChange={(e) => handleWeightChange(index, Number(e.target.value))} 
-              min={0} 
-              step={1} 
-              className={`w-20 h-8 text-sm ${
-                index === 0 && suggestedWeight > 0 && (set.weight === null || set.weight === suggestedWeight) 
-                ? "border-green-500 bg-green-50" 
-                : ""
-              }`}
-              placeholder={suggestedWeight > 0 ? suggestedWeight.toString() : ""}
-            />
-            <span className="ml-1 text-sm">kg</span>
+      {sets.map((set, index) => {
+        // Use the set's actual values if they exist, otherwise use suggested values for the first set
+        const displayWeight = set.weight !== null ? set.weight : 
+          (index === 0 && suggestedWeight > 0 ? suggestedWeight : "");
+          
+        const displayReps = set.reps !== null ? set.reps :
+          (index === 0 && exercise?.reps_programadas ? exercise.reps_programadas : "");
+
+        return (
+          <div key={index} className={`grid grid-cols-4 gap-2 items-center py-2 ${index !== sets.length - 1 ? "border-b" : ""}`}>
+            <div>{set.number}</div>
+            <div className="flex items-center">
+              <Input 
+                type="number" 
+                value={displayWeight}
+                onChange={(e) => handleWeightChange(index, Number(e.target.value))} 
+                min={0} 
+                step={1} 
+                className={`w-20 h-8 text-sm ${
+                  index === 0 && suggestedWeight > 0 && set.weight === null
+                  ? "border-green-500 bg-green-50" 
+                  : ""
+                }`}
+                placeholder={index === 0 && suggestedWeight > 0 ? suggestedWeight.toString() : ""}
+              />
+              <span className="ml-1 text-sm">kg</span>
+            </div>
+            <div>
+              <Input 
+                type="number" 
+                value={displayReps}
+                onChange={(e) => handleRepsChange(index, Number(e.target.value))} 
+                min={0} 
+                step={1} 
+                className={`w-20 h-8 text-sm ${
+                  index === 0 && exercise?.reps_programadas && set.reps === null
+                  ? "border-blue-500 bg-blue-50" 
+                  : ""
+                }`}
+                placeholder={index === 0 && exercise?.reps_programadas ? exercise.reps_programadas.toString() : ""}
+              />
+            </div>
+            <div className="flex justify-center">
+              <Button 
+                variant={set.completed ? "default" : "outline"} 
+                size="sm" 
+                className="h-8 w-8 p-0" 
+                onClick={() => handleSetComplete(index)}
+              >
+                {set.completed ? <Check className="h-4 w-4" /> : null}
+              </Button>
+            </div>
           </div>
-          <div>
-            <Input 
-              type="number" 
-              value={set.reps || (exercise?.reps_programadas ? exercise.reps_programadas : "")} 
-              onChange={(e) => handleRepsChange(index, Number(e.target.value))} 
-              min={0} 
-              step={1} 
-              className={`w-20 h-8 text-sm ${
-                exercise?.reps_programadas && (set.reps === null || set.reps === exercise.reps_programadas)
-                ? "border-blue-500 bg-blue-50" 
-                : ""
-              }`}
-              placeholder={exercise?.reps_programadas ? exercise.reps_programadas.toString() : ""}
-            />
-          </div>
-          <div className="flex justify-center">
-            <Button 
-              variant={set.completed ? "default" : "outline"} 
-              size="sm" 
-              className="h-8 w-8 p-0" 
-              onClick={() => handleSetComplete(index)}
-            >
-              {set.completed ? <Check className="h-4 w-4" /> : null}
-            </Button>
-          </div>
-        </div>
-      ))}
+        );
+      })}
       
       <div className="mt-4 space-y-4">
         {showNoteInput ? (
