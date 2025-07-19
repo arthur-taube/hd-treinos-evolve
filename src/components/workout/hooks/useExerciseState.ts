@@ -1,6 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { calculateProgression, getCurrentRepsProgramadas, updateRepsProgramadas } from "@/utils/progressionCalculator";
 
 export interface SetData {
   number: number;
@@ -26,6 +28,8 @@ interface Exercise {
   reps_programadas?: number | null;
   incremento_minimo?: number | null;
   exercicio_original_id: string;
+  repeticoes?: string | null;
+  treino_usuario_id: string;
 }
 
 export const useExerciseState = (
@@ -48,7 +52,9 @@ export const useExerciseState = (
   // Initialize sets with progression values if available
   useEffect(() => {
     const initializeSets = async () => {
-      console.log(`Initializing sets for exercise: ${exercise.nome}`);
+      console.log(`=== INICIANDO CÁLCULO DE PROGRESSÃO PARA ${exercise.nome} ===`);
+      console.log(`Exercise ID: ${exercise.id}`);
+      console.log(`Treino Usuario ID: ${exercise.treino_usuario_id}`);
       console.log(`Exercise data:`, exercise);
       
       const initialSets: SetData[] = Array.from({ length: exercise.series }, (_, index) => ({
@@ -105,81 +111,130 @@ export const useExerciseState = (
         return null;
       }
 
-      // Get the last completed exercise with evaluation
-      const { data: lastExercise, error: exerciseError } = await supabase
+      // Get current programa_usuario_id
+      const { data: currentWorkout, error: workoutError } = await supabase
+        .from('treinos_usuario')
+        .select('programa_usuario_id')
+        .eq('id', exercise.treino_usuario_id)
+        .single();
+
+      if (workoutError || !currentWorkout) {
+        console.error('Error fetching current workout:', workoutError);
+        return null;
+      }
+
+      const currentProgramaUsuarioId = currentWorkout.programa_usuario_id;
+      console.log(`Current programa_usuario_id: ${currentProgramaUsuarioId}`);
+
+      // Get the last completed exercise WITH SAME PROGRAMA_USUARIO_ID
+      const { data: lastExercises, error: exerciseError } = await supabase
         .from('exercicios_treino_usuario')
-        .select('peso, series, repeticoes, avaliacao_dificuldade, avaliacao_fadiga, avaliacao_dor, incremento_minimo')
+        .select(`
+          peso, 
+          series, 
+          repeticoes, 
+          reps_programadas,
+          avaliacao_dificuldade, 
+          avaliacao_fadiga, 
+          avaliacao_dor, 
+          incremento_minimo,
+          updated_at,
+          treino_usuario_id,
+          treinos_usuario!inner(programa_usuario_id)
+        `)
         .eq('exercicio_original_id', exercise.exercicio_original_id)
         .eq('concluido', true)
+        .eq('treinos_usuario.programa_usuario_id', currentProgramaUsuarioId)
         .not('avaliacao_dificuldade', 'is', null)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .neq('id', exercise.id) // Don't include current exercise
+        .order('updated_at', { ascending: false });
 
       if (exerciseError) {
         console.error('Error fetching last exercise:', exerciseError);
         return null;
       }
 
-      if (!lastExercise) {
-        console.log(`No previous exercise data found for ${exercise.nome}`);
+      if (!lastExercises || lastExercises.length === 0) {
+        console.log(`No previous exercise data found for ${exercise.nome} in program ${currentProgramaUsuarioId}`);
         return null;
       }
 
-      console.log(`Last exercise data for ${exercise.nome}:`, lastExercise);
+      const lastExercise = lastExercises[0];
+      console.log(`Last exercise data for ${exercise.nome} in same program:`, lastExercise);
 
-      // Get the best series from the previous workout
-      const { data: previousSeries, error: seriesError } = await supabase
-        .rpc('get_series_by_exercise', { exercise_id: exercise.id });
+      // Check if this is the first week
+      const isFirstWeek = await checkIsFirstWeek();
+      console.log(`Is first week for ${exercise.nome}:`, isFirstWeek);
 
-      if (seriesError) {
-        console.error('Error fetching previous series:', seriesError);
-        return null;
+      // Get current reps_programadas
+      let currentRepsProgramadas = exercise.reps_programadas;
+      if (!currentRepsProgramadas) {
+        currentRepsProgramadas = await getCurrentRepsProgramadas(exercise.id);
       }
 
-      let bestReps = 0;
-      if (previousSeries && previousSeries.length > 0) {
-        const bestSeries = previousSeries.reduce((best, current) => {
-          const bestVolume = best.peso * best.repeticoes;
-          const currentVolume = current.peso * current.repeticoes;
-          return currentVolume > bestVolume ? current : best;
-        }, previousSeries[0]);
-        bestReps = bestSeries.repeticoes;
-      }
-
-      const incrementoMinimo = exercise.incremento_minimo || lastExercise.incremento_minimo || 1;
-      const currentWeight = lastExercise.peso || 0;
-      const difficulty = lastExercise.avaliacao_dificuldade;
-
-      console.log(`Progression calculation inputs for ${exercise.nome}:`, {
-        currentWeight,
-        bestReps,
-        difficulty,
-        incrementoMinimo
-      });
-
-      // Simple progression logic based on difficulty
-      let suggestedWeight = currentWeight;
-      let suggestedReps = exercise.reps_programadas || bestReps || 10;
-
-      if (difficulty === 'facil') {
-        // Increase weight by 2 increments, keep reps
-        suggestedWeight = currentWeight + (incrementoMinimo * 2);
-      } else if (difficulty === 'bom') {
-        // Increase weight by 1 increment, keep reps
-        suggestedWeight = currentWeight + incrementoMinimo;
-      } else if (difficulty === 'dificil') {
-        // Keep weight, increase reps by 1
-        suggestedReps = Math.min(bestReps + 1, 12);
-      }
-
-      const result = {
-        suggestedWeight: Math.max(suggestedWeight, 0),
-        suggestedReps: Math.max(suggestedReps, 1)
+      // Use the complete progression calculator
+      const progressionParams = {
+        exerciseId: exercise.id,
+        currentWeight: lastExercise.peso || 0,
+        programmedReps: exercise.repeticoes || lastExercise.repeticoes || "10",
+        executedReps: currentRepsProgramadas || lastExercise.reps_programadas || 10,
+        currentSets: lastExercise.series || exercise.series,
+        incrementoMinimo: exercise.incremento_minimo || lastExercise.incremento_minimo || 2.5,
+        avaliacaoDificuldade: lastExercise.avaliacao_dificuldade,
+        avaliacaoFadiga: lastExercise.avaliacao_fadiga || 0,
+        avaliacaoDor: lastExercise.avaliacao_dor || 0,
+        isFirstWeek: isFirstWeek
       };
 
-      console.log(`Calculated progression for ${exercise.nome}:`, result);
-      return result;
+      console.log(`Progression params for ${exercise.nome}:`, progressionParams);
+
+      const progressionResult = await calculateProgression(progressionParams);
+      console.log(`Progression result for ${exercise.nome}:`, progressionResult);
+
+      // Update exercise with new values
+      const updateData: any = {
+        peso: progressionResult.newWeight,
+        series: progressionResult.newSets
+      };
+
+      // Handle reps_programadas for double progression
+      if (progressionResult.reps_programadas) {
+        updateData.reps_programadas = progressionResult.reps_programadas;
+        await updateRepsProgramadas(exercise.id, progressionResult.reps_programadas);
+      }
+
+      // Update the exercise in database
+      const { error: updateError } = await supabase
+        .from('exercicios_treino_usuario')
+        .update(updateData)
+        .eq('id', exercise.id);
+
+      if (updateError) {
+        console.error('Error updating exercise with progression:', updateError);
+      } else {
+        console.log(`Updated exercise ${exercise.nome} with progression:`, updateData);
+      }
+
+      // Determine suggested reps for UI
+      let suggestedReps: number;
+      if (progressionResult.reps_programadas) {
+        // Double progression - use calculated reps_programadas
+        suggestedReps = progressionResult.reps_programadas;
+      } else if (exercise.repeticoes && !exercise.repeticoes.includes('-')) {
+        // Linear progression with fixed reps
+        suggestedReps = parseInt(exercise.repeticoes);
+      } else if (exercise.repeticoes && exercise.repeticoes.includes('-')) {
+        // Range - use minimum value for display
+        suggestedReps = parseInt(exercise.repeticoes.split('-')[0]);
+      } else {
+        // Fallback
+        suggestedReps = 10;
+      }
+
+      return {
+        suggestedWeight: progressionResult.newWeight,
+        suggestedReps: suggestedReps
+      };
 
     } catch (error) {
       console.error('Error calculating automatic progression:', error);
@@ -205,11 +260,30 @@ export const useExerciseState = (
 
   const checkIsFirstWeek = async (): Promise<boolean> => {
     try {
+      // Get current programa_usuario_id
+      const { data: currentWorkout, error: workoutError } = await supabase
+        .from('treinos_usuario')
+        .select('programa_usuario_id')
+        .eq('id', exercise.treino_usuario_id)
+        .single();
+
+      if (workoutError || !currentWorkout) {
+        console.error('Error checking first week:', workoutError);
+        return true;
+      }
+
+      // Check for previous completed exercises in the same program
       const { data, error } = await supabase
         .from('exercicios_treino_usuario')
-        .select('id')
+        .select(`
+          id,
+          treino_usuario_id,
+          treinos_usuario!inner(programa_usuario_id)
+        `)
         .eq('exercicio_original_id', exercise.exercicio_original_id)
         .eq('concluido', true)
+        .eq('treinos_usuario.programa_usuario_id', currentWorkout.programa_usuario_id)
+        .neq('id', exercise.id)
         .limit(1);
 
       if (error) {
@@ -218,7 +292,7 @@ export const useExerciseState = (
       }
 
       const isFirstWeek = !data || data.length === 0;
-      console.log(`Is first week for ${exercise.nome}:`, isFirstWeek);
+      console.log(`Is first week for ${exercise.nome} in program ${currentWorkout.programa_usuario_id}:`, isFirstWeek);
       return isFirstWeek;
     } catch (error) {
       console.error('Error in checkIsFirstWeek:', error);

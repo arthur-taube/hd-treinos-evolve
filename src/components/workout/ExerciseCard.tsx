@@ -1,3 +1,4 @@
+
 import { Card } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { FeedbackDialog } from "./FeedbackDialog";
@@ -25,6 +26,8 @@ interface ExerciseCardProps {
     video_url?: string | null;
     configuracao_inicial?: boolean;
     reps_programadas?: number | null;
+    incremento_minimo?: number | null;
+    treino_usuario_id: string;
   };
   onExerciseComplete: (exerciseId: string, isCompleted: boolean) => Promise<void>;
   onWeightUpdate: (exerciseId: string, weight: number) => Promise<void>;
@@ -35,6 +38,9 @@ export function ExerciseCard({
   onExerciseComplete,
   onWeightUpdate
 }: ExerciseCardProps) {
+  console.log(`=== RENDERING ExerciseCard for ${exercise.nome} ===`);
+  console.log(`Exercise data:`, exercise);
+
   const {
     isOpen,
     setIsOpen,

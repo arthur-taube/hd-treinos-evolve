@@ -45,10 +45,34 @@ export function ExerciseSets({
 }: ExerciseSetsProps) {
   // Get suggested values from progression or exercise data
   const suggestedWeight = exercise?.peso || 0;
-  const suggestedReps = exercise?.reps_programadas || 
-    (exercise?.repeticoes ? parseInt(exercise.repeticoes.split('-')[0]) : 10);
+  
+  // Determine suggested reps based on progression type
+  let suggestedReps: number;
+  
+  if (exercise?.reps_programadas && exercise.reps_programadas > 0) {
+    // Double progression - use calculated reps_programadas
+    suggestedReps = exercise.reps_programadas;
+    console.log(`Using reps_programadas for suggestion: ${suggestedReps}`);
+  } else if (exercise?.repeticoes && !exercise.repeticoes.includes('-')) {
+    // Linear progression - fixed reps
+    suggestedReps = parseInt(exercise.repeticoes);
+    console.log(`Using fixed repeticoes for suggestion: ${suggestedReps}`);
+  } else if (exercise?.repeticoes && exercise.repeticoes.includes('-')) {
+    // Range - use minimum value for display but this should use reps_programadas
+    const minReps = parseInt(exercise.repeticoes.split('-')[0]);
+    suggestedReps = exercise?.reps_programadas || minReps;
+    console.log(`Using range repeticoes, suggesting: ${suggestedReps}`);
+  } else {
+    // Fallback
+    suggestedReps = 10;
+    console.log(`Using fallback reps: ${suggestedReps}`);
+  }
 
-  const hasProgressionData = suggestedWeight > 0 || (exercise?.reps_programadas && exercise.reps_programadas > 0);
+  const hasProgressionData = suggestedWeight > 0 || suggestedReps > 0;
+
+  // Determine progression type for display
+  const isDoubleProgression = exercise?.repeticoes && exercise.repeticoes.includes('-');
+  const progressionType = isDoubleProgression ? 'dupla' : 'linear';
 
   return (
     <div className="px-4 py-2">
@@ -57,15 +81,23 @@ export function ExerciseSets({
         <div className="mb-4 p-3 rounded-md bg-green-50 border border-green-200">
           <div className="flex items-center gap-2 mb-2">
             <Target className="h-4 w-4 text-green-600" />
-            <h4 className="text-sm font-medium text-green-800">Valores Sugeridos pela Progressão</h4>
+            <h4 className="text-sm font-medium text-green-800">
+              Valores Sugeridos pela Progressão ({progressionType})
+            </h4>
           </div>
           <div className="text-sm text-green-700">
             {suggestedWeight > 0 && (
               <span>Carga: <strong>{suggestedWeight}kg</strong></span>
             )}
-            {suggestedWeight > 0 && exercise?.reps_programadas && <span> • </span>}
-            {exercise?.reps_programadas && (
-              <span>Repetições: <strong>{exercise.reps_programadas} reps</strong></span>
+            {suggestedWeight > 0 && suggestedReps > 0 && <span> • </span>}
+            {suggestedReps > 0 && (
+              <span>
+                {isDoubleProgression ? (
+                  <>Meta: <strong>{suggestedReps} reps</strong> (dentro da faixa {exercise?.repeticoes})</>
+                ) : (
+                  <>Repetições: <strong>{suggestedReps} reps</strong></>
+                )}
+              </span>
             )}
           </div>
         </div>
@@ -103,7 +135,7 @@ export function ExerciseSets({
           (index === 0 && suggestedWeight > 0 ? suggestedWeight : "");
           
         const displayReps = set.reps !== null ? set.reps :
-          (index === 0 && exercise?.reps_programadas ? exercise.reps_programadas : "");
+          (index === 0 && suggestedReps > 0 ? suggestedReps : "");
 
         return (
           <div key={index} className={`grid grid-cols-4 gap-2 items-center py-2 ${index !== sets.length - 1 ? "border-b" : ""}`}>
@@ -114,7 +146,7 @@ export function ExerciseSets({
                 value={displayWeight}
                 onChange={(e) => handleWeightChange(index, Number(e.target.value))} 
                 min={0} 
-                step={1} 
+                step={0.5} 
                 className={`w-20 h-8 text-sm ${
                   index === 0 && suggestedWeight > 0 && set.weight === null
                   ? "border-green-500 bg-green-50" 
@@ -132,11 +164,11 @@ export function ExerciseSets({
                 min={0} 
                 step={1} 
                 className={`w-20 h-8 text-sm ${
-                  index === 0 && exercise?.reps_programadas && set.reps === null
+                  index === 0 && suggestedReps > 0 && set.reps === null
                   ? "border-blue-500 bg-blue-50" 
                   : ""
                 }`}
-                placeholder={index === 0 && exercise?.reps_programadas ? exercise.reps_programadas.toString() : ""}
+                placeholder={index === 0 && suggestedReps > 0 ? suggestedReps.toString() : ""}
               />
             </div>
             <div className="flex justify-center">

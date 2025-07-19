@@ -1,4 +1,3 @@
-
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { SetData } from "./useExerciseState";
@@ -8,6 +7,7 @@ interface Exercise {
   nome: string;
   exercicio_original_id: string;
   concluido: boolean;
+  treino_usuario_id: string;
 }
 
 export const useExerciseActions = (
