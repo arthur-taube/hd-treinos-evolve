@@ -34,6 +34,7 @@ interface ExercicioUsuario {
   video_url?: string | null;
   configuracao_inicial?: boolean;
   reps_programadas?: number | null;
+  treino_usuario_id: string;
 }
 
 export default function Workout() {
@@ -81,7 +82,8 @@ export default function Workout() {
             observacao, 
             video_url,
             configuracao_inicial,
-            reps_programadas
+            reps_programadas,
+            treino_usuario_id
           `)
           .eq('treino_usuario_id', treinoId)
           .order('ordem', { ascending: true });
