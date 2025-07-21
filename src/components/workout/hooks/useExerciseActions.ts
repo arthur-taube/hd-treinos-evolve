@@ -24,7 +24,7 @@ export const useExerciseActions = (
     const newSets = [...sets];
     const currentSet = newSets[index];
     
-    if (!currentSet.weight || !currentSet.reps) {
+    if (currentSet.weight === null || currentSet.weight === undefined || !currentSet.reps) {
       toast({
         title: "Dados incompletos",
         description: "Por favor, preencha peso e repetições antes de marcar como concluída.",
@@ -63,7 +63,7 @@ export const useExerciseActions = (
     newSets[index].weight = weight;
     setSets(newSets);
 
-    if (weight > 0) {
+    if (weight !== null && weight !== undefined) {
       onWeightUpdate(exercise.id, weight);
     }
   };

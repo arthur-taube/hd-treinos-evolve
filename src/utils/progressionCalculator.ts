@@ -154,17 +154,19 @@ const calculateDoubleProgressionWeight = (
   // Caso especial -1: "Errei a carga"
   if (diffValue === -1) {
     const reduction1 = incrementoMinimo;
-    const reduction2 = Math.max(1, Math.round(currentWeight * 0.025));
+    const reduction2 = Math.max(1, Math.round(Math.abs(currentWeight) * 0.025));
     const reduction = Math.max(reduction1, reduction2);
-    return Math.max(0, currentWeight - reduction);
+    // Para pesos negativos, "reduzir carga" significa tornar mais negativo (mais fácil)
+    return currentWeight >= 0 ? Math.max(0, currentWeight - reduction) : currentWeight - reduction;
   }
   
   // Caso especial -2: "Socorro!" (Deload)
   if (diffValue === -2) {
     const reduction1 = incrementoMinimo * 2;
-    const reduction2 = Math.max(1, Math.round(currentWeight * 0.04));
+    const reduction2 = Math.max(1, Math.round(Math.abs(currentWeight) * 0.04));
     const reduction = Math.min(reduction1, reduction2);
-    return Math.max(0, currentWeight - reduction);
+    // Para pesos negativos, deload significa tornar mais negativo (mais fácil)
+    return currentWeight >= 0 ? Math.max(0, currentWeight - reduction) : currentWeight - reduction;
   }
   
   // Regra geral: Aumenta um incremento se as repetições diminuíram
@@ -342,9 +344,11 @@ export const calculateProgression = async (params: ProgressionParams): Promise<P
     } else if (diffValue === 1) {
       newWeight += incrementoMinimo;
     } else if (diffValue === -1) {
-      newWeight = Math.max(0, newWeight - incrementoMinimo);
+      // Para pesos negativos, "reduzir" significa tornar mais negativo
+      newWeight = newWeight >= 0 ? Math.max(0, newWeight - incrementoMinimo) : newWeight - incrementoMinimo;
     } else if (diffValue === -2) {
-      newWeight = Math.max(0, newWeight - (incrementoMinimo * 2));
+      // Para pesos negativos, "reduzir" significa tornar mais negativo
+      newWeight = newWeight >= 0 ? Math.max(0, newWeight - (incrementoMinimo * 2)) : newWeight - (incrementoMinimo * 2);
     }
 
     return {
