@@ -1,4 +1,3 @@
-
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Check, Target } from "lucide-react";
@@ -44,7 +43,7 @@ export function ExerciseSets({
   exercise
 }: ExerciseSetsProps) {
   // Get suggested values from progression or exercise data
-  const suggestedWeight = exercise?.peso !== undefined && exercise?.peso !== null ? exercise.peso : undefined;
+  const suggestedWeight = exercise?.peso !== undefined && exercise?.peso !== null ? exercise.peso : 0;
   
   // Determine suggested reps based on progression type
   let suggestedReps: number;
@@ -86,19 +85,15 @@ export function ExerciseSets({
             </h4>
           </div>
           <div className="text-sm text-green-700">
-            {(suggestedWeight !== undefined && suggestedWeight !== null) && (
-              <span>Carga: <strong>{suggestedWeight}kg</strong></span>
-            )}
-            {(suggestedWeight !== undefined && suggestedWeight !== null) && suggestedReps > 0 && <span> • </span>}
-            {suggestedReps > 0 && (
-              <span>
-                {isDoubleProgression ? (
-                  <>Meta: <strong>{suggestedReps} reps</strong> (dentro da faixa {exercise?.repeticoes})</>
-                ) : (
-                  <>Repetições: <strong>{suggestedReps} reps</strong></>
-                )}
-              </span>
-            )}
+            <span>Carga: <strong>{suggestedWeight}kg</strong></span>
+            <span> • </span>
+            <span>
+              {isDoubleProgression ? (
+                <>Meta: <strong>{suggestedReps} reps</strong> (dentro da faixa {exercise?.repeticoes})</>
+              ) : (
+                <>Repetições: <strong>{suggestedReps} reps</strong></>
+              )}
+            </span>
           </div>
         </div>
       )}
@@ -131,11 +126,8 @@ export function ExerciseSets({
       
       {sets.map((set, index) => {
         // Use the set's actual values if they exist, otherwise use suggested values for all sets
-        const displayWeight = set.weight !== null ? set.weight : 
-          (suggestedWeight !== undefined && suggestedWeight !== null ? suggestedWeight : "");
-          
-        const displayReps = set.reps !== null ? set.reps :
-          (suggestedReps > 0 ? suggestedReps : "");
+        const displayWeight = set.weight !== null ? set.weight : suggestedWeight;
+        const displayReps = set.reps !== null ? set.reps : suggestedReps;
 
         return (
           <div key={index} className={`grid grid-cols-4 gap-2 items-center py-2 ${index !== sets.length - 1 ? "border-b" : ""}`}>
@@ -146,12 +138,7 @@ export function ExerciseSets({
                 value={displayWeight}
                 onChange={(e) => handleWeightChange(index, Number(e.target.value))} 
                 step={0.5} 
-                className={`w-20 h-8 text-sm ${
-                  suggestedWeight !== undefined && suggestedWeight !== null && set.weight === null
-                  ? "border-green-500 bg-green-50" 
-                  : ""
-                }`}
-                placeholder={suggestedWeight !== undefined && suggestedWeight !== null ? suggestedWeight.toString() : ""}
+                className="w-20 h-8 text-sm"
               />
               <span className="ml-1 text-sm">kg</span>
             </div>
@@ -162,12 +149,7 @@ export function ExerciseSets({
                 onChange={(e) => handleRepsChange(index, Number(e.target.value))} 
                 min={0} 
                 step={1} 
-                className={`w-20 h-8 text-sm ${
-                  suggestedReps > 0 && set.reps === null
-                  ? "border-blue-500 bg-blue-50" 
-                  : ""
-                }`}
-                placeholder={suggestedReps > 0 ? suggestedReps.toString() : ""}
+                className="w-20 h-8 text-sm"
               />
             </div>
             <div className="flex justify-center">
