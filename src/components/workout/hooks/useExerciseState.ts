@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { calculateProgression, getCurrentRepsProgramadas, updateRepsProgramadas } from "@/utils/progressionCalculator";
+import { useExerciseFeedback } from "@/hooks/use-exercise-feedback";
 
 export interface SetData {
   number: number;
@@ -44,10 +45,8 @@ export const useExerciseState = (
   const [exerciseNote, setExerciseNote] = useState("");
   const [sets, setSets] = useState<SetData[]>([]);
   
-  const [showDifficultyDialog, setShowDifficultyDialog] = useState(false);
-  const [showFatigueDialog, setShowFatigueDialog] = useState(false);
-  const [showPainDialog, setShowPainDialog] = useState(false);
-  const [showIncrementDialog, setShowIncrementDialog] = useState(false);
+  // Use the feedback hook for managing all feedback dialogs and functions
+  const feedbackHook = useExerciseFeedback(exercise.id);
 
   // Initialize sets with progression values if available
   useEffect(() => {
@@ -300,105 +299,7 @@ export const useExerciseState = (
     }
   };
 
-  const saveDifficultyFeedback = async (value: string) => {
-    try {
-      const { error } = await supabase
-        .from('exercicios_treino_usuario')
-        .update({ 
-          avaliacao_dificuldade: value,
-          data_avaliacao: new Date().toISOString()
-        })
-        .eq('id', exercise.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Avaliação salva",
-        description: "Sua avaliação de dificuldade foi registrada."
-      });
-    } catch (error: any) {
-      toast({
-        title: "Erro ao salvar avaliação",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const saveFatigueFeedback = async (value: string) => {
-    try {
-      const { error } = await supabase
-        .from('exercicios_treino_usuario')
-        .update({ 
-          avaliacao_fadiga: parseInt(value),
-          data_avaliacao: new Date().toISOString()
-        })
-        .eq('id', exercise.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Avaliação de fadiga salva",
-        description: "Sua avaliação foi registrada."
-      });
-    } catch (error: any) {
-      toast({
-        title: "Erro ao salvar avaliação",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const savePainFeedback = async (value: string) => {
-    try {
-      const { error } = await supabase
-        .from('exercicios_treino_usuario')
-        .update({ 
-          avaliacao_dor: parseInt(value),
-          data_avaliacao: new Date().toISOString()
-        })
-        .eq('id', exercise.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Avaliação de dor salva",
-        description: "Sua avaliação foi registrada."
-      });
-    } catch (error: any) {
-      toast({
-        title: "Erro ao salvar avaliação",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const saveIncrementSetting = async (value: number) => {
-    try {
-      const { error } = await supabase
-        .from('exercicios_treino_usuario')
-        .update({ 
-          incremento_minimo: value,
-          configuracao_inicial: true
-        })
-        .eq('id', exercise.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Configuração salva",
-        description: `Incremento mínimo de ${value}kg definido para este exercício.`
-      });
-    } catch (error: any) {
-      toast({
-        title: "Erro ao salvar configuração",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
+  // All feedback functions are now handled by useExerciseFeedback hook
 
   return {
     isOpen,
@@ -413,18 +314,18 @@ export const useExerciseState = (
     setExerciseNote,
     sets,
     setSets,
-    showDifficultyDialog,
-    setShowDifficultyDialog,
-    showFatigueDialog,
-    setShowFatigueDialog,
-    showPainDialog,
-    setShowPainDialog,
-    showIncrementDialog,
-    setShowIncrementDialog,
-    saveDifficultyFeedback,
-    saveFatigueFeedback,
-    savePainFeedback,
-    saveIncrementSetting,
+    showDifficultyDialog: feedbackHook.showDifficultyDialog,
+    setShowDifficultyDialog: feedbackHook.setShowDifficultyDialog,
+    showFatigueDialog: feedbackHook.showFatigueDialog,
+    setShowFatigueDialog: feedbackHook.setShowFatigueDialog,
+    showPainDialog: feedbackHook.showPainDialog,
+    setShowPainDialog: feedbackHook.setShowPainDialog,
+    showIncrementDialog: feedbackHook.showIncrementDialog,
+    setShowIncrementDialog: feedbackHook.setShowIncrementDialog,
+    saveDifficultyFeedback: feedbackHook.saveDifficultyFeedback,
+    saveFatigueFeedback: feedbackHook.saveFatigueFeedback,
+    savePainFeedback: feedbackHook.savePainFeedback,
+    saveIncrementSetting: feedbackHook.saveIncrementSetting,
     checkIsFirstWeek,
     checkNeedsIncrementConfiguration
   };
