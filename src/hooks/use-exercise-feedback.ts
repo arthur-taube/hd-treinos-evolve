@@ -31,6 +31,36 @@ export const DIFFICULTY_OPTIONS = [
   }
 ];
 
+// Combined fatigue and pain options for beginners
+export const COMBINED_FATIGUE_PAIN_OPTIONS = [
+  {
+    value: 1,
+    label: "Nem parece que treinei",
+    description: "Esse exercício não deixou meus músculos nem um pouco cansados hoje nem doloridos na semana passada."
+  },
+  {
+    value: 0.75,
+    label: "Foi moleza",
+    description: "Esse exercício não deixou meus músculos cansados hoje, mas fiquei um pouco dolorido na semana passada."
+  },
+  {
+    value: 0,
+    label: "Esse pegou bem",
+    description: "Eu senti uma boa/razoável fadiga muscular com esse exercício hoje e/ou tive alguma dor na semana passada."
+  },
+  {
+    value: -0.25,
+    label: "Foi sofrido",
+    description: "Esse exercício causou uma boa fadiga muscular hoje e me deixou dolorido por vários dias na semana passada (chegando a afetar o treino seguinte)."
+  },
+  {
+    value: -1,
+    label: "Quase morri",
+    description: "Esse exercício deixou meus músculos totalmente exaustos hoje e com uma dor muscular forte e prolongada na semana passada (chegando a afetar o treino seguinte)."
+  }
+];
+
+// Keep original options for reference (will be used in intermediate/advanced programs later)
 export const FATIGUE_OPTIONS = [
   {
     value: 0.75,
@@ -78,6 +108,7 @@ export function useExerciseFeedback(exerciseId: string) {
   const [showFatigueDialog, setShowFatigueDialog] = useState(false);
   const [showPainDialog, setShowPainDialog] = useState(false);
   const [showIncrementDialog, setShowIncrementDialog] = useState(false);
+  const [showCombinedFatiguePainDialog, setShowCombinedFatiguePainDialog] = useState(false);
   
   const checkInitialConfiguration = async () => {
     try {
@@ -118,7 +149,8 @@ export function useExerciseFeedback(exerciseId: string) {
       if (error) throw error;
       
       setShowDifficultyDialog(false);
-      setShowFatigueDialog(true);
+      // Show combined fatigue/pain dialog instead of separate ones
+      setShowCombinedFatiguePainDialog(true);
       
     } catch (error: any) {
       toast({
@@ -146,6 +178,35 @@ export function useExerciseFeedback(exerciseId: string) {
       toast({
         title: "Avaliação salva",
         description: "Suas avaliações foram salvas com sucesso!"
+      });
+      
+    } catch (error: any) {
+      toast({
+        title: "Erro ao salvar avaliação",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  // New function for combined fatigue/pain evaluation
+  const saveCombinedFatiguePainFeedback = async (value: number) => {
+    try {
+      const { error } = await supabase
+        .from('exercicios_treino_usuario')
+        .update({
+          avaliacao_fadiga: value,
+          data_avaliacao: new Date().toISOString()
+        })
+        .eq('id', exerciseId);
+      
+      if (error) throw error;
+      
+      setShowCombinedFatiguePainDialog(false);
+      
+      toast({
+        title: "Avaliação salva",
+        description: "Sua avaliação foi salva com sucesso!"
       });
       
     } catch (error: any) {
@@ -259,8 +320,11 @@ export function useExerciseFeedback(exerciseId: string) {
     setShowPainDialog,
     showIncrementDialog,
     setShowIncrementDialog,
+    showCombinedFatiguePainDialog,
+    setShowCombinedFatiguePainDialog,
     saveDifficultyFeedback,
     saveFatigueFeedback,
+    saveCombinedFatiguePainFeedback,
     savePainFeedback,
     saveIncrementSetting,
     checkInitialConfiguration,

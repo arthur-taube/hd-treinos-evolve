@@ -1,209 +1,155 @@
 
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { FeedbackDialog } from "./FeedbackDialog";
-import { DIFFICULTY_OPTIONS, FATIGUE_OPTIONS, PAIN_OPTIONS, INCREMENT_OPTIONS } from "@/hooks/use-exercise-feedback";
-import { useExerciseState } from "./hooks/useExerciseState";
-import { useExerciseActions } from "./hooks/useExerciseActions";
-import { usePreviousSeries } from "./hooks/usePreviousSeries";
+import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { ExerciseHeader } from "./components/ExerciseHeader";
 import { ExerciseObservation } from "./components/ExerciseObservation";
 import { ExerciseSets } from "./components/ExerciseSets";
+import { FeedbackDialog, FeedbackOption } from "./FeedbackDialog";
+import { useExerciseState } from "./hooks/useExerciseState";
+import { useExerciseActions } from "./hooks/useExerciseActions";
+import { usePreviousSeries } from "./hooks/usePreviousSeries";
+import { 
+  DIFFICULTY_OPTIONS, 
+  COMBINED_FATIGUE_PAIN_OPTIONS,
+  INCREMENT_OPTIONS 
+} from "@/hooks/use-exercise-feedback";
 
-interface ExerciseCardProps {
-  exercise: {
-    id: string;
-    nome: string;
-    grupo_muscular: string;
-    primary_muscle: string;
-    secondary_muscle?: string;
-    exercicio_original_id: string;
-    series: number;
-    repeticoes: string | null;
-    peso: number | null;
-    concluido: boolean;
-    observacao?: string | null;
-    video_url?: string | null;
-    configuracao_inicial?: boolean;
-    reps_programadas?: number | null;
-    incremento_minimo?: number | null;
-    treino_usuario_id: string;
-  };
-  onExerciseComplete: (exerciseId: string, isCompleted: boolean) => Promise<void>;
-  onWeightUpdate: (exerciseId: string, weight: number) => Promise<void>;
+interface Exercise {
+  id: string;
+  nome: string;
+  series: number;
+  peso: number | null;
+  repeticoes?: string | null;
+  grupo_muscular: string;
+  observacao?: string | null;
+  concluido: boolean;
+  ordem: number;
+  oculto: boolean;
+  exercicio_original_id: string;
+  video_url?: string | null;
+  primary_muscle?: string | null;
+  secondary_muscle?: string | null;
+  configuracao_inicial?: boolean;
+  reps_programadas?: number | null;
+  incremento_minimo?: number | null;
+  treino_usuario_id: string;
 }
 
-export function ExerciseCard({
-  exercise,
-  onExerciseComplete,
-  onWeightUpdate
-}: ExerciseCardProps) {
-  console.log(`=== RENDERING ExerciseCard for ${exercise.nome} ===`);
-  console.log(`Exercise data:`, exercise);
+interface ExerciseCardProps {
+  exercise: Exercise;
+  onExerciseComplete: (exerciseId: string, isCompleted: boolean) => Promise<void>;
+  onWeightUpdate: (exerciseId: string, weight: number) => Promise<void>;
+  muscleName?: string;
+}
 
-  const {
-    isOpen,
-    setIsOpen,
-    observation,
-    setObservation,
-    showObservationInput,
-    setShowObservationInput,
-    showNoteInput,
-    setShowNoteInput,
-    exerciseNote,
-    setExerciseNote,
-    sets,
-    setSets,
-    showDifficultyDialog,
-    setShowDifficultyDialog,
-    showFatigueDialog,
-    setShowFatigueDialog,
-    showPainDialog,
-    setShowPainDialog,
-    showIncrementDialog,
-    setShowIncrementDialog,
-    saveDifficultyFeedback,
-    saveFatigueFeedback,
-    savePainFeedback,
-    saveIncrementSetting,
-    checkIsFirstWeek
-  } = useExerciseState(exercise, onExerciseComplete, onWeightUpdate);
+export function ExerciseCard({ exercise, onExerciseComplete, onWeightUpdate, muscleName }: ExerciseCardProps) {
+  const exerciseState = useExerciseState(exercise, onExerciseComplete, onWeightUpdate);
+  const { previousSeries, isLoadingSeries } = usePreviousSeries(exercise.id);
 
-  const { isLoadingSeries, previousSeries } = usePreviousSeries(isOpen, exercise.exercicio_original_id);
-
-  const {
-    handleSetComplete,
-    handleWeightChange,
-    handleRepsChange,
-    handleExerciseComplete,
-    handleSaveDifficultyFeedback,
-    handleSaveIncrementSetting,
-    saveObservation,
-    skipIncompleteSets,
-    replaceExerciseThisWorkout,
-    replaceExerciseAllWorkouts,
-    addNote
-  } = useExerciseActions(
+  const exerciseActions = useExerciseActions(
     exercise,
-    sets,
-    setSets,
+    exerciseState.sets,
+    exerciseState.setSets,
     onExerciseComplete,
     onWeightUpdate,
-    setIsOpen,
-    setShowDifficultyDialog,
-    checkIsFirstWeek
+    exerciseState.setIsOpen,
+    exerciseState.setShowDifficultyDialog,
+    exerciseState.checkIsFirstWeek
   );
 
-  const allSetsCompleted = sets.every(set => set.completed);
+  const allSetsCompleted = exerciseState.sets.every(set => set.completed);
+  
+  useEffect(() => {
+    if (!exercise.concluido && exerciseState.checkNeedsIncrementConfiguration()) {
+      exerciseState.checkInitialConfiguration();
+    }
+  }, [exercise.id, exercise.concluido]);
 
-  const handleSaveObservation = () => {
-    saveObservation(observation, setShowObservationInput);
-  };
-
-  const handleAddNote = () => {
-    addNote(setShowNoteInput);
-  };
-
-  const handleSaveDifficulty = (value: string) => {
-    handleSaveDifficultyFeedback(value, saveDifficultyFeedback);
-  };
-
-  const handleSaveIncrement = (value: number) => {
-    handleSaveIncrementSetting(value, saveIncrementSetting);
-  };
+  useEffect(() => {
+    if (exercise.primary_muscle) {
+      exerciseState.checkNeedsPainEvaluation(exercise.primary_muscle);
+    }
+  }, [exercise.primary_muscle]);
 
   return (
     <>
-      <Card className="mb-4 overflow-hidden">
-        <ExerciseHeader
+      <Card className="mb-4">
+        <ExerciseHeader 
           exercise={exercise}
-          observation={observation}
-          isOpen={isOpen}
-          setIsOpen={setIsOpen}
-          setShowObservationInput={setShowObservationInput}
-          setShowIncrementDialog={setShowIncrementDialog}
-          skipIncompleteSets={skipIncompleteSets}
-          replaceExerciseThisWorkout={replaceExerciseThisWorkout}
-          replaceExerciseAllWorkouts={replaceExerciseAllWorkouts}
+          isOpen={exerciseState.isOpen}
+          setIsOpen={exerciseState.setIsOpen}
+          skipIncompleteSets={exerciseActions.skipIncompleteSets}
+          replaceExerciseThisWorkout={exerciseActions.replaceExerciseThisWorkout}
+          replaceExerciseAllWorkouts={exerciseActions.replaceExerciseAllWorkouts}
         />
-
-        <ExerciseObservation
-          observation={observation}
-          setObservation={setObservation}
-          showObservationInput={showObservationInput}
-          setShowObservationInput={setShowObservationInput}
-          saveObservation={handleSaveObservation}
-        />
-
-        <Accordion type="single" collapsible value={isOpen ? "sets" : ""} className="border-t">
-          <AccordionItem value="sets" className="border-b-0">
-            <AccordionTrigger className="hidden">Séries</AccordionTrigger>
-            <AccordionContent>
-              <ExerciseSets
-                sets={sets}
-                previousSeries={previousSeries}
-                isLoadingSeries={isLoadingSeries}
-                handleSetComplete={handleSetComplete}
-                handleWeightChange={handleWeightChange}
-                handleRepsChange={handleRepsChange}
-                showNoteInput={showNoteInput}
-                setShowNoteInput={setShowNoteInput}
-                exerciseNote={exerciseNote}
-                setExerciseNote={setExerciseNote}
-                addNote={handleAddNote}
-                handleExerciseComplete={handleExerciseComplete}
-                allSetsCompleted={allSetsCompleted}
-                exerciseConcluido={exercise.concluido}
-                exercise={exercise}
-              />
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
+        
+        {exerciseState.isOpen && (
+          <>
+            <ExerciseObservation
+              observation={exerciseState.observation}
+              setObservation={exerciseState.setObservation}
+              showObservationInput={exerciseState.showObservationInput}
+              setShowObservationInput={exerciseState.setShowObservationInput}
+              saveObservation={exerciseActions.saveObservation}
+            />
+            
+            <ExerciseSets
+              sets={exerciseState.sets}
+              previousSeries={previousSeries}
+              isLoadingSeries={isLoadingSeries}
+              handleSetComplete={exerciseActions.handleSetComplete}
+              handleWeightChange={exerciseActions.handleWeightChange}
+              handleRepsChange={exerciseActions.handleRepsChange}
+              showNoteInput={exerciseState.showNoteInput}
+              setShowNoteInput={exerciseState.setShowNoteInput}
+              exerciseNote={exerciseState.exerciseNote}
+              setExerciseNote={exerciseState.setExerciseNote}
+              addNote={exerciseActions.addNote}
+              handleExerciseComplete={exerciseActions.handleExerciseComplete}
+              allSetsCompleted={allSetsCompleted}
+              exerciseConcluido={exercise.concluido}
+              exercise={exercise}
+            />
+          </>
+        )}
       </Card>
 
-      <FeedbackDialog 
-        isOpen={showDifficultyDialog} 
-        onClose={() => setShowDifficultyDialog(false)} 
-        onSubmit={handleSaveDifficulty} 
-        title="Como foi o exercício?" 
-        description="Avalie a dificuldade do exercício {exerciseName}" 
-        options={DIFFICULTY_OPTIONS} 
-        exerciseName={exercise.nome} 
+      {/* Difficulty evaluation dialog */}
+      <FeedbackDialog
+        isOpen={exerciseState.showDifficultyDialog}
+        onClose={() => exerciseState.setShowDifficultyDialog(false)}
+        onSubmit={(value) => exerciseActions.handleSaveDifficultyFeedback(value as string, exerciseState.saveDifficultyFeedback)}
+        title="Como foi a dificuldade?"
+        description="Avalie como foi executar o exercício {exerciseName} hoje:"
+        options={DIFFICULTY_OPTIONS}
+        exerciseName={exercise.nome}
+        muscleName={muscleName}
       />
 
-      <FeedbackDialog 
-        isOpen={showFatigueDialog} 
-        onClose={() => setShowFatigueDialog(false)} 
-        onSubmit={saveFatigueFeedback} 
-        title="Fadiga Muscular" 
-        description="Como você sentiu seus músculos após completar o exercício {exerciseName}?" 
-        options={FATIGUE_OPTIONS} 
-        exerciseName={exercise.nome} 
+      {/* Combined Fatigue/Pain evaluation dialog */}
+      <FeedbackDialog
+        isOpen={exerciseState.showCombinedFatiguePainDialog}
+        onClose={() => exerciseState.setShowCombinedFatiguePainDialog(false)}
+        onSubmit={(value) => exerciseState.saveCombinedFatiguePainFeedback(value as number)}
+        title="Dor Muscular / Fadiga Muscular"
+        description="Como você sentiu seus músculos após completar o exercício {exerciseName}?"
+        options={COMBINED_FATIGUE_PAIN_OPTIONS}
+        exerciseName={exercise.nome}
+        muscleName={muscleName}
       />
 
-      <FeedbackDialog 
-        isOpen={showPainDialog} 
-        onClose={() => setShowPainDialog(false)} 
-        onSubmit={savePainFeedback} 
-        title="Dor Muscular" 
-        description="Em relação à dor muscular no(s) {muscleName}, quão dolorido você ficou depois do último treino?" 
-        options={PAIN_OPTIONS} 
-        exerciseName={exercise.nome} 
-        muscleName={exercise.primary_muscle} 
-      />
-
-      <FeedbackDialog 
-        isOpen={showIncrementDialog} 
-        onClose={() => setShowIncrementDialog(false)} 
-        onSubmit={handleSaveIncrement} 
-        title="Defina a carga incremental mínima" 
-        description="Antes de começar, informe qual o incremento mínimo de peso que você consegue adicionar no equipamento usado para o exercício {exerciseName}." 
-        options={INCREMENT_OPTIONS} 
-        exerciseName={exercise.nome} 
-        isNumericInput={true} 
-        minValue={0.5} 
-        maxValue={10} 
-        step={0.5} 
+      {/* Increment setting dialog */}
+      <FeedbackDialog
+        isOpen={exerciseState.showIncrementDialog}
+        onClose={() => exerciseState.setShowIncrementDialog(false)}
+        onSubmit={(value) => exerciseActions.handleSaveIncrementSetting(value as number, exerciseState.saveIncrementSetting)}
+        title="Configuração do exercício"
+        description="Qual é a carga incremental mínima para o exercício {exerciseName}?"
+        options={INCREMENT_OPTIONS}
+        exerciseName={exercise.nome}
+        muscleName={muscleName}
       />
     </>
   );
