@@ -132,7 +132,7 @@ export function ExerciseCard({ exercise, onExerciseComplete, onWeightUpdate, mus
               exercise={{
                 peso: exercise.peso,
                 reps_programadas: exercise.reps_programadas,
-                repeticoes: exercise.repeticoes || "10"
+                repeticoes: exercise.repeticoes // Remove fallback - aceita null
               }}
             />
           </>
