@@ -125,7 +125,7 @@ export const useExerciseState = (
       const currentProgramaUsuarioId = currentWorkout.programa_usuario_id;
       console.log(`Current programa_usuario_id: ${currentProgramaUsuarioId}`);
 
-      // Get the last completed exercise WITH SAME PROGRAMA_USUARIO_ID
+      // Get the last completed exercise WITH SAME PROGRAMA_USUARIO_ID (removido avaliacao_dor)
       const { data: lastExercises, error: exerciseError } = await supabase
         .from('exercicios_treino_usuario')
         .select(`
@@ -135,7 +135,6 @@ export const useExerciseState = (
           reps_programadas,
           avaliacao_dificuldade, 
           avaliacao_fadiga, 
-          avaliacao_dor, 
           incremento_minimo,
           updated_at,
           treino_usuario_id,
@@ -171,7 +170,7 @@ export const useExerciseState = (
         currentRepsProgramadas = await getCurrentRepsProgramadas(exercise.id);
       }
 
-      // Use the complete progression calculator
+      // Use the complete progression calculator (removido avaliacaoDor)
       const progressionParams = {
         exerciseId: exercise.id,
         currentWeight: lastExercise.peso || 0,
@@ -181,7 +180,6 @@ export const useExerciseState = (
         incrementoMinimo: exercise.incremento_minimo || lastExercise.incremento_minimo || 2.5,
         avaliacaoDificuldade: lastExercise.avaliacao_dificuldade,
         avaliacaoFadiga: lastExercise.avaliacao_fadiga || 0,
-        avaliacaoDor: lastExercise.avaliacao_dor || 0,
         isFirstWeek: isFirstWeek
       };
 
@@ -298,8 +296,6 @@ export const useExerciseState = (
       return true;
     }
   };
-
-  // All feedback functions are now handled by useExerciseFeedback hook
 
   return {
     isOpen,

@@ -60,43 +60,6 @@ export const COMBINED_FATIGUE_PAIN_OPTIONS = [
   }
 ];
 
-// Keep original options for reference (will be used in intermediate/advanced programs later)
-export const FATIGUE_OPTIONS = [
-  {
-    value: 0.75,
-    label: "Nem parece que treinei",
-    description: "Este exercício não deixou meus músculos nem um pouco cansados hoje."
-  },
-  {
-    value: 0,
-    label: "Esse pegou",
-    description: "Eu senti uma boa/razoável fadiga muscular com este exercício hoje."
-  },
-  {
-    value: -0.75,
-    label: "Quase morri",
-    description: "Meus músculos estão totalmente exaustos depois deste exercício hoje."
-  }
-];
-
-export const PAIN_OPTIONS = [
-  {
-    value: 0.25,
-    label: "Nunca fiquei dolorido",
-    description: "Eu nunca tive nenhuma dor nesse(s) músculo(s) depois do último treino."
-  },
-  {
-    value: 0,
-    label: "Tive alguma dor",
-    description: "Eu cheguei a ficar dolorido depois do treino passado, mas já me recuperei."
-  },
-  {
-    value: -0.25,
-    label: "Ainda estou dolorido",
-    description: "Tive bastante dor e ainda estou (ou passei vários dias) dolorido depois do último treino."
-  }
-];
-
 export const INCREMENT_OPTIONS = [
   { value: 1, label: "1 kg", description: "Incremento mínimo de 1 kg" },
   { value: 2.5, label: "2.5 kg", description: "Incremento mínimo de 2.5 kg (recomendado)" },
@@ -105,10 +68,12 @@ export const INCREMENT_OPTIONS = [
 
 export function useExerciseFeedback(exerciseId: string) {
   const [showDifficultyDialog, setShowDifficultyDialog] = useState(false);
-  const [showFatigueDialog, setShowFatigueDialog] = useState(false);
-  const [showPainDialog, setShowPainDialog] = useState(false);
   const [showIncrementDialog, setShowIncrementDialog] = useState(false);
   const [showCombinedFatiguePainDialog, setShowCombinedFatiguePainDialog] = useState(false);
+  
+  // Remove unused fatigue and pain dialogs
+  const [showFatigueDialog] = useState(false);
+  const [showPainDialog] = useState(false);
   
   const checkInitialConfiguration = async () => {
     try {
@@ -160,34 +125,6 @@ export function useExerciseFeedback(exerciseId: string) {
       });
     }
   };
-  
-  const saveFatigueFeedback = async (fatigue: number) => {
-    try {
-      const { error } = await supabase
-        .from('exercicios_treino_usuario')
-        .update({
-          avaliacao_fadiga: fatigue,
-          data_avaliacao: new Date().toISOString()
-        })
-        .eq('id', exerciseId);
-      
-      if (error) throw error;
-      
-      setShowFatigueDialog(false);
-      
-      toast({
-        title: "Avaliação salva",
-        description: "Suas avaliações foram salvas com sucesso!"
-      });
-      
-    } catch (error: any) {
-      toast({
-        title: "Erro ao salvar avaliação",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
 
   // New function for combined fatigue/pain evaluation
   const saveCombinedFatiguePainFeedback = async (value: number) => {
@@ -207,34 +144,6 @@ export function useExerciseFeedback(exerciseId: string) {
       toast({
         title: "Avaliação salva",
         description: "Sua avaliação foi salva com sucesso!"
-      });
-      
-    } catch (error: any) {
-      toast({
-        title: "Erro ao salvar avaliação",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const savePainFeedback = async (pain: number) => {
-    try {
-      const { error } = await supabase
-        .from('exercicios_treino_usuario')
-        .update({
-          avaliacao_dor: pain,
-          data_avaliacao: new Date().toISOString()
-        })
-        .eq('id', exerciseId);
-      
-      if (error) throw error;
-      
-      setShowPainDialog(false);
-      
-      toast({
-        title: "Avaliação de dor salva",
-        description: "Sua avaliação de dor foi salva com sucesso!"
       });
       
     } catch (error: any) {
@@ -273,51 +182,23 @@ export function useExerciseFeedback(exerciseId: string) {
       });
     }
   };
-  
-  const checkNeedsPainEvaluation = async (primaryMuscle: string) => {
-    if (!primaryMuscle) return false;
-    
-    try {
-      const { data: previousExercises, error } = await supabase
-        .from('exercicios_treino_usuario')
-        .select('id, treino_usuario_id, data_avaliacao')
-        .eq('primary_muscle', primaryMuscle)
-        .eq('concluido', true)
-        .neq('id', exerciseId)
-        .order('updated_at', { ascending: false })
-        .limit(5);
-      
-      if (error) throw error;
-      
-      if (!previousExercises || previousExercises.length === 0) {
-        return false;
-      }
-      
-      const hasRecentEvaluation = previousExercises.some(ex => 
-        ex.id !== exerciseId && 
-        ex.data_avaliacao !== null && 
-        new Date(ex.data_avaliacao).getTime() > (Date.now() - 7 * 24 * 60 * 60 * 1000)
-      );
-      
-      if (!hasRecentEvaluation && previousExercises.length > 0) {
-        setShowPainDialog(true);
-        return true;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error("Erro ao verificar necessidade de avaliação de dor:", error);
-      return false;
-    }
+
+  // Keep legacy functions for compatibility but they don't do anything meaningful
+  const saveFatigueFeedback = async () => {
+    console.log('Legacy fatigue feedback - using combined evaluation instead');
+  };
+
+  const savePainFeedback = async () => {
+    console.log('Legacy pain feedback - using combined evaluation instead');
   };
 
   return {
     showDifficultyDialog,
     setShowDifficultyDialog,
     showFatigueDialog,
-    setShowFatigueDialog,
+    setShowFatigueDialog: () => {}, // No-op
     showPainDialog,
-    setShowPainDialog,
+    setShowPainDialog: () => {}, // No-op
     showIncrementDialog,
     setShowIncrementDialog,
     showCombinedFatiguePainDialog,
@@ -328,6 +209,5 @@ export function useExerciseFeedback(exerciseId: string) {
     savePainFeedback,
     saveIncrementSetting,
     checkInitialConfiguration,
-    checkNeedsPainEvaluation,
   };
 }

@@ -9,7 +9,6 @@ export interface ProgressionParams {
   incrementoMinimo: number;
   avaliacaoDificuldade: string;
   avaliacaoFadiga?: number;
-  avaliacaoDor?: number;
   isFirstWeek?: boolean;
 }
 
@@ -46,7 +45,6 @@ export const getPreviousExerciseData = async (exerciseId: string): Promise<{
   repsProgramadas: number;
   avaliacaoDificuldade: string;
   avaliacaoFadiga: number;
-  avaliacaoDor: number;
   repeticoes: string;
 } | null> => {
   try {
@@ -71,7 +69,7 @@ export const getPreviousExerciseData = async (exerciseId: string): Promise<{
     // Buscar exercício anterior no mesmo programa
     const { data: previousExercises } = await supabase
       .from('exercicios_treino_usuario')
-      .select('peso, series, reps_programadas, avaliacao_dificuldade, avaliacao_fadiga, avaliacao_dor, treino_usuario_id, repeticoes')
+      .select('peso, series, reps_programadas, avaliacao_dificuldade, avaliacao_fadiga, treino_usuario_id, repeticoes')
       .eq('exercicio_original_id', currentExercise.exercicio_original_id)
       .eq('concluido', true)
       .neq('id', exerciseId);
@@ -120,7 +118,6 @@ export const getPreviousExerciseData = async (exerciseId: string): Promise<{
       repsProgramadas: previousExercise.reps_programadas || bestReps,
       avaliacaoDificuldade: previousExercise.avaliacao_dificuldade || 'moderado',
       avaliacaoFadiga: previousExercise.avaliacao_fadiga || 0,
-      avaliacaoDor: previousExercise.avaliacao_dor || 0,
       repeticoes: previousExercise.repeticoes || currentExercise.repeticoes || ''
     };
   } catch (error) {
@@ -216,12 +213,11 @@ const calculateDoubleProgressionReps = (
   return Math.max(min, newReps);
 };
 
-// Calcular novas séries com valores decimais exatos
+// Calcular novas séries usando apenas avaliação combinada (fadiga)
 const calculateNewSets = (
   previousSets: number,
   dificuldade: string,
-  avaliacaoFadiga: number = 0,
-  avaliacaoDor: number = 0
+  avaliacaoFadiga: number = 0
 ): number => {
   const diffValue = getDifficultyValue(dificuldade);
   
@@ -230,8 +226,8 @@ const calculateNewSets = (
     return previousSets / 2; // Retorna valor exato, incluindo decimais
   }
   
-  // Regra geral: X = S + F + D
-  const newSets = previousSets + avaliacaoFadiga + avaliacaoDor;
+  // Regra atualizada: X = S + F (usando apenas a avaliação combinada)
+  const newSets = previousSets + avaliacaoFadiga;
   
   // Retorna o valor exato (com decimais) - será salvo na database
   return Math.max(0.5, newSets); // Mínimo de 0.5 séries
@@ -258,11 +254,10 @@ export const calculateProgression = async (params: ProgressionParams): Promise<P
     incrementoMinimo,
     avaliacaoDificuldade,
     avaliacaoFadiga = 0,
-    avaliacaoDor = 0,
     isFirstWeek = false
   } = params;
 
-  console.log('Calculando progressão com algoritmo facilitado:', params);
+  console.log('Calculando progressão com algoritmo atualizado:', params);
 
   // Primeira semana: usar valores executados como baseline
   if (isFirstWeek) {
@@ -288,12 +283,11 @@ export const calculateProgression = async (params: ProgressionParams): Promise<P
 
   const useDoubleProgression = isDoubleProgression(previousData.repeticoes);
   
-  // Calcular novas séries primeiro (REGRA MAIOR) - mantém valor decimal exato
+  // Calcular novas séries primeiro (REGRA MAIOR) - usando apenas fadiga combinada
   const newSets = calculateNewSets(
     previousData.sets,
     avaliacaoDificuldade,
-    avaliacaoFadiga,
-    avaliacaoDor
+    avaliacaoFadiga
   );
   
   // Se séries aumentaram, manter peso e reps da semana anterior
