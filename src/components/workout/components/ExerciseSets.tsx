@@ -22,7 +22,7 @@ interface ExerciseSetsProps {
   exercise?: {
     peso: number | null;
     reps_programadas?: number | null;
-    repeticoes?: string | null; // Aceita null
+    repeticoes?: string | null;
   };
 }
 
@@ -137,7 +137,12 @@ export function ExerciseSets({
               <Input 
                 type="number" 
                 value={displayWeight}
-                onChange={(e) => handleWeightChange(index, Number(e.target.value))} 
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  if (!isNaN(value)) {
+                    handleWeightChange(index, value);
+                  }
+                }}
                 step={0.5} 
                 className="w-20 h-8 text-sm"
               />
@@ -147,7 +152,12 @@ export function ExerciseSets({
               <Input 
                 type="number" 
                 value={displayReps}
-                onChange={(e) => handleRepsChange(index, Number(e.target.value))} 
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  if (!isNaN(value)) {
+                    handleRepsChange(index, value);
+                  }
+                }}
                 min={0} 
                 step={1} 
                 className="w-20 h-8 text-sm"

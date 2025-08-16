@@ -24,7 +24,26 @@ export const useExerciseActions = (
     const newSets = [...sets];
     const currentSet = newSets[index];
     
-    if (currentSet.weight === null || currentSet.weight === undefined || !currentSet.reps) {
+    // Get fallback values from other sets or use default values
+    let effectiveWeight = currentSet.weight;
+    let effectiveReps = currentSet.reps;
+    
+    // If weight is null/undefined, try to get from first set or use 0
+    if (effectiveWeight === null || effectiveWeight === undefined) {
+      const firstSetWithWeight = sets.find(set => set.weight !== null && set.weight !== undefined);
+      effectiveWeight = firstSetWithWeight?.weight || 0;
+      currentSet.weight = effectiveWeight; // Update the set with the fallback value
+    }
+    
+    // If reps is null/undefined, try to get from first set or use 10
+    if (effectiveReps === null || effectiveReps === undefined || effectiveReps === 0) {
+      const firstSetWithReps = sets.find(set => set.reps !== null && set.reps !== undefined && set.reps > 0);
+      effectiveReps = firstSetWithReps?.reps || 10;
+      currentSet.reps = effectiveReps; // Update the set with the fallback value
+    }
+
+    // Now validate the effective values
+    if (effectiveWeight === null || effectiveWeight === undefined || !effectiveReps || effectiveReps <= 0) {
       toast({
         title: "Dados incompletos",
         description: "Por favor, preencha peso e repetições antes de marcar como concluída.",
@@ -40,8 +59,8 @@ export const useExerciseActions = (
       await supabase.rpc('save_series', {
         p_exercicio_id: exercise.id,
         p_numero_serie: index + 1,
-        p_peso: currentSet.weight,
-        p_repeticoes: currentSet.reps,
+        p_peso: effectiveWeight,
+        p_repeticoes: effectiveReps,
         p_concluida: currentSet.completed
       });
 
@@ -59,6 +78,8 @@ export const useExerciseActions = (
   };
 
   const handleWeightChange = (index: number, weight: number) => {
+    if (isNaN(weight)) return; // Ignore invalid inputs
+    
     const newSets = [...sets];
     newSets[index].weight = weight;
     setSets(newSets);
@@ -69,6 +90,8 @@ export const useExerciseActions = (
   };
 
   const handleRepsChange = (index: number, reps: number) => {
+    if (isNaN(reps)) return; // Ignore invalid inputs
+    
     const newSets = [...sets];
     newSets[index].reps = reps;
     setSets(newSets);
