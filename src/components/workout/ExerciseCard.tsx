@@ -7,13 +7,13 @@ import { ExerciseHeader } from "./components/ExerciseHeader";
 import { ExerciseObservation } from "./components/ExerciseObservation";
 import { ExerciseSets } from "./components/ExerciseSets";
 import { FeedbackDialog } from "./FeedbackDialog";
+import { IncrementConfigDialog } from "./IncrementConfigDialog";
 import { useExerciseState } from "./hooks/useExerciseState";
 import { useExerciseActions } from "./hooks/useExerciseActions";
 import { usePreviousSeries } from "./hooks/usePreviousSeries";
 import { 
   DIFFICULTY_OPTIONS, 
-  COMBINED_FATIGUE_PAIN_OPTIONS,
-  INCREMENT_OPTIONS 
+  COMBINED_FATIGUE_PAIN_OPTIONS
 } from "@/hooks/use-exercise-feedback";
 
 interface Exercise {
@@ -61,29 +61,31 @@ export function ExerciseCard({ exercise, onExerciseComplete, onWeightUpdate, mus
 
   const allSetsCompleted = exerciseState.sets.every(set => set.completed);
   
-  useEffect(() => {
-    if (!exercise.concluido && exerciseState.checkNeedsIncrementConfiguration()) {
-      // Use the function from the feedback hook that's properly exposed
-      const checkConfig = async () => {
-        try {
-          const { data, error } = await supabase
-            .from('exercicios_treino_usuario')
-            .select('configuracao_inicial')
-            .eq('id', exercise.id)
-            .single();
-          
-          if (error) throw error;
-          
-          if (data && !data.configuracao_inicial) {
-            exerciseState.setShowIncrementDialog(true);
-          }
-        } catch (error: any) {
-          console.error("Erro ao verificar configuração inicial:", error);
+  // Remover o useEffect que verificava configuração inicial automaticamente
+  // A configuração agora só será solicitada quando o usuário expandir o exercício
+
+  const handleExerciseExpand = async (isOpen: boolean) => {
+    exerciseState.setIsOpen(isOpen);
+    
+    // Verificar se precisa configurar incremento apenas quando expandir
+    if (isOpen && !exercise.concluido && exerciseState.checkNeedsIncrementConfiguration()) {
+      try {
+        const { data, error } = await supabase
+          .from('exercicios_treino_usuario')
+          .select('configuracao_inicial, incremento_minimo')
+          .eq('id', exercise.id)
+          .single();
+        
+        if (error) throw error;
+        
+        if (data && !data.configuracao_inicial && (!data.incremento_minimo || data.incremento_minimo <= 0)) {
+          exerciseState.setShowIncrementDialog(true);
         }
-      };
-      checkConfig();
+      } catch (error: any) {
+        console.error("Erro ao verificar configuração inicial:", error);
+      }
     }
-  }, [exercise.id, exercise.concluido]);
+  };
 
   return (
     <>
@@ -91,7 +93,7 @@ export function ExerciseCard({ exercise, onExerciseComplete, onWeightUpdate, mus
         <ExerciseHeader 
           exercise={exercise}
           isOpen={exerciseState.isOpen}
-          setIsOpen={exerciseState.setIsOpen}
+          setIsOpen={handleExerciseExpand}
           skipIncompleteSets={exerciseActions.skipIncompleteSets}
           replaceExerciseThisWorkout={exerciseActions.replaceExerciseThisWorkout}
           replaceExerciseAllWorkouts={exerciseActions.replaceExerciseAllWorkouts}
@@ -125,7 +127,7 @@ export function ExerciseCard({ exercise, onExerciseComplete, onWeightUpdate, mus
               exercise={{
                 peso: exercise.peso,
                 reps_programadas: exercise.reps_programadas,
-                repeticoes: exercise.repeticoes
+                repeticoes: exercise.repeticoes || undefined
               }}
             />
           </>
@@ -156,14 +158,11 @@ export function ExerciseCard({ exercise, onExerciseComplete, onWeightUpdate, mus
         muscleName={muscleName}
       />
 
-      {/* Increment setting dialog */}
-      <FeedbackDialog
+      {/* Increment setting dialog with slider */}
+      <IncrementConfigDialog
         isOpen={exerciseState.showIncrementDialog}
         onClose={() => exerciseState.setShowIncrementDialog(false)}
-        onSubmit={(value) => exerciseActions.handleSaveIncrementSetting(value as number, exerciseState.saveIncrementSetting)}
-        title="Configuração do exercício"
-        description="Qual é a carga incremental mínima para o exercício {exerciseName}?"
-        options={INCREMENT_OPTIONS}
+        onSubmit={(value) => exerciseActions.handleSaveIncrementSetting(value, exerciseState.saveIncrementSetting)}
         exerciseName={exercise.nome}
         muscleName={muscleName}
       />
