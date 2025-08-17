@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { calculateProgression, getCurrentRepsProgramadas, getIncrementoMinimo } from "./progressionCalculator";
+import { calculateProgression, getCurrentRepsProgramadas } from "./progressionCalculator";
 import { updateMissingMuscleData } from "./muscleDataLoader";
 
 interface ExerciseData {
@@ -36,7 +36,7 @@ export const applyWorkoutProgression = async (treinoId: string): Promise<void> =
       return;
     }
 
-    // Buscar ID do programa para o incremento mínimo
+    // Buscar ID do programa
     const { data: treinoData } = await supabase
       .from('treinos_usuario')
       .select('programa_usuario_id')
@@ -60,7 +60,7 @@ export const applyWorkoutProgression = async (treinoId: string): Promise<void> =
 };
 
 const processExerciseProgression = async (
-  exercicio: ExerciseData, 
+  exercicio: ExerciseData,
   programaUsuarioId: string
 ): Promise<void> => {
   try {
@@ -84,31 +84,42 @@ const processExerciseProgression = async (
       return;
     }
 
-    // Buscar dados do exercício anterior para progressão (removido avaliacao_dor)
+    // Buscar dados do exercício anterior NO MESMO PROGRAMA com JOIN
     const { data: avaliacoesAnteriores } = await supabase
       .from('exercicios_treino_usuario')
-      .select('avaliacao_dificuldade, avaliacao_fadiga, peso, series, repeticoes, incremento_minimo')
+      .select(`
+        id,
+        avaliacao_dificuldade, 
+        avaliacao_fadiga, 
+        peso, 
+        series, 
+        repeticoes, 
+        incremento_minimo,
+        treinos_usuario!inner(programa_usuario_id)
+      `)
       .eq('exercicio_original_id', exercicio.exercicio_original_id)
       .eq('concluido', true)
+      .eq('treinos_usuario.programa_usuario_id', programaUsuarioId)
+      .neq('id', exercicio.id)
       .order('updated_at', { ascending: false })
       .limit(1);
 
     if (!avaliacoesAnteriores || avaliacoesAnteriores.length === 0) {
-      console.log(`Nenhuma avaliação anterior encontrada para ${exercicio.nome}`);
+      console.log(`Nenhuma avaliação anterior encontrada para ${exercicio.nome} no programa ${programaUsuarioId}`);
       return;
     }
 
     const ultimaAvaliacao = avaliacoesAnteriores[0];
 
-    // Buscar incremento mínimo
-    let incrementoMinimo = ultimaAvaliacao.incremento_minimo;
-    if (!incrementoMinimo && exercicio.exercicio_original_id) {
-      incrementoMinimo = await getIncrementoMinimo(exercicio.exercicio_original_id, programaUsuarioId);
+    // Se não há incremento_minimo definido, não aplicar progressão automática
+    if (!ultimaAvaliacao.incremento_minimo || ultimaAvaliacao.incremento_minimo <= 0) {
+      console.log(`Incremento mínimo não definido para ${exercicio.nome} - usuário deve configurar ao abrir exercício`);
+      return;
     }
 
-    // Buscar séries executadas anteriormente
+    // Buscar séries executadas anteriormente (usando o ID correto do exercício anterior)
     const { data: seriesAnteriores } = await supabase.rpc('get_series_by_exercise', {
-      exercise_id: exercicio.id
+      exercise_id: ultimaAvaliacao.id
     });
     
     let executedReps = 0;
@@ -121,19 +132,19 @@ const processExerciseProgression = async (
       executedReps = bestSeries.repeticoes;
     }
 
-    if (!ultimaAvaliacao.avaliacao_dificuldade || !incrementoMinimo || executedReps === 0) {
+    if (!ultimaAvaliacao.avaliacao_dificuldade || executedReps === 0) {
       console.log(`Dados insuficientes para progressão de ${exercicio.nome}`);
       return;
     }
 
-    // Calcular progressão (removido avaliacaoDor)
+    // Calcular progressão
     const progressao = await calculateProgression({
       exerciseId: exercicio.id,
       currentWeight: ultimaAvaliacao.peso || 0,
       programmedReps: ultimaAvaliacao.repeticoes || exercicio.repeticoes || "10",
       executedReps: executedReps,
       currentSets: ultimaAvaliacao.series || exercicio.series,
-      incrementoMinimo: incrementoMinimo,
+      incrementoMinimo: ultimaAvaliacao.incremento_minimo,
       avaliacaoDificuldade: ultimaAvaliacao.avaliacao_dificuldade,
       avaliacaoFadiga: ultimaAvaliacao.avaliacao_fadiga,
       isFirstWeek: false
