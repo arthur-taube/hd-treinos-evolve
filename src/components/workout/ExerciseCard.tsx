@@ -46,7 +46,7 @@ interface ExerciseCardProps {
 
 export function ExerciseCard({ exercise, onExerciseComplete, onWeightUpdate, muscleName }: ExerciseCardProps) {
   const exerciseState = useExerciseState(exercise, onExerciseComplete, onWeightUpdate);
-  const { previousSeries, isLoadingSeries } = usePreviousSeries(exerciseState.isOpen, exercise.exercicio_original_id);
+  const { previousSeries, isLoadingSeries } = usePreviousSeries(exercise.id);
 
   const exerciseActions = useExerciseActions(
     exercise,
@@ -60,10 +60,14 @@ export function ExerciseCard({ exercise, onExerciseComplete, onWeightUpdate, mus
   );
 
   const allSetsCompleted = exerciseState.sets.every(set => set.completed);
+  
+  // Remover o useEffect que verificava configuração inicial automaticamente
+  // A configuração agora só será solicitada quando o usuário expandir o exercício
 
   const handleExerciseExpand = async (isOpen: boolean) => {
     exerciseState.setIsOpen(isOpen);
     
+    // Verificar se precisa configurar incremento apenas quando expandir
     if (isOpen && !exercise.concluido && exerciseState.checkNeedsIncrementConfiguration()) {
       try {
         const { data, error } = await supabase
@@ -130,6 +134,7 @@ export function ExerciseCard({ exercise, onExerciseComplete, onWeightUpdate, mus
         )}
       </Card>
 
+      {/* Difficulty evaluation dialog */}
       <FeedbackDialog
         isOpen={exerciseState.showDifficultyDialog}
         onClose={() => exerciseState.setShowDifficultyDialog(false)}
@@ -141,6 +146,7 @@ export function ExerciseCard({ exercise, onExerciseComplete, onWeightUpdate, mus
         muscleName={muscleName}
       />
 
+      {/* Combined Fatigue/Pain evaluation dialog */}
       <FeedbackDialog
         isOpen={exerciseState.showCombinedFatiguePainDialog}
         onClose={() => exerciseState.setShowCombinedFatiguePainDialog(false)}
@@ -152,6 +158,7 @@ export function ExerciseCard({ exercise, onExerciseComplete, onWeightUpdate, mus
         muscleName={muscleName}
       />
 
+      {/* Increment setting dialog with slider */}
       <IncrementConfigDialog
         isOpen={exerciseState.showIncrementDialog}
         onClose={() => exerciseState.setShowIncrementDialog(false)}

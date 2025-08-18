@@ -72,13 +72,11 @@ export const useExerciseState = (
         console.log(`Calculated progression for ${exercise.nome}:`, progressionData);
         
         if (progressionData) {
-          // Apply progression to ALL sets (so they're pre-filled with valid values)
-          initialSets.forEach(set => {
-            set.weight = progressionData.suggestedWeight;
-            set.reps = progressionData.suggestedReps;
-          });
+          // Apply progression to the first set (others will follow user input)
+          initialSets[0].weight = progressionData.suggestedWeight;
+          initialSets[0].reps = progressionData.suggestedReps;
           
-          console.log(`Applied progression to all sets:`, initialSets);
+          console.log(`Applied progression to first set:`, initialSets[0]);
         }
       }
 
@@ -127,7 +125,7 @@ export const useExerciseState = (
       const currentProgramaUsuarioId = currentWorkout.programa_usuario_id;
       console.log(`Current programa_usuario_id: ${currentProgramaUsuarioId}`);
 
-      // Get the last completed exercise WITH SAME PROGRAMA_USUARIO_ID
+      // Get the last completed exercise WITH SAME PROGRAMA_USUARIO_ID (removido avaliacao_dor)
       const { data: lastExercises, error: exerciseError } = await supabase
         .from('exercicios_treino_usuario')
         .select(`
@@ -172,7 +170,7 @@ export const useExerciseState = (
         currentRepsProgramadas = await getCurrentRepsProgramadas(exercise.id);
       }
 
-      // Use the complete progression calculator
+      // Use the complete progression calculator (removido avaliacaoDor)
       const progressionParams = {
         exerciseId: exercise.id,
         currentWeight: lastExercise.peso || 0,
