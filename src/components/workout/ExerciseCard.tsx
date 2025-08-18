@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ExerciseHeader } from "./components/ExerciseHeader";
 import { ExerciseObservation } from "./components/ExerciseObservation";
 import { ExerciseSets } from "./components/ExerciseSets";
-import { FeedbackDialog } from "./FeedbackDialog";
+import { FeedbackDialog, FeedbackOption } from "./FeedbackDialog";
 import { useExerciseState } from "./hooks/useExerciseState";
 import { useExerciseActions } from "./hooks/useExerciseActions";
 import { usePreviousSeries } from "./hooks/usePreviousSeries";
@@ -85,6 +85,13 @@ export function ExerciseCard({ exercise, onExerciseComplete, onWeightUpdate, mus
     }
   }, [exercise.id, exercise.concluido]);
 
+  useEffect(() => {
+    if (exercise.primary_muscle) {
+      // We'll skip the pain evaluation check for now since we're using combined evaluation
+      // The combined dialog will be triggered after difficulty evaluation
+    }
+  }, [exercise.primary_muscle]);
+
   return (
     <>
       <Card className="mb-4">
@@ -125,7 +132,7 @@ export function ExerciseCard({ exercise, onExerciseComplete, onWeightUpdate, mus
               exercise={{
                 peso: exercise.peso,
                 reps_programadas: exercise.reps_programadas,
-                repeticoes: exercise.repeticoes
+                repeticoes: exercise.repeticoes // Remove fallback - aceita null
               }}
             />
           </>

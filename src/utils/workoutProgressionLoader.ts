@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { calculateProgression, getCurrentRepsProgramadas, getIncrementoMinimo } from "./progressionCalculator";
 import { updateMissingMuscleData } from "./muscleDataLoader";
@@ -84,10 +83,10 @@ const processExerciseProgression = async (
       return;
     }
 
-    // Buscar dados do exercício anterior para progressão (removido avaliacao_dor)
+    // Buscar dados do exercício anterior para progressão
     const { data: avaliacoesAnteriores } = await supabase
       .from('exercicios_treino_usuario')
-      .select('avaliacao_dificuldade, avaliacao_fadiga, peso, series, repeticoes, incremento_minimo')
+      .select('avaliacao_dificuldade, avaliacao_fadiga, avaliacao_dor, peso, series, repeticoes, incremento_minimo')
       .eq('exercicio_original_id', exercicio.exercicio_original_id)
       .eq('concluido', true)
       .order('updated_at', { ascending: false })
@@ -126,7 +125,7 @@ const processExerciseProgression = async (
       return;
     }
 
-    // Calcular progressão (removido avaliacaoDor)
+    // Calcular progressão
     const progressao = await calculateProgression({
       exerciseId: exercicio.id,
       currentWeight: ultimaAvaliacao.peso || 0,
@@ -136,6 +135,7 @@ const processExerciseProgression = async (
       incrementoMinimo: incrementoMinimo,
       avaliacaoDificuldade: ultimaAvaliacao.avaliacao_dificuldade,
       avaliacaoFadiga: ultimaAvaliacao.avaliacao_fadiga,
+      avaliacaoDor: ultimaAvaliacao.avaliacao_dor,
       isFirstWeek: false
     });
 
