@@ -91,12 +91,10 @@ export const useExerciseActions = (
       await onExerciseComplete(exercise.id, true);
       setIsOpen(false);
       
-      const isFirstWeek = await checkIsFirstWeek();
-      if (!isFirstWeek) {
-        setTimeout(() => {
-          setShowDifficultyDialog(true);
-        }, 1000);
-      }
+      // Always show difficulty dialog after completing exercise (not just for non-first week)
+      setTimeout(() => {
+        setShowDifficultyDialog(true);
+      }, 500);
     } catch (error: any) {
       toast({
         title: "Erro ao concluir exercício",

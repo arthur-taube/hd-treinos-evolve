@@ -57,7 +57,7 @@ export const useExerciseState = (
         feedbackHook.setShowIncrementDialog(true);
       }
     }
-  }, [isOpen, exercise.incremento_minimo, exercise.concluido]);
+  }, [isOpen, exercise.incremento_minimo, exercise.concluido, exercise.nome, feedbackHook]);
 
   // Initialize sets with progression values if available
   useEffect(() => {

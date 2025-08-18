@@ -107,10 +107,10 @@ export const getPreviousExerciseData = async (exerciseId: string): Promise<{
     // Pegar o mais recente (primeiro da lista já ordenada)
     const previousExercise = exerciciosDoPrograma[0];
 
-    // Buscar melhor série executada do exercício anterior usando o ID correto
+    // Buscar melhor série executada do exercício anterior usando o ID do exercício ATUAL (não o anterior)
     const { data: series } = await supabase.rpc(
       'get_series_by_exercise',
-      { exercise_id: previousExercise.id }
+      { exercise_id: exerciseId } // Voltando a usar o ID do exercício atual
     );
 
     let bestReps = previousExercise.reps_programadas || 10;
