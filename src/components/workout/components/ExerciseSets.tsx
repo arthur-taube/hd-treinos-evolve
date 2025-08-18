@@ -1,3 +1,4 @@
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Check, Target } from "lucide-react";
@@ -62,9 +63,9 @@ export function ExerciseSets({
     suggestedReps = exercise?.reps_programadas || minReps;
     console.log(`Using range repeticoes, suggesting: ${suggestedReps}`);
   } else {
-    // Fallback
-    suggestedReps = 10;
-    console.log(`Using fallback reps: ${suggestedReps}`);
+    // Sem dados de repetições - não sugerir valor
+    suggestedReps = 0;
+    console.log(`No repetition data available`);
   }
 
   const hasProgressionData = (suggestedWeight !== undefined && suggestedWeight !== null) || suggestedReps > 0;
@@ -75,8 +76,8 @@ export function ExerciseSets({
 
   return (
     <div className="px-4 py-2">
-      {/* Indicador de progressão aplicada */}
-      {hasProgressionData && (
+      {/* Indicador de progressão aplicada - só mostra se tem dados válidos */}
+      {hasProgressionData && exercise?.repeticoes && (
         <div className="mb-4 p-3 rounded-md bg-green-50 border border-green-200">
           <div className="flex items-center gap-2 mb-2">
             <Target className="h-4 w-4 text-green-600" />
@@ -127,7 +128,7 @@ export function ExerciseSets({
       {sets.map((set, index) => {
         // Use the set's actual values if they exist, otherwise use suggested values for all sets
         const displayWeight = set.weight !== null ? set.weight : suggestedWeight;
-        const displayReps = set.reps !== null ? set.reps : suggestedReps;
+        const displayReps = set.reps !== null ? set.reps : (suggestedReps > 0 ? suggestedReps : '');
 
         return (
           <div key={index} className={`grid grid-cols-4 gap-2 items-center py-2 ${index !== sets.length - 1 ? "border-b" : ""}`}>
@@ -136,7 +137,12 @@ export function ExerciseSets({
               <Input 
                 type="number" 
                 value={displayWeight}
-                onChange={(e) => handleWeightChange(index, Number(e.target.value))} 
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  if (!isNaN(value)) {
+                    handleWeightChange(index, value);
+                  }
+                }}
                 step={0.5} 
                 className="w-20 h-8 text-sm"
               />
@@ -146,10 +152,16 @@ export function ExerciseSets({
               <Input 
                 type="number" 
                 value={displayReps}
-                onChange={(e) => handleRepsChange(index, Number(e.target.value))} 
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  if (!isNaN(value)) {
+                    handleRepsChange(index, value);
+                  }
+                }}
                 min={0} 
                 step={1} 
                 className="w-20 h-8 text-sm"
+                placeholder="Reps"
               />
             </div>
             <div className="flex justify-center">
