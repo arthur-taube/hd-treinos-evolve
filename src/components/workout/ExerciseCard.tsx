@@ -2,7 +2,7 @@
 import { Card } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { FeedbackDialog } from "./FeedbackDialog";
-import { DIFFICULTY_OPTIONS, FATIGUE_OPTIONS, PAIN_OPTIONS, INCREMENT_OPTIONS } from "@/hooks/use-exercise-feedback";
+import { DIFFICULTY_OPTIONS, COMBINED_FATIGUE_OPTIONS } from "@/hooks/use-exercise-feedback";
 import { useExerciseState } from "./hooks/useExerciseState";
 import { useExerciseActions } from "./hooks/useExerciseActions";
 import { usePreviousSeries } from "./hooks/usePreviousSeries";
@@ -58,13 +58,10 @@ export function ExerciseCard({
     setShowDifficultyDialog,
     showFatigueDialog,
     setShowFatigueDialog,
-    showPainDialog,
-    setShowPainDialog,
     showIncrementDialog,
     setShowIncrementDialog,
     saveDifficultyFeedback,
     saveFatigueFeedback,
-    savePainFeedback,
     saveIncrementSetting,
     checkIsFirstWeek
   } = useExerciseState(exercise, onExerciseComplete, onWeightUpdate);
@@ -175,21 +172,10 @@ export function ExerciseCard({
         isOpen={showFatigueDialog} 
         onClose={() => setShowFatigueDialog(false)} 
         onSubmit={saveFatigueFeedback} 
-        title="Fadiga Muscular" 
+        title="Dor Muscular / Fadiga Muscular" 
         description="Como você sentiu seus músculos após completar o exercício {exerciseName}?" 
-        options={FATIGUE_OPTIONS} 
+        options={COMBINED_FATIGUE_OPTIONS} 
         exerciseName={exercise.nome} 
-      />
-
-      <FeedbackDialog 
-        isOpen={showPainDialog} 
-        onClose={() => setShowPainDialog(false)} 
-        onSubmit={savePainFeedback} 
-        title="Dor Muscular" 
-        description="Em relação à dor muscular no(s) {muscleName}, quão dolorido você ficou depois do último treino?" 
-        options={PAIN_OPTIONS} 
-        exerciseName={exercise.nome} 
-        muscleName={exercise.primary_muscle} 
       />
 
       <FeedbackDialog 
@@ -198,7 +184,7 @@ export function ExerciseCard({
         onSubmit={handleSaveIncrement} 
         title="Defina a carga incremental mínima" 
         description="Antes de começar, informe qual o incremento mínimo de peso que você consegue adicionar no equipamento usado para o exercício {exerciseName}." 
-        options={INCREMENT_OPTIONS} 
+        options={[]} 
         exerciseName={exercise.nome} 
         isNumericInput={true} 
         minValue={0.5} 

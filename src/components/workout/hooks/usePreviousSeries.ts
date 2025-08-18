@@ -16,12 +16,47 @@ export function usePreviousSeries(isOpen: boolean, exercicioOriginalId: string) 
   const fetchPreviousSeries = async () => {
     setIsLoadingSeries(true);
     try {
+      // First get current exercise to determine its program
+      const { data: currentExercise, error: currentError } = await supabase
+        .from('exercicios_treino_usuario')
+        .select('treino_usuario_id')
+        .eq('exercicio_original_id', exercicioOriginalId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (currentError || !currentExercise) {
+        console.error('Error fetching current exercise:', currentError);
+        setIsLoadingSeries(false);
+        return;
+      }
+
+      // Get current program
+      const { data: currentWorkout, error: workoutError } = await supabase
+        .from('treinos_usuario')
+        .select('programa_usuario_id')
+        .eq('id', currentExercise.treino_usuario_id)
+        .single();
+
+      if (workoutError || !currentWorkout) {
+        console.error('Error fetching current workout:', workoutError);
+        setIsLoadingSeries(false);
+        return;
+      }
+
+      // Get previous exercises from same program
       const { data: previousExercises, error: exercisesError } = await supabase
         .from('exercicios_treino_usuario')
-        .select('id, treino_usuario_id')
+        .select(`
+          id, 
+          treino_usuario_id,
+          updated_at,
+          treinos_usuario!inner(programa_usuario_id)
+        `)
         .eq('exercicio_original_id', exercicioOriginalId)
         .eq('concluido', true)
-        .neq('id', exercicioOriginalId)
+        .eq('treinos_usuario.programa_usuario_id', currentWorkout.programa_usuario_id)
+        .neq('treino_usuario_id', currentExercise.treino_usuario_id)
         .order('updated_at', { ascending: false })
         .limit(3);
 

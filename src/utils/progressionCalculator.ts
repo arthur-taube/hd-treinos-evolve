@@ -9,7 +9,6 @@ export interface ProgressionParams {
   incrementoMinimo: number;
   avaliacaoDificuldade: string;
   avaliacaoFadiga?: number;
-  avaliacaoDor?: number;
   isFirstWeek?: boolean;
 }
 
@@ -38,7 +37,7 @@ export const isDoubleProgression = (repeticoes: string): boolean => {
   return repeticoes && repeticoes.includes('-');
 };
 
-// Função para buscar dados do exercício anterior
+// Função para buscar dados do exercício anterior com filtro por programa
 export const getPreviousExerciseData = async (exerciseId: string): Promise<{
   weight: number;
   reps: number;
@@ -46,11 +45,11 @@ export const getPreviousExerciseData = async (exerciseId: string): Promise<{
   repsProgramadas: number;
   avaliacaoDificuldade: string;
   avaliacaoFadiga: number;
-  avaliacaoDor: number;
   repeticoes: string;
+  previousExerciseId: string;
 } | null> => {
   try {
-    // Buscar exercício anterior com mesmo exercicio_original_id
+    // Buscar exercício atual
     const { data: currentExercise } = await supabase
       .from('exercicios_treino_usuario')
       .select('exercicio_original_id, treino_usuario_id, repeticoes')
@@ -68,13 +67,24 @@ export const getPreviousExerciseData = async (exerciseId: string): Promise<{
 
     if (!currentTreino) return null;
 
-    // Buscar exercício anterior no mesmo programa
+    // Buscar exercícios anteriores no mesmo programa com ORDER BY para garantir consistência
     const { data: previousExercises } = await supabase
       .from('exercicios_treino_usuario')
-      .select('peso, series, reps_programadas, avaliacao_dificuldade, avaliacao_fadiga, avaliacao_dor, treino_usuario_id, repeticoes')
+      .select(`
+        id,
+        peso, 
+        series, 
+        reps_programadas, 
+        avaliacao_dificuldade, 
+        avaliacao_fadiga, 
+        treino_usuario_id, 
+        repeticoes,
+        updated_at
+      `)
       .eq('exercicio_original_id', currentExercise.exercicio_original_id)
       .eq('concluido', true)
-      .neq('id', exerciseId);
+      .neq('id', exerciseId)
+      .order('updated_at', { ascending: false });
 
     if (!previousExercises || previousExercises.length === 0) return null;
 
@@ -94,13 +104,13 @@ export const getPreviousExerciseData = async (exerciseId: string): Promise<{
 
     if (exerciciosDoPrograma.length === 0) return null;
 
-    // Pegar o mais recente
-    const previousExercise = exerciciosDoPrograma[exerciciosDoPrograma.length - 1];
+    // Pegar o mais recente (primeiro da lista já ordenada)
+    const previousExercise = exerciciosDoPrograma[0];
 
-    // Buscar melhor série executada do exercício anterior
+    // Buscar melhor série executada do exercício anterior usando o ID correto
     const { data: series } = await supabase.rpc(
       'get_series_by_exercise',
-      { exercise_id: exerciseId }
+      { exercise_id: previousExercise.id }
     );
 
     let bestReps = previousExercise.reps_programadas || 10;
@@ -119,9 +129,9 @@ export const getPreviousExerciseData = async (exerciseId: string): Promise<{
       sets: previousExercise.series || 3,
       repsProgramadas: previousExercise.reps_programadas || bestReps,
       avaliacaoDificuldade: previousExercise.avaliacao_dificuldade || 'moderado',
-      avaliacaoFadiga: previousExercise.avaliacao_fadiga || 0,
-      avaliacaoDor: previousExercise.avaliacao_dor || 0,
-      repeticoes: previousExercise.repeticoes || currentExercise.repeticoes || ''
+      avaliacaoFadiga: previousExercise.avaliacao_fadiga || 0, // Combined fatigue/pain value
+      repeticoes: previousExercise.repeticoes || currentExercise.repeticoes || '',
+      previousExerciseId: previousExercise.id
     };
   } catch (error) {
     console.error('Erro ao buscar dados do exercício anterior:', error);
@@ -216,25 +226,23 @@ const calculateDoubleProgressionReps = (
   return Math.max(min, newReps);
 };
 
-// Calcular novas séries com valores decimais exatos
+// Calcular novas séries - agora usando apenas avaliacao_fadiga (combinada)
 const calculateNewSets = (
   previousSets: number,
   dificuldade: string,
-  avaliacaoFadiga: number = 0,
-  avaliacaoDor: number = 0
+  avaliacaoFadiga: number = 0
 ): number => {
   const diffValue = getDifficultyValue(dificuldade);
   
   // Socorro! (Deload) - Regra superior
   if (diffValue === -2) {
-    return previousSets / 2; // Retorna valor exato, incluindo decimais
+    return previousSets / 2;
   }
   
-  // Regra geral: X = S + F + D
-  const newSets = previousSets + avaliacaoFadiga + avaliacaoDor;
+  // Regra geral: X = S + F (apenas fadiga combinada, sem dor separada)
+  const newSets = previousSets + avaliacaoFadiga;
   
-  // Retorna o valor exato (com decimais) - será salvo na database
-  return Math.max(0.5, newSets); // Mínimo de 0.5 séries
+  return Math.max(0.5, newSets);
 };
 
 // Função auxiliar para arredondar séries para exibição
@@ -247,7 +255,7 @@ export const roundSetsForDisplay = (sets: number): number => {
   }
 };
 
-// Função principal para calcular progressão
+// Função principal para calcular progressão - atualizada para usar apenas avaliacao_fadiga
 export const calculateProgression = async (params: ProgressionParams): Promise<ProgressionResult> => {
   const {
     exerciseId,
@@ -258,11 +266,10 @@ export const calculateProgression = async (params: ProgressionParams): Promise<P
     incrementoMinimo,
     avaliacaoDificuldade,
     avaliacaoFadiga = 0,
-    avaliacaoDor = 0,
     isFirstWeek = false
   } = params;
 
-  console.log('Calculando progressão com algoritmo facilitado:', params);
+  console.log('Calculando progressão com avaliação combinada:', params);
 
   // Primeira semana: usar valores executados como baseline
   if (isFirstWeek) {
@@ -282,18 +289,16 @@ export const calculateProgression = async (params: ProgressionParams): Promise<P
   // Buscar dados do exercício anterior
   const previousData = await getPreviousExerciseData(exerciseId);
   if (!previousData) {
-    // Se não encontrou dados anteriores, tratar como primeira semana
     return calculateProgression({ ...params, isFirstWeek: true });
   }
 
   const useDoubleProgression = isDoubleProgression(previousData.repeticoes);
   
-  // Calcular novas séries primeiro (REGRA MAIOR) - mantém valor decimal exato
+  // Calcular novas séries usando apenas avaliacao_fadiga
   const newSets = calculateNewSets(
     previousData.sets,
     avaliacaoDificuldade,
-    avaliacaoFadiga,
-    avaliacaoDor
+    avaliacaoFadiga
   );
   
   // Se séries aumentaram, manter peso e reps da semana anterior
@@ -301,7 +306,7 @@ export const calculateProgression = async (params: ProgressionParams): Promise<P
     return {
       newWeight: previousData.weight,
       newReps: useDoubleProgression ? previousData.repeticoes : previousData.repsProgramadas,
-      newSets: newSets, // Valor exato com decimais
+      newSets: newSets,
       progressionType: useDoubleProgression ? 'double' : 'linear',
       isDeload: getDifficultyValue(avaliacaoDificuldade) === -2,
       reasoning: 'Séries aumentaram - mantendo peso e reps anteriores',
@@ -328,7 +333,7 @@ export const calculateProgression = async (params: ProgressionParams): Promise<P
     return {
       newWeight: newWeight,
       newReps: previousData.repeticoes,
-      newSets: newSets, // Valor exato com decimais
+      newSets: newSets,
       progressionType: 'double',
       isDeload: getDifficultyValue(avaliacaoDificuldade) === -2,
       reasoning: 'Progressão dupla aplicada',
@@ -354,7 +359,7 @@ export const calculateProgression = async (params: ProgressionParams): Promise<P
     return {
       newWeight: newWeight,
       newReps: previousData.repsProgramadas,
-      newSets: newSets, // Valor exato com decimais
+      newSets: newSets,
       progressionType: 'linear',
       isDeload: diffValue === -2,
       reasoning: 'Progressão linear aplicada',

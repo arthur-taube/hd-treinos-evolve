@@ -1,5 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { calculateProgression, getCurrentRepsProgramadas, getIncrementoMinimo } from "./progressionCalculator";
+import { calculateProgression, getCurrentRepsProgramadas } from "./progressionCalculator";
 import { updateMissingMuscleData } from "./muscleDataLoader";
 
 interface ExerciseData {
@@ -13,6 +14,7 @@ interface ExerciseData {
   configuracao_inicial: boolean | null;
   primary_muscle: string | null;
   secondary_muscle: string | null;
+  incremento_minimo: number | null;
 }
 
 export const applyWorkoutProgression = async (treinoId: string): Promise<void> => {
@@ -35,21 +37,9 @@ export const applyWorkoutProgression = async (treinoId: string): Promise<void> =
       return;
     }
 
-    // Buscar ID do programa para o incremento mínimo
-    const { data: treinoData } = await supabase
-      .from('treinos_usuario')
-      .select('programa_usuario_id')
-      .eq('id', treinoId)
-      .single();
-
-    if (!treinoData) {
-      console.error('Dados do treino não encontrados');
-      return;
-    }
-
     // Processar cada exercício
     for (const exercicio of exercicios) {
-      await processExerciseProgression(exercicio, treinoData.programa_usuario_id);
+      await processExerciseProgression(exercicio);
     }
 
     console.log('Progressão automática aplicada com sucesso');
@@ -58,19 +48,16 @@ export const applyWorkoutProgression = async (treinoId: string): Promise<void> =
   }
 };
 
-const processExerciseProgression = async (
-  exercicio: ExerciseData, 
-  programaUsuarioId: string
-): Promise<void> => {
+const processExerciseProgression = async (exercicio: ExerciseData): Promise<void> => {
   try {
     // Atualizar dados musculares se necessário
     if ((!exercicio.primary_muscle || !exercicio.secondary_muscle) && exercicio.exercicio_original_id) {
       await updateMissingMuscleData(exercicio.id, exercicio.exercicio_original_id);
     }
 
-    // Se configuração inicial não foi feita, pular
-    if (exercicio.configuracao_inicial !== true) {
-      console.log(`Exercício ${exercicio.nome} ainda não teve configuração inicial`);
+    // Se incremento_minimo não está definido, pular progressão
+    if (!exercicio.incremento_minimo || exercicio.incremento_minimo <= 0) {
+      console.log(`Exercício ${exercicio.nome} não tem incremento mínimo definido, pulando progressão`);
       return;
     }
 
@@ -86,7 +73,16 @@ const processExerciseProgression = async (
     // Buscar dados do exercício anterior para progressão
     const { data: avaliacoesAnteriores } = await supabase
       .from('exercicios_treino_usuario')
-      .select('avaliacao_dificuldade, avaliacao_fadiga, avaliacao_dor, peso, series, repeticoes, incremento_minimo')
+      .select(`
+        avaliacao_dificuldade, 
+        avaliacao_fadiga, 
+        peso, 
+        series, 
+        repeticoes, 
+        incremento_minimo,
+        id,
+        updated_at
+      `)
       .eq('exercicio_original_id', exercicio.exercicio_original_id)
       .eq('concluido', true)
       .order('updated_at', { ascending: false })
@@ -99,15 +95,9 @@ const processExerciseProgression = async (
 
     const ultimaAvaliacao = avaliacoesAnteriores[0];
 
-    // Buscar incremento mínimo
-    let incrementoMinimo = ultimaAvaliacao.incremento_minimo;
-    if (!incrementoMinimo && exercicio.exercicio_original_id) {
-      incrementoMinimo = await getIncrementoMinimo(exercicio.exercicio_original_id, programaUsuarioId);
-    }
-
-    // Buscar séries executadas anteriormente
+    // Buscar séries executadas usando o ID correto do exercício anterior
     const { data: seriesAnteriores } = await supabase.rpc('get_series_by_exercise', {
-      exercise_id: exercicio.id
+      exercise_id: ultimaAvaliacao.id
     });
     
     let executedReps = 0;
@@ -120,22 +110,21 @@ const processExerciseProgression = async (
       executedReps = bestSeries.repeticoes;
     }
 
-    if (!ultimaAvaliacao.avaliacao_dificuldade || !incrementoMinimo || executedReps === 0) {
+    if (!ultimaAvaliacao.avaliacao_dificuldade || executedReps === 0) {
       console.log(`Dados insuficientes para progressão de ${exercicio.nome}`);
       return;
     }
 
-    // Calcular progressão
+    // Calcular progressão com avaliação combinada (apenas avaliacao_fadiga)
     const progressao = await calculateProgression({
       exerciseId: exercicio.id,
       currentWeight: ultimaAvaliacao.peso || 0,
       programmedReps: ultimaAvaliacao.repeticoes || exercicio.repeticoes || "10",
       executedReps: executedReps,
       currentSets: ultimaAvaliacao.series || exercicio.series,
-      incrementoMinimo: incrementoMinimo,
+      incrementoMinimo: exercicio.incremento_minimo,
       avaliacaoDificuldade: ultimaAvaliacao.avaliacao_dificuldade,
-      avaliacaoFadiga: ultimaAvaliacao.avaliacao_fadiga,
-      avaliacaoDor: ultimaAvaliacao.avaliacao_dor,
+      avaliacaoFadiga: ultimaAvaliacao.avaliacao_fadiga || 0, // Combined evaluation
       isFirstWeek: false
     });
 

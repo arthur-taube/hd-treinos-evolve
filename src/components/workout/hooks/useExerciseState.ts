@@ -48,6 +48,17 @@ export const useExerciseState = (
   // Use the feedback hook for managing all feedback dialogs and functions
   const feedbackHook = useExerciseFeedback(exercise.id);
 
+  // Check for increment configuration when exercise is opened
+  useEffect(() => {
+    if (isOpen && !exercise.concluido) {
+      // Check if increment configuration is needed
+      if (exercise.incremento_minimo === null || exercise.incremento_minimo === undefined) {
+        console.log(`Exercise ${exercise.nome} needs increment configuration`);
+        feedbackHook.setShowIncrementDialog(true);
+      }
+    }
+  }, [isOpen, exercise.incremento_minimo, exercise.concluido]);
+
   // Initialize sets with progression values if available
   useEffect(() => {
     const initializeSets = async () => {
@@ -63,50 +74,30 @@ export const useExerciseState = (
         completed: false
       }));
 
-      // Check if we should apply automatic progression
-      const shouldApplyProgression = await shouldApplyAutomaticProgression();
-      console.log(`Should apply progression for ${exercise.nome}:`, shouldApplyProgression);
-
-      if (shouldApplyProgression) {
+      // Only apply progression if incremento_minimo is defined
+      if (exercise.incremento_minimo && exercise.incremento_minimo > 0) {
         const progressionData = await calculateAutomaticProgression();
         console.log(`Calculated progression for ${exercise.nome}:`, progressionData);
         
         if (progressionData) {
-          // Apply progression to the first set (others will follow user input)
           initialSets[0].weight = progressionData.suggestedWeight;
           initialSets[0].reps = progressionData.suggestedReps;
-          
           console.log(`Applied progression to first set:`, initialSets[0]);
         }
+      } else {
+        console.log(`Exercise ${exercise.nome} has no incremento_minimo, skipping progression`);
       }
 
       setSets(initialSets);
     };
 
     initializeSets();
-  }, [exercise.id, exercise.series]);
-
-  const shouldApplyAutomaticProgression = async (): Promise<boolean> => {
-    // If incremento_minimo is set, we can apply progression regardless of configuracao_inicial
-    if (exercise.incremento_minimo && exercise.incremento_minimo > 0) {
-      console.log(`Exercise ${exercise.nome} has incremento_minimo: ${exercise.incremento_minimo}`);
-      return true;
-    }
-
-    // Fallback to checking configuracao_inicial
-    if (exercise.configuracao_inicial === true) {
-      console.log(`Exercise ${exercise.nome} has configuracao_inicial: true`);
-      return true;
-    }
-
-    console.log(`Exercise ${exercise.nome} cannot apply progression - no incremento_minimo or configuracao_inicial`);
-    return false;
-  };
+  }, [exercise.id, exercise.series, exercise.incremento_minimo]);
 
   const calculateAutomaticProgression = async () => {
     try {
-      if (!exercise.exercicio_original_id) {
-        console.log(`No exercicio_original_id for ${exercise.nome}`);
+      if (!exercise.exercicio_original_id || !exercise.incremento_minimo) {
+        console.log(`No progression data available for ${exercise.nome}`);
         return null;
       }
 
@@ -135,7 +126,6 @@ export const useExerciseState = (
           reps_programadas,
           avaliacao_dificuldade, 
           avaliacao_fadiga, 
-          avaliacao_dor, 
           incremento_minimo,
           updated_at,
           treino_usuario_id,
@@ -145,7 +135,7 @@ export const useExerciseState = (
         .eq('concluido', true)
         .eq('treinos_usuario.programa_usuario_id', currentProgramaUsuarioId)
         .not('avaliacao_dificuldade', 'is', null)
-        .neq('id', exercise.id) // Don't include current exercise
+        .neq('id', exercise.id)
         .order('updated_at', { ascending: false });
 
       if (exerciseError) {
@@ -171,17 +161,16 @@ export const useExerciseState = (
         currentRepsProgramadas = await getCurrentRepsProgramadas(exercise.id);
       }
 
-      // Use the complete progression calculator
+      // Use the complete progression calculator with combined evaluation (only avaliacao_fadiga)
       const progressionParams = {
         exerciseId: exercise.id,
         currentWeight: lastExercise.peso || 0,
         programmedReps: exercise.repeticoes || lastExercise.repeticoes || "10",
         executedReps: currentRepsProgramadas || lastExercise.reps_programadas || 10,
         currentSets: lastExercise.series || exercise.series,
-        incrementoMinimo: exercise.incremento_minimo || lastExercise.incremento_minimo || 2.5,
+        incrementoMinimo: exercise.incremento_minimo,
         avaliacaoDificuldade: lastExercise.avaliacao_dificuldade,
-        avaliacaoFadiga: lastExercise.avaliacao_fadiga || 0,
-        avaliacaoDor: lastExercise.avaliacao_dor || 0,
+        avaliacaoFadiga: lastExercise.avaliacao_fadiga || 0, // Combined fatigue/pain value
         isFirstWeek: isFirstWeek
       };
 
@@ -196,7 +185,6 @@ export const useExerciseState = (
         series: progressionResult.newSets
       };
 
-      // Handle reps_programadas for double progression
       if (progressionResult.reps_programadas) {
         updateData.reps_programadas = progressionResult.reps_programadas;
         await updateRepsProgramadas(exercise.id, progressionResult.reps_programadas);
@@ -217,16 +205,12 @@ export const useExerciseState = (
       // Determine suggested reps for UI
       let suggestedReps: number;
       if (progressionResult.reps_programadas) {
-        // Double progression - use calculated reps_programadas
         suggestedReps = progressionResult.reps_programadas;
       } else if (exercise.repeticoes && !exercise.repeticoes.includes('-')) {
-        // Linear progression with fixed reps
         suggestedReps = parseInt(exercise.repeticoes);
       } else if (exercise.repeticoes && exercise.repeticoes.includes('-')) {
-        // Range - use minimum value for display
         suggestedReps = parseInt(exercise.repeticoes.split('-')[0]);
       } else {
-        // Fallback
         suggestedReps = 10;
       }
 
@@ -239,22 +223,6 @@ export const useExerciseState = (
       console.error('Error calculating automatic progression:', error);
       return null;
     }
-  };
-
-  const checkNeedsIncrementConfiguration = (): boolean => {
-    // If incremento_minimo is already set, no need to configure
-    if (exercise.incremento_minimo && exercise.incremento_minimo > 0) {
-      console.log(`Exercise ${exercise.nome} already has incremento_minimo: ${exercise.incremento_minimo}`);
-      return false;
-    }
-
-    // Check if configuracao_inicial is false or null
-    if (exercise.configuracao_inicial !== true) {
-      console.log(`Exercise ${exercise.nome} needs increment configuration`);
-      return true;
-    }
-
-    return false;
   };
 
   const checkIsFirstWeek = async (): Promise<boolean> => {
@@ -299,8 +267,6 @@ export const useExerciseState = (
     }
   };
 
-  // All feedback functions are now handled by useExerciseFeedback hook
-
   return {
     isOpen,
     setIsOpen,
@@ -318,15 +284,11 @@ export const useExerciseState = (
     setShowDifficultyDialog: feedbackHook.setShowDifficultyDialog,
     showFatigueDialog: feedbackHook.showFatigueDialog,
     setShowFatigueDialog: feedbackHook.setShowFatigueDialog,
-    showPainDialog: feedbackHook.showPainDialog,
-    setShowPainDialog: feedbackHook.setShowPainDialog,
     showIncrementDialog: feedbackHook.showIncrementDialog,
     setShowIncrementDialog: feedbackHook.setShowIncrementDialog,
     saveDifficultyFeedback: feedbackHook.saveDifficultyFeedback,
     saveFatigueFeedback: feedbackHook.saveFatigueFeedback,
-    savePainFeedback: feedbackHook.savePainFeedback,
     saveIncrementSetting: feedbackHook.saveIncrementSetting,
-    checkIsFirstWeek,
-    checkNeedsIncrementConfiguration
+    checkIsFirstWeek
   };
 };
