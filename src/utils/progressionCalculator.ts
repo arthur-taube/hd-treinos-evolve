@@ -48,51 +48,57 @@ export const getPreviousExerciseData = async (exerciseId: string): Promise<{
   repeticoes: string;
 } | null> => {
   try {
-    // Buscar exercício atual e programa
+    // Buscar exercício anterior com mesmo exercicio_original_id
     const { data: currentExercise } = await supabase
       .from('exercicios_treino_usuario')
-      .select(`
-        exercicio_original_id, 
-        treino_usuario_id, 
-        repeticoes,
-        treinos_usuario!inner(programa_usuario_id)
-      `)
+      .select('exercicio_original_id, treino_usuario_id, repeticoes')
       .eq('id', exerciseId)
       .single();
 
     if (!currentExercise) return null;
 
-    const currentProgramaUsuarioId = currentExercise.treinos_usuario.programa_usuario_id;
+    // Buscar programa do treino atual
+    const { data: currentTreino } = await supabase
+      .from('treinos_usuario')
+      .select('programa_usuario_id')
+      .eq('id', currentExercise.treino_usuario_id)
+      .single();
 
-    // Buscar exercício anterior no mesmo programa com JOIN
+    if (!currentTreino) return null;
+
+    // Buscar exercício anterior no mesmo programa
     const { data: previousExercises } = await supabase
       .from('exercicios_treino_usuario')
-      .select(`
-        id,
-        peso, 
-        series, 
-        reps_programadas, 
-        avaliacao_dificuldade, 
-        avaliacao_fadiga, 
-        repeticoes,
-        updated_at,
-        treinos_usuario!inner(programa_usuario_id)
-      `)
+      .select('peso, series, reps_programadas, avaliacao_dificuldade, avaliacao_fadiga, treino_usuario_id, repeticoes')
       .eq('exercicio_original_id', currentExercise.exercicio_original_id)
       .eq('concluido', true)
-      .eq('treinos_usuario.programa_usuario_id', currentProgramaUsuarioId)
-      .neq('id', exerciseId)
-      .order('updated_at', { ascending: false })
-      .limit(1);
+      .neq('id', exerciseId);
 
     if (!previousExercises || previousExercises.length === 0) return null;
 
-    const previousExercise = previousExercises[0];
+    // Filtrar apenas exercícios do mesmo programa
+    const exerciciosDoPrograma = [];
+    for (const ex of previousExercises) {
+      const { data: treino } = await supabase
+        .from('treinos_usuario')
+        .select('programa_usuario_id')
+        .eq('id', ex.treino_usuario_id)
+        .single();
 
-    // Buscar melhor série executada do exercício anterior (usando o ID correto)
+      if (treino && treino.programa_usuario_id === currentTreino.programa_usuario_id) {
+        exerciciosDoPrograma.push(ex);
+      }
+    }
+
+    if (exerciciosDoPrograma.length === 0) return null;
+
+    // Pegar o mais recente
+    const previousExercise = exerciciosDoPrograma[exerciciosDoPrograma.length - 1];
+
+    // Buscar melhor série executada do exercício anterior
     const { data: series } = await supabase.rpc(
       'get_series_by_exercise',
-      { exercise_id: previousExercise.id }
+      { exercise_id: exerciseId }
     );
 
     let bestReps = previousExercise.reps_programadas || 10;

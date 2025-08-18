@@ -46,11 +46,7 @@ interface ExerciseCardProps {
 
 export function ExerciseCard({ exercise, onExerciseComplete, onWeightUpdate, muscleName }: ExerciseCardProps) {
   const exerciseState = useExerciseState(exercise, onExerciseComplete, onWeightUpdate);
-  const { previousSeries, isLoadingSeries } = usePreviousSeries(
-    exerciseState.isOpen, 
-    exercise.exercicio_original_id,
-    exercise.treino_usuario_id
-  );
+  const { previousSeries, isLoadingSeries } = usePreviousSeries(exerciseState.isOpen, exercise.exercicio_original_id);
 
   const exerciseActions = useExerciseActions(
     exercise,
@@ -87,32 +83,16 @@ export function ExerciseCard({ exercise, onExerciseComplete, onWeightUpdate, mus
     }
   };
 
-  // Create exercise object with proper typing for ExerciseHeader
-  const exerciseForHeader = {
-    nome: exercise.nome,
-    grupo_muscular: exercise.grupo_muscular,
-    series: exercise.series,
-    repeticoes: exercise.repeticoes || "10", // Provide fallback string for header display
-    peso: exercise.peso || 0,
-    concluido: exercise.concluido,
-    observacao: exercise.observacao,
-    video_url: exercise.video_url,
-    reps_programadas: exercise.reps_programadas
-  };
-
   return (
     <>
       <Card className="mb-4">
         <ExerciseHeader 
-          exercise={exerciseForHeader}
+          exercise={exercise}
           isOpen={exerciseState.isOpen}
           setIsOpen={handleExerciseExpand}
           skipIncompleteSets={exerciseActions.skipIncompleteSets}
           replaceExerciseThisWorkout={exerciseActions.replaceExerciseThisWorkout}
           replaceExerciseAllWorkouts={exerciseActions.replaceExerciseAllWorkouts}
-          observation={exerciseState.observation}
-          setShowObservationInput={exerciseState.setShowObservationInput}
-          setShowIncrementDialog={exerciseState.setShowIncrementDialog}
         />
         
         {exerciseState.isOpen && (

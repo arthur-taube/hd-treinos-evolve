@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -88,13 +89,19 @@ export const useExerciseState = (
   }, [exercise.id, exercise.series]);
 
   const shouldApplyAutomaticProgression = async (): Promise<boolean> => {
-    // SOMENTE se incremento_minimo estiver definido e > 0
+    // If incremento_minimo is set, we can apply progression regardless of configuracao_inicial
     if (exercise.incremento_minimo && exercise.incremento_minimo > 0) {
       console.log(`Exercise ${exercise.nome} has incremento_minimo: ${exercise.incremento_minimo}`);
       return true;
     }
 
-    console.log(`Exercise ${exercise.nome} cannot apply progression - no incremento_minimo defined`);
+    // Fallback to checking configuracao_inicial
+    if (exercise.configuracao_inicial === true) {
+      console.log(`Exercise ${exercise.nome} has configuracao_inicial: true`);
+      return true;
+    }
+
+    console.log(`Exercise ${exercise.nome} cannot apply progression - no incremento_minimo or configuracao_inicial`);
     return false;
   };
 
@@ -140,8 +147,7 @@ export const useExerciseState = (
         .eq('treinos_usuario.programa_usuario_id', currentProgramaUsuarioId)
         .not('avaliacao_dificuldade', 'is', null)
         .neq('id', exercise.id) // Don't include current exercise
-        .order('updated_at', { ascending: false })
-        .limit(1);
+        .order('updated_at', { ascending: false });
 
       if (exerciseError) {
         console.error('Error fetching last exercise:', exerciseError);
@@ -173,17 +179,11 @@ export const useExerciseState = (
         programmedReps: exercise.repeticoes || lastExercise.repeticoes || "10",
         executedReps: currentRepsProgramadas || lastExercise.reps_programadas || 10,
         currentSets: lastExercise.series || exercise.series,
-        incrementoMinimo: exercise.incremento_minimo || lastExercise.incremento_minimo, // Sem fallback!
+        incrementoMinimo: exercise.incremento_minimo || lastExercise.incremento_minimo || 2.5,
         avaliacaoDificuldade: lastExercise.avaliacao_dificuldade,
         avaliacaoFadiga: lastExercise.avaliacao_fadiga || 0,
         isFirstWeek: isFirstWeek
       };
-
-      // Se não há incremento mínimo definido, não calcular progressão
-      if (!progressionParams.incrementoMinimo || progressionParams.incrementoMinimo <= 0) {
-        console.log(`No incremento_minimo defined for ${exercise.nome} - skipping progression`);
-        return null;
-      }
 
       console.log(`Progression params for ${exercise.nome}:`, progressionParams);
 
@@ -242,13 +242,18 @@ export const useExerciseState = (
   };
 
   const checkNeedsIncrementConfiguration = (): boolean => {
-    // Se incremento_minimo não está definido ou é <= 0, precisa configurar
-    if (!exercise.incremento_minimo || exercise.incremento_minimo <= 0) {
+    // If incremento_minimo is already set, no need to configure
+    if (exercise.incremento_minimo && exercise.incremento_minimo > 0) {
+      console.log(`Exercise ${exercise.nome} already has incremento_minimo: ${exercise.incremento_minimo}`);
+      return false;
+    }
+
+    // Check if configuracao_inicial is false or null
+    if (exercise.configuracao_inicial !== true) {
       console.log(`Exercise ${exercise.nome} needs increment configuration`);
       return true;
     }
 
-    console.log(`Exercise ${exercise.nome} already has incremento_minimo: ${exercise.incremento_minimo}`);
     return false;
   };
 
