@@ -60,6 +60,12 @@ export const COMBINED_FATIGUE_PAIN_OPTIONS = [
   }
 ];
 
+export const INCREMENT_OPTIONS = [
+  { value: 1, label: "1 kg", description: "Incremento mínimo de 1 kg" },
+  { value: 2.5, label: "2.5 kg", description: "Incremento mínimo de 2.5 kg (recomendado)" },
+  { value: 5, label: "5 kg", description: "Incremento mínimo de 5 kg" }
+];
+
 export function useExerciseFeedback(exerciseId: string) {
   const [showDifficultyDialog, setShowDifficultyDialog] = useState(false);
   const [showIncrementDialog, setShowIncrementDialog] = useState(false);
@@ -68,6 +74,32 @@ export function useExerciseFeedback(exerciseId: string) {
   // Remove unused fatigue and pain dialogs
   const [showFatigueDialog] = useState(false);
   const [showPainDialog] = useState(false);
+  
+  const checkInitialConfiguration = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('exercicios_treino_usuario')
+        .select('configuracao_inicial')
+        .eq('id', exerciseId)
+        .single();
+      
+      if (error) throw error;
+      
+      // Se o exercício já foi configurado, não mostrar o diálogo
+      if (data && data.configuracao_inicial === true) {
+        console.log('Exercício já configurado, não mostrando diálogo de incremento');
+        return;
+      }
+      
+      // Se exercise hasn't been configured yet, show dialog
+      if (data && !data.configuracao_inicial) {
+        setShowIncrementDialog(true);
+      }
+      
+    } catch (error: any) {
+      console.error("Erro ao verificar configuração inicial:", error);
+    }
+  };
   
   const saveDifficultyFeedback = async (difficulty: string) => {
     try {
@@ -176,5 +208,6 @@ export function useExerciseFeedback(exerciseId: string) {
     saveCombinedFatiguePainFeedback,
     savePainFeedback,
     saveIncrementSetting,
+    checkInitialConfiguration,
   };
 }
