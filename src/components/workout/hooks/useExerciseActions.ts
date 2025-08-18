@@ -115,7 +115,16 @@ export const useExerciseActions = (
     value: number,
     saveIncrementSetting: (value: number) => Promise<void>
   ) => {
-    await saveIncrementSetting(value);
+    try {
+      await saveIncrementSetting(value);
+      // Don't need additional logic here as the custom function handles preventing reopening
+    } catch (error: any) {
+      toast({
+        title: "Erro ao salvar configuração",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   };
 
   const saveObservation = async (

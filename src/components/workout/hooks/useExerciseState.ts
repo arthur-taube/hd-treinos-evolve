@@ -44,20 +44,22 @@ export const useExerciseState = (
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [exerciseNote, setExerciseNote] = useState("");
   const [sets, setSets] = useState<SetData[]>([]);
+  const [incrementDialogShown, setIncrementDialogShown] = useState(false);
   
   // Use the feedback hook for managing all feedback dialogs and functions
   const feedbackHook = useExerciseFeedback(exercise.id);
 
-  // Check for increment configuration when exercise is opened
+  // Check for increment configuration when exercise is opened (only once per session)
   useEffect(() => {
-    if (isOpen && !exercise.concluido) {
+    if (isOpen && !exercise.concluido && !incrementDialogShown) {
       // Check if increment configuration is needed
       if (exercise.incremento_minimo === null || exercise.incremento_minimo === undefined) {
         console.log(`Exercise ${exercise.nome} needs increment configuration`);
         feedbackHook.setShowIncrementDialog(true);
+        setIncrementDialogShown(true);
       }
     }
-  }, [isOpen, exercise.incremento_minimo, exercise.concluido, exercise.nome, feedbackHook]);
+  }, [isOpen, exercise.concluido, incrementDialogShown]);
 
   // Initialize sets with progression values if available
   useEffect(() => {
@@ -267,6 +269,12 @@ export const useExerciseState = (
     }
   };
 
+  // Custom save increment function that prevents reopening
+  const customSaveIncrementSetting = async (value: number) => {
+    await feedbackHook.saveIncrementSetting(value);
+    setIncrementDialogShown(true); // Mark as shown to prevent reopening
+  };
+
   return {
     isOpen,
     setIsOpen,
@@ -288,7 +296,7 @@ export const useExerciseState = (
     setShowIncrementDialog: feedbackHook.setShowIncrementDialog,
     saveDifficultyFeedback: feedbackHook.saveDifficultyFeedback,
     saveFatigueFeedback: feedbackHook.saveFatigueFeedback,
-    saveIncrementSetting: feedbackHook.saveIncrementSetting,
+    saveIncrementSetting: customSaveIncrementSetting,
     checkIsFirstWeek
   };
 };
