@@ -63,32 +63,13 @@ export function ExerciseCard({ exercise, onExerciseComplete, onWeightUpdate, mus
   
   useEffect(() => {
     if (!exercise.concluido && exerciseState.checkNeedsIncrementConfiguration()) {
-      // Use the function from the feedback hook that's properly exposed
-      const checkConfig = async () => {
-        try {
-          const { data, error } = await supabase
-            .from('exercicios_treino_usuario')
-            .select('configuracao_inicial')
-            .eq('id', exercise.id)
-            .single();
-          
-          if (error) throw error;
-          
-          if (data && !data.configuracao_inicial) {
-            exerciseState.setShowIncrementDialog(true);
-          }
-        } catch (error: any) {
-          console.error("Erro ao verificar configuração inicial:", error);
-        }
-      };
-      checkConfig();
+      exerciseState.checkInitialConfiguration();
     }
   }, [exercise.id, exercise.concluido]);
 
   useEffect(() => {
     if (exercise.primary_muscle) {
-      // We'll skip the pain evaluation check for now since we're using combined evaluation
-      // The combined dialog will be triggered after difficulty evaluation
+      exerciseState.checkNeedsPainEvaluation(exercise.primary_muscle);
     }
   }, [exercise.primary_muscle]);
 
@@ -111,7 +92,7 @@ export function ExerciseCard({ exercise, onExerciseComplete, onWeightUpdate, mus
               setObservation={exerciseState.setObservation}
               showObservationInput={exerciseState.showObservationInput}
               setShowObservationInput={exerciseState.setShowObservationInput}
-              saveObservation={() => exerciseActions.saveObservation(exerciseState.observation, exerciseState.setShowObservationInput)}
+              saveObservation={exerciseActions.saveObservation}
             />
             
             <ExerciseSets
@@ -125,7 +106,7 @@ export function ExerciseCard({ exercise, onExerciseComplete, onWeightUpdate, mus
               setShowNoteInput={exerciseState.setShowNoteInput}
               exerciseNote={exerciseState.exerciseNote}
               setExerciseNote={exerciseState.setExerciseNote}
-              addNote={() => exerciseActions.addNote(exerciseState.setShowNoteInput)}
+              addNote={exerciseActions.addNote}
               handleExerciseComplete={exerciseActions.handleExerciseComplete}
               allSetsCompleted={allSetsCompleted}
               exerciseConcluido={exercise.concluido}
