@@ -129,11 +129,7 @@ export function ExerciseCard({ exercise, onExerciseComplete, onWeightUpdate, mus
               handleExerciseComplete={exerciseActions.handleExerciseComplete}
               allSetsCompleted={allSetsCompleted}
               exerciseConcluido={exercise.concluido}
-              exercise={{
-                peso: exercise.peso,
-                reps_programadas: exercise.reps_programadas,
-                repeticoes: exercise.repeticoes || "10"
-              }}
+              exercise={exercise}
             />
           </>
         )}
