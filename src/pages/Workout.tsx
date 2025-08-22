@@ -1,154 +1,104 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import PageHeader from "@/components/layout/PageHeader";
+import { useParams, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { ExerciseCard } from "@/components/workout/ExerciseCard";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, CheckCircle, ChevronRight } from "lucide-react";
-import { ExerciseCard } from "@/components/workout/ExerciseCard";
-import { FeedbackDialog } from "@/components/workout/FeedbackDialog";
-import { useExerciseFeedback } from "@/hooks/use-exercise-feedback";
-import { applyWorkoutProgression } from "@/utils/workoutProgressionLoader";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Check, Calendar, Clock, Target } from "lucide-react";
 
-interface TreinoUsuario {
-  id: string;
-  nome: string;
-  ordem_semana: number;
-  programa_usuario_id: string;
-  concluido: boolean;
-}
-
-interface ExercicioUsuario {
+interface Exercise {
   id: string;
   nome: string;
   grupo_muscular: string;
   primary_muscle: string;
+  secondary_muscle?: string;
   exercicio_original_id: string;
   series: number;
   repeticoes: string | null;
-  oculto: boolean;
-  ordem: number;
-  concluido: boolean;
   peso: number | null;
+  concluido: boolean;
   observacao?: string | null;
   video_url?: string | null;
   configuracao_inicial?: boolean;
   reps_programadas?: number | null;
+  incremento_minimo?: number | null;
   treino_usuario_id: string;
 }
 
 export default function Workout() {
-  const { treinoId } = useParams<{ treinoId: string }>();
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [treino, setTreino] = useState<TreinoUsuario | null>(null);
-  const [exercicios, setExercicios] = useState<ExercicioUsuario[]>([]);
+  const [workout, setWorkout] = useState<any>(null);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  
-  useEffect(() => {
-    async function fetchWorkoutData() {
-      if (!treinoId) return;
-
-      try {
-        // Aplicar progressão automática primeiro
-        await applyWorkoutProgression(treinoId);
-
-        // Buscar dados do treino
-        const { data: treinoData, error: treinoError } = await supabase
-          .from('treinos_usuario')
-          .select('*')
-          .eq('id', treinoId)
-          .single();
-
-        if (treinoError) throw treinoError;
-
-        setTreino(treinoData);
-
-        // Buscar exercícios do treino com primary_muscle dos exercícios originais
-        const { data: exerciciosData, error: exerciciosError } = await supabase
-          .from('exercicios_treino_usuario')
-          .select(`
-            id, 
-            nome, 
-            grupo_muscular, 
-            primary_muscle,
-            exercicio_original_id,
-            series, 
-            repeticoes, 
-            oculto, 
-            ordem, 
-            concluido, 
-            peso, 
-            observacao, 
-            video_url,
-            configuracao_inicial,
-            reps_programadas,
-            treino_usuario_id
-          `)
-          .eq('treino_usuario_id', treinoId)
-          .order('ordem', { ascending: true });
-
-        if (exerciciosError) throw exerciciosError;
-        
-        const exerciciosProcessados = await Promise.all(
-          exerciciosData.map(async (exercicio) => {
-            if (!exercicio.primary_muscle && exercicio.exercicio_original_id) {
-              const { data, error } = await supabase
-                .from('exercicios_iniciantes')
-                .select('primary_muscle')
-                .eq('id', exercicio.exercicio_original_id)
-                .single();
-                
-              if (!error && data) {
-                exercicio.primary_muscle = data.primary_muscle || exercicio.grupo_muscular;
-                
-                await supabase
-                  .from('exercicios_treino_usuario')
-                  .update({ primary_muscle: data.primary_muscle })
-                  .eq('id', exercicio.id);
-              }
-            }
-            
-            return exercicio;
-          })
-        );
-
-        setExercicios(exerciciosProcessados);
-      } catch (error: any) {
-        toast({
-          title: "Erro ao carregar treino",
-          description: error.message || "Não foi possível carregar os dados do treino.",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchWorkoutData();
-  }, [treinoId]);
+  const [completingWorkout, setCompletingWorkout] = useState(false);
 
   useEffect(() => {
-    async function ensureSeriesTable() {
-      try {
-        await supabase.rpc('ensure_series_table').then(({ error }) => {
-          if (error) {
-            console.error("Erro ao verificar/criar tabela de séries:", error);
-          }
-        });
-      } catch (error) {
-        console.error("Erro ao verificar tabela de séries:", error);
-      }
+    if (id) {
+      fetchWorkout();
     }
-    
-    ensureSeriesTable();
-  }, []);
+  }, [id]);
 
-  const toggleExerciseCompletion = async (exerciseId: string, isCompleted: boolean) => {
-    setExercicios(prev => 
-      prev.map(ex => ex.id === exerciseId ? { ...ex, concluido: isCompleted } : ex)
-    );
+  const fetchWorkout = async () => {
+    try {
+      const { data: workoutData, error: workoutError } = await supabase
+        .from('treinos_usuario')
+        .select(`
+          id,
+          nome,
+          data_concluido,
+          concluido,
+          programas_usuario (
+            nome
+          )
+        `)
+        .eq('id', id)
+        .single();
 
+      if (workoutError) throw workoutError;
+
+      const { data: exercisesData, error: exercisesError } = await supabase
+        .from('exercicios_treino_usuario')
+        .select(`
+          id,
+          nome,
+          grupo_muscular,
+          primary_muscle,
+          secondary_muscle,
+          exercicio_original_id,
+          series,
+          repeticoes,
+          peso,
+          concluido,
+          observacao,
+          video_url,
+          configuracao_inicial,
+          reps_programadas,
+          incremento_minimo,
+          treino_usuario_id
+        `)
+        .eq('treino_usuario_id', id)
+        .order('created_at');
+
+      if (exercisesError) throw exercisesError;
+
+      setWorkout(workoutData);
+      setExercises(exercisesData || []);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao carregar treino",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExerciseComplete = async (exerciseId: string, isCompleted: boolean) => {
     try {
       const { error } = await supabase
         .from('exercicios_treino_usuario')
@@ -156,194 +106,128 @@ export default function Workout() {
         .eq('id', exerciseId);
 
       if (error) throw error;
+
+      setExercises(exercises.map(exercise =>
+        exercise.id === exerciseId ? { ...exercise, concluido: isCompleted } : exercise
+      ));
     } catch (error: any) {
       toast({
         title: "Erro ao atualizar exercício",
-        description: error.message || "Não foi possível atualizar o status do exercício.",
+        description: error.message,
         variant: "destructive"
       });
-      
-      setExercicios(prev => 
-        prev.map(ex => ex.id === exerciseId ? { ...ex, concluido: !isCompleted } : ex)
-      );
     }
   };
 
-  const updateExerciseWeight = async (exerciseId: string, weight: number) => {
-    setExercicios(prev => 
-      prev.map(ex => ex.id === exerciseId ? { ...ex, peso: weight } : ex)
-    );
-    
+  const handleWeightUpdate = async (exerciseId: string, weight: number) => {
     try {
       const { error } = await supabase
         .from('exercicios_treino_usuario')
         .update({ peso: weight })
         .eq('id', exerciseId);
-      
+
       if (error) throw error;
+
+      setExercises(exercises.map(exercise =>
+        exercise.id === exerciseId ? { ...exercise, peso: weight } : exercise
+      ));
     } catch (error: any) {
       toast({
         title: "Erro ao atualizar peso",
-        description: error.message || "Não foi possível salvar o peso do exercício.",
+        description: error.message,
         variant: "destructive"
       });
     }
   };
 
   const completeWorkout = async () => {
-    if (!treino) return;
-    
-    setSaving(true);
+    setCompletingWorkout(true);
     try {
-      const visibleExercises = exercicios.filter(ex => !ex.oculto);
-      const { error: exerciciosError } = await supabase
-        .from('exercicios_treino_usuario')
-        .update({ concluido: true })
-        .in('id', visibleExercises.map(ex => ex.id));
-        
-      if (exerciciosError) throw exerciciosError;
-      
-      const { error: treinoError } = await supabase
+      const { error } = await supabase
         .from('treinos_usuario')
-        .update({ 
-          concluido: true,
-          data_concluido: new Date().toISOString()
-        })
-        .eq('id', treino.id);
-        
-      if (treinoError) throw treinoError;
-      
-      setExercicios(prev => prev.map(ex => ex.oculto ? ex : { ...ex, concluido: true }));
-      setTreino(prev => prev ? { ...prev, concluido: true } : null);
-      
+        .update({ concluido: true, data_concluido: new Date().toISOString() })
+        .eq('id', id);
+
+      if (error) throw error;
+
       toast({
         title: "Treino concluído!",
-        description: "Parabéns! Seu treino foi registrado como concluído."
+        description: "Parabéns, seu treino foi finalizado com sucesso.",
       });
-      
-      navigate('/active-program');
+      navigate("/workouts");
     } catch (error: any) {
       toast({
         title: "Erro ao concluir treino",
-        description: error.message || "Não foi possível registrar o treino como concluído.",
+        description: error.message,
         variant: "destructive"
       });
     } finally {
-      setSaving(false);
+      setCompletingWorkout(false);
     }
   };
 
-  const findAdjacentWorkout = async (direction: 'next' | 'previous') => {
-    if (!treino) return null;
-    
-    try {
-      const { data: treinos } = await supabase
-        .from('treinos_usuario')
-        .select('*')
-        .eq('programa_usuario_id', treino.programa_usuario_id)
-        .order('ordem_semana', { ascending: true });
-        
-      if (!treinos || treinos.length === 0) return null;
-      
-      const currentIndex = treinos.findIndex(t => t.id === treino.id);
-      if (currentIndex === -1) return null;
-      
-      const targetIndex = direction === 'next' 
-        ? currentIndex + 1 
-        : currentIndex - 1;
-        
-      if (targetIndex < 0 || targetIndex >= treinos.length) return null;
-      
-      return treinos[targetIndex].id;
-    } catch (error) {
-      console.error('Erro ao buscar treino adjacente:', error);
-      return null;
-    }
-  };
+  if (loading) {
+    return (
+      <AppLayout>
+        <PageHeader title="Carregando treino..." />
+      </AppLayout>
+    );
+  }
 
-  const navigateToAdjacentWorkout = async (direction: 'next' | 'previous') => {
-    const adjacentWorkoutId = await findAdjacentWorkout(direction);
-    if (adjacentWorkoutId) {
-      navigate(`/workout/${adjacentWorkoutId}`);
-    } else {
-      toast({
-        title: `Não há treino ${direction === 'next' ? 'próximo' : 'anterior'}`,
-        description: `Este é o ${direction === 'next' ? 'último' : 'primeiro'} treino do programa.`
-      });
-    }
-  };
+  if (!workout) {
+    return (
+      <AppLayout>
+        <PageHeader title="Treino não encontrado" />
+      </AppLayout>
+    );
+  }
 
-  const isAllExercisesCompleted = () => {
-    const visibleExercises = exercicios.filter(ex => !ex.oculto);
-    return visibleExercises.length > 0 && visibleExercises.every(ex => ex.concluido);
-  };
-
-  const isWorkoutAlreadyCompleted = () => {
-    return treino?.concluido === true;
-  };
+  const allExercisesCompleted = exercises.length > 0 && exercises.every(exercise => exercise.concluido);
 
   return (
-    <div className="pb-20">
-      <PageHeader title={treino?.nome || "Carregando..."}>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => navigateToAdjacentWorkout('previous')}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            onClick={() => navigate("/active-program")}
-          >
-            Voltar ao Programa
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => navigateToAdjacentWorkout('next')}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </PageHeader>
+    <AppLayout>
+      <PageHeader title={workout?.programas_usuario?.nome || "Treino"} />
 
-      {loading ? (
-        <div className="flex justify-center my-8">
-          <p>Carregando detalhes do treino...</p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          <div className="space-y-4">
-            {exercicios
-              .filter(ex => !ex.oculto)
-              .map((exercicio) => (
-                <ExerciseCard 
-                  key={exercicio.id}
-                  exercise={exercicio}
-                  onExerciseComplete={toggleExerciseCompletion}
-                  onWeightUpdate={updateExerciseWeight}
-                />
-              ))}
+      <Card className="mb-4">
+        <CardHeader>
+          <CardTitle>Informações do Treino</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            <span>{new Date().toLocaleDateString()}</span>
           </div>
-          
-          <div className="pt-4">
-            <Button 
-              className="w-full" 
-              onClick={completeWorkout} 
-              disabled={saving || isWorkoutAlreadyCompleted() || !isAllExercisesCompleted()}
-            >
-              {saving ? "Salvando..." : 
-               isWorkoutAlreadyCompleted() ? "Treino Já Concluído!" : 
-               isAllExercisesCompleted() ? "Concluir Treino" : "Complete todos os exercícios"}
-              {(isAllExercisesCompleted() || isWorkoutAlreadyCompleted()) && <CheckCircle className="ml-2 h-4 w-4" />}
-            </Button>
+          <div className="flex items-center gap-2">
+            <Target className="h-4 w-4" />
+            <span>{exercises.length} exercícios</span>
           </div>
-        </div>
-      )}
-    </div>
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            <span>Duração estimada: 45-60 minutos</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Check className="h-4 w-4" />
+            <span>{allExercisesCompleted ? 'Treino concluído' : 'Em andamento'}</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {exercises.map(exercise => (
+        <ExerciseCard
+          key={exercise.id}
+          exercise={exercise}
+          onExerciseComplete={handleExerciseComplete}
+          onWeightUpdate={handleWeightUpdate}
+        />
+      ))}
+
+      <Button
+        className="w-full"
+        onClick={completeWorkout}
+        disabled={completingWorkout || allExercisesCompleted}
+      >
+        {allExercisesCompleted ? "Treino concluído" : "Concluir treino"}
+      </Button>
+    </AppLayout>
   );
 }
