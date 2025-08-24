@@ -49,22 +49,38 @@ export const useExerciseState = (
   // Use the feedback hook for managing all feedback dialogs and functions
   const feedbackHook = useExerciseFeedback(exercise.id);
 
+  // Reset incrementDialogShown when exercise.id changes
+  useEffect(() => {
+    setIncrementDialogShown(false);
+  }, [exercise.id]);
+
   // Check for increment configuration when exercise is opened (only once per session)
   useEffect(() => {
-    if (isOpen && !exercise.concluido && !incrementDialogShown) {
-      // Check if increment configuration is needed
-      if (exercise.incremento_minimo === null || exercise.incremento_minimo === undefined) {
-        console.log(`Exercise ${exercise.nome} needs increment configuration`);
-        feedbackHook.setShowIncrementDialog(true);
+    const checkIncrementConfig = async () => {
+      if (isOpen && !exercise.concluido && !incrementDialogShown) {
+        console.log(`Checking increment configuration for ${exercise.nome}`);
+        
+        // Use the robust check from feedbackHook that queries the database directly
+        const needsConfiguration = await feedbackHook.checkInitialConfiguration();
+        
+        if (needsConfiguration) {
+          console.log(`Exercise ${exercise.nome} needs increment configuration`);
+          feedbackHook.setShowIncrementDialog(true);
+        } else {
+          console.log(`Exercise ${exercise.nome} already has increment configuration`);
+        }
+        
         setIncrementDialogShown(true);
       }
-    }
-  }, [isOpen, exercise.concluido, incrementDialogShown]);
+    };
 
-  // Initialize sets with progression values if available
+    checkIncrementConfig();
+  }, [isOpen, exercise.concluido, incrementDialogShown, exercise.id]);
+
+  // Initialize sets without automatic progression for first week
   useEffect(() => {
     const initializeSets = async () => {
-      console.log(`=== INICIANDO CÁLCULO DE PROGRESSÃO PARA ${exercise.nome} ===`);
+      console.log(`=== INICIANDO INICIALIZAÇÃO DE SETS PARA ${exercise.nome} ===`);
       console.log(`Exercise ID: ${exercise.id}`);
       console.log(`Treino Usuario ID: ${exercise.treino_usuario_id}`);
       console.log(`Exercise data:`, exercise);
@@ -76,8 +92,12 @@ export const useExerciseState = (
         completed: false
       }));
 
-      // Only apply progression if incremento_minimo is defined
-      if (exercise.incremento_minimo && exercise.incremento_minimo > 0) {
+      // Check if this is the first week
+      const isFirstWeek = await checkIsFirstWeek();
+      console.log(`Is first week for ${exercise.nome}:`, isFirstWeek);
+
+      // Skip automatic progression for first week - let user input baseline
+      if (!isFirstWeek && exercise.incremento_minimo && exercise.incremento_minimo > 0) {
         const progressionData = await calculateAutomaticProgression();
         console.log(`Calculated progression for ${exercise.nome}:`, progressionData);
         
@@ -87,7 +107,7 @@ export const useExerciseState = (
           console.log(`Applied progression to first set:`, initialSets[0]);
         }
       } else {
-        console.log(`Exercise ${exercise.nome} has no incremento_minimo, skipping progression`);
+        console.log(`Skipping automatic progression for ${exercise.nome} - first week or no increment configured`);
       }
 
       setSets(initialSets);

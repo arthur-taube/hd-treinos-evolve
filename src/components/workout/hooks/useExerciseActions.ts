@@ -1,6 +1,7 @@
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { SetData } from "./useExerciseState";
+import { getWorstSeriesReps } from "@/utils/progressionCalculator";
 
 interface Exercise {
   id: string;
@@ -89,9 +90,50 @@ export const useExerciseActions = (
 
     try {
       await onExerciseComplete(exercise.id, true);
+
+      // Check if this is the first week and handle reps_programadas baseline
+      const isFirstWeek = await checkIsFirstWeek();
+      if (isFirstWeek) {
+        console.log(`First week detected for ${exercise.nome}, calculating baseline reps_programadas`);
+        
+        // Calculate baseline reps_programadas from worst series
+        const worstSeriesReps = await getWorstSeriesReps(exercise.id);
+        let baselineReps: number | null = null;
+
+        if (worstSeriesReps !== null) {
+          baselineReps = worstSeriesReps;
+          console.log(`Using worst series reps as baseline: ${baselineReps}`);
+        } else if (exercise.repeticoes) {
+          // Parse repeticoes to get minimum value
+          if (exercise.repeticoes.includes('-')) {
+            baselineReps = parseInt(exercise.repeticoes.split('-')[0]);
+          } else {
+            baselineReps = parseInt(exercise.repeticoes);
+          }
+          console.log(`Using minimum repeticoes as baseline: ${baselineReps}`);
+        }
+        // If no repeticoes configured, leave as null (acceptable for hidden exercises)
+
+        // Save baseline reps_programadas if we have a value
+        if (baselineReps !== null) {
+          const { error: updateError } = await supabase
+            .from('exercicios_treino_usuario')
+            .update({ reps_programadas: baselineReps })
+            .eq('id', exercise.id);
+
+          if (updateError) {
+            console.error('Error saving baseline reps_programadas:', updateError);
+          } else {
+            console.log(`Saved baseline reps_programadas: ${baselineReps} for ${exercise.nome}`);
+          }
+        } else {
+          console.log(`No baseline reps_programadas to save for ${exercise.nome} (acceptable for hidden exercises)`);
+        }
+      }
+
       setIsOpen(false);
       
-      // Always show difficulty dialog after completing exercise (not just for non-first week)
+      // Always show difficulty dialog after completing exercise
       setTimeout(() => {
         setShowDifficultyDialog(true);
       }, 500);

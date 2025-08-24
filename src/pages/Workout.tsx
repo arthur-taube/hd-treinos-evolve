@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PageHeader from "@/components/layout/PageHeader";
@@ -34,6 +35,7 @@ interface ExercicioUsuario {
   video_url?: string | null;
   configuracao_inicial?: boolean;
   reps_programadas?: number | null;
+  incremento_minimo?: number | null;
   treino_usuario_id: string;
 }
 
@@ -83,6 +85,7 @@ export default function Workout() {
             video_url,
             configuracao_inicial,
             reps_programadas,
+            incremento_minimo,
             treino_usuario_id
           `)
           .eq('treino_usuario_id', treinoId)
