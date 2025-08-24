@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { calculateProgression, getCurrentRepsProgramadas, updateRepsProgramadas, getWorstSeriesReps } from "@/utils/progressionCalculator";
+import { calculateProgression, getCurrentRepsProgramadas, updateRepsProgramadas } from "@/utils/progressionCalculator";
 import { useExerciseFeedback } from "@/hooks/use-exercise-feedback";
 
 export interface SetData {
@@ -51,26 +51,15 @@ export const useExerciseState = (
 
   // Check for increment configuration when exercise is opened (only once per session)
   useEffect(() => {
-    const checkIncrementConfig = async () => {
-      if (isOpen && !exercise.concluido && !incrementDialogShown) {
-        console.log(`Checking increment config for ${exercise.nome}:`, {
-          incremento_minimo: exercise.incremento_minimo,
-          configuracao_inicial: exercise.configuracao_inicial
-        });
-        
-        // Use the hook's check method for proper validation
-        const needsConfig = await feedbackHook.checkInitialConfiguration();
-        if (needsConfig) {
-          console.log(`Exercise ${exercise.nome} needs increment configuration`);
-          setIncrementDialogShown(true);
-        } else {
-          console.log(`Exercise ${exercise.nome} already configured`);
-        }
+    if (isOpen && !exercise.concluido && !incrementDialogShown) {
+      // Check if increment configuration is needed
+      if (exercise.incremento_minimo === null || exercise.incremento_minimo === undefined) {
+        console.log(`Exercise ${exercise.nome} needs increment configuration`);
+        feedbackHook.setShowIncrementDialog(true);
+        setIncrementDialogShown(true);
       }
-    };
-
-    checkIncrementConfig();
-  }, [isOpen, exercise.concluido, incrementDialogShown, exercise.nome, exercise.incremento_minimo]);
+    }
+  }, [isOpen, exercise.concluido, incrementDialogShown]);
 
   // Initialize sets with progression values if available
   useEffect(() => {
@@ -156,54 +145,17 @@ export const useExerciseState = (
         return null;
       }
 
-      // Check if this is the first week
-      const isFirstWeek = !lastExercises || lastExercises.length === 0;
-      console.log(`Is first week for ${exercise.nome}:`, isFirstWeek);
-
-      let lastExercise;
-      let executedReps;
-
-      if (isFirstWeek) {
-        console.log(`First week - getting worst series for baseline`);
-        
-        // For first week, we need to get executedReps from the worst series of this current exercise
-        // But since we haven't completed it yet, we'll use a fallback approach
-        executedReps = await getWorstSeriesReps(exercise.id);
-        
-        if (!executedReps) {
-          // Fallback: use reps_programadas or extract from repeticoes
-          if (exercise.reps_programadas && exercise.reps_programadas > 0) {
-            executedReps = exercise.reps_programadas;
-          } else if (exercise.repeticoes && !exercise.repeticoes.includes('-')) {
-            executedReps = parseInt(exercise.repeticoes);
-          } else if (exercise.repeticoes && exercise.repeticoes.includes('-')) {
-            executedReps = parseInt(exercise.repeticoes.split('-')[0]);
-          } else {
-            executedReps = 10; // Ultimate fallback
-          }
-        }
-        
-        console.log(`First week executedReps determined: ${executedReps}`);
-        
-        // Create a mock lastExercise for first week
-        lastExercise = {
-          peso: exercise.peso || 0,
-          series: exercise.series,
-          repeticoes: exercise.repeticoes || "10",
-          reps_programadas: executedReps,
-          avaliacao_dificuldade: "bom", // Default for first week
-          avaliacao_fadiga: 0 // Neutral
-        };
-      } else {
-        lastExercise = lastExercises[0];
-        console.log(`Previous exercise data for ${exercise.nome}:`, lastExercise);
-        
-        // Get executed reps from the last exercise
-        executedReps = await getWorstSeriesReps(lastExercise.treino_usuario_id);
-        if (!executedReps) {
-          executedReps = lastExercise.reps_programadas || 10;
-        }
+      if (!lastExercises || lastExercises.length === 0) {
+        console.log(`No previous exercise data found for ${exercise.nome} in program ${currentProgramaUsuarioId}`);
+        return null;
       }
+
+      const lastExercise = lastExercises[0];
+      console.log(`Last exercise data for ${exercise.nome} in same program:`, lastExercise);
+
+      // Check if this is the first week
+      const isFirstWeek = await checkIsFirstWeek();
+      console.log(`Is first week for ${exercise.nome}:`, isFirstWeek);
 
       // Get current reps_programadas
       let currentRepsProgramadas = exercise.reps_programadas;
@@ -211,16 +163,16 @@ export const useExerciseState = (
         currentRepsProgramadas = await getCurrentRepsProgramadas(exercise.id);
       }
 
-      // Use the complete progression calculator
+      // Use the complete progression calculator with combined evaluation (only avaliacao_fadiga)
       const progressionParams = {
         exerciseId: exercise.id,
         currentWeight: lastExercise.peso || 0,
         programmedReps: exercise.repeticoes || lastExercise.repeticoes || "10",
-        executedReps: executedReps,
+        executedReps: currentRepsProgramadas || lastExercise.reps_programadas || 10,
         currentSets: lastExercise.series || exercise.series,
         incrementoMinimo: exercise.incremento_minimo,
         avaliacaoDificuldade: lastExercise.avaliacao_dificuldade,
-        avaliacaoFadiga: lastExercise.avaliacao_fadiga || 0,
+        avaliacaoFadiga: lastExercise.avaliacao_fadiga || 0, // Combined fatigue/pain value
         isFirstWeek: isFirstWeek
       };
 
@@ -229,17 +181,15 @@ export const useExerciseState = (
       const progressionResult = await calculateProgression(progressionParams);
       console.log(`Progression result for ${exercise.nome}:`, progressionResult);
 
-      // Always update exercise with new values, including reps_programadas
+      // Update exercise with new values
       const updateData: any = {
         peso: progressionResult.newWeight,
         series: progressionResult.newSets
       };
 
-      // Always update reps_programadas when we have a calculated value
-      if (progressionResult.reps_programadas !== undefined) {
+      if (progressionResult.reps_programadas) {
         updateData.reps_programadas = progressionResult.reps_programadas;
         await updateRepsProgramadas(exercise.id, progressionResult.reps_programadas);
-        console.log(`Updated reps_programadas to: ${progressionResult.reps_programadas}`);
       }
 
       // Update the exercise in database
@@ -256,7 +206,7 @@ export const useExerciseState = (
 
       // Determine suggested reps for UI
       let suggestedReps: number;
-      if (progressionResult.reps_programadas !== undefined) {
+      if (progressionResult.reps_programadas) {
         suggestedReps = progressionResult.reps_programadas;
       } else if (exercise.repeticoes && !exercise.repeticoes.includes('-')) {
         suggestedReps = parseInt(exercise.repeticoes);
