@@ -9,6 +9,7 @@ interface Exercise {
   exercicio_original_id: string;
   concluido: boolean;
   treino_usuario_id: string;
+  repeticoes?: string | null;
 }
 
 export const useExerciseActions = (
