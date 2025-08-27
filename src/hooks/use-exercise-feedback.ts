@@ -1,7 +1,7 @@
-
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { precomputeNextExerciseProgression } from "@/utils/nextWorkoutProgression";
 
 // Constants for feedback options
 export const DIFFICULTY_OPTIONS = [
@@ -134,6 +134,9 @@ export function useExerciseFeedback(exerciseId: string) {
         title: "Avaliação salva",
         description: "Suas avaliações foram salvas com sucesso!"
       });
+
+      // Trigger precomputation after both evaluations are saved
+      await triggerProgressionPrecomputation(exerciseId, fatigue);
       
     } catch (error: any) {
       toast({
@@ -141,6 +144,43 @@ export function useExerciseFeedback(exerciseId: string) {
         description: error.message,
         variant: "destructive"
       });
+    }
+  };
+
+  const triggerProgressionPrecomputation = async (exerciseId: string, avaliacaoFadiga: number) => {
+    try {
+      // Get exercise data needed for precomputation
+      const { data: exercise, error } = await supabase
+        .from('exercicios_treino_usuario')
+        .select(`
+          exercicio_original_id,
+          avaliacao_dificuldade,
+          treino_usuario_id,
+          treinos_usuario!inner(programa_usuario_id)
+        `)
+        .eq('id', exerciseId)
+        .single();
+
+      if (error || !exercise) {
+        console.error('Error fetching exercise for precomputation:', error);
+        return;
+      }
+
+      if (!exercise.avaliacao_dificuldade) {
+        console.log('No difficulty evaluation found, skipping precomputation');
+        return;
+      }
+
+      await precomputeNextExerciseProgression({
+        currentExerciseId: exerciseId,
+        exercicioOriginalId: exercise.exercicio_original_id,
+        programaUsuarioId: exercise.treinos_usuario.programa_usuario_id,
+        avaliacaoDificuldade: exercise.avaliacao_dificuldade,
+        avaliacaoFadiga: avaliacaoFadiga
+      });
+
+    } catch (error) {
+      console.error('Error triggering progression precomputation:', error);
     }
   };
 

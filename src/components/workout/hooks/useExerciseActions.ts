@@ -2,6 +2,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { SetData } from "./useExerciseState";
 import { getWorstSeriesReps } from "@/utils/progressionCalculator";
+import { precomputeNextExerciseProgression } from "@/utils/nextWorkoutProgression";
 
 interface Exercise {
   id: string;
@@ -26,10 +27,11 @@ export const useExerciseActions = (
     const newSets = [...sets];
     const currentSet = newSets[index];
     
-    if (currentSet.weight === null || currentSet.weight === undefined || !currentSet.reps) {
+    // Validation: require weight and reps before completing
+    if (currentSet.weight === null || currentSet.weight === undefined || !currentSet.reps || currentSet.reps <= 0) {
       toast({
         title: "Dados incompletos",
-        description: "Por favor, preencha peso e repetições antes de marcar como concluída.",
+        description: "Por favor, preencha peso (use 0 se necessário) e repetições (maior que 0) antes de marcar como concluída.",
         variant: "destructive"
       });
       return;
@@ -113,7 +115,6 @@ export const useExerciseActions = (
           }
           console.log(`Using minimum repeticoes as baseline: ${baselineReps}`);
         }
-        // If no repeticoes configured, leave as null (acceptable for hidden exercises)
 
         // Save baseline reps_programadas if we have a value
         if (baselineReps !== null) {
@@ -160,7 +161,6 @@ export const useExerciseActions = (
   ) => {
     try {
       await saveIncrementSetting(value);
-      // Don't need additional logic here as the custom function handles preventing reopening
     } catch (error: any) {
       toast({
         title: "Erro ao salvar configuração",

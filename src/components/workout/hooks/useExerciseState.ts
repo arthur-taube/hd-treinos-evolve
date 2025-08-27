@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { calculateProgression, getCurrentRepsProgramadas, updateRepsProgramadas } from "@/utils/progressionCalculator";
 import { useExerciseFeedback } from "@/hooks/use-exercise-feedback";
 
 export interface SetData {
@@ -60,7 +59,6 @@ export const useExerciseState = (
       if (isOpen && !exercise.concluido && !incrementDialogShown) {
         console.log(`Checking increment configuration for ${exercise.nome}`);
         
-        // Use the robust check from feedbackHook that queries the database directly
         const needsConfiguration = await feedbackHook.checkInitialConfiguration();
         
         if (needsConfiguration) {
@@ -77,175 +75,40 @@ export const useExerciseState = (
     checkIncrementConfig();
   }, [isOpen, exercise.concluido, incrementDialogShown, exercise.id]);
 
-  // Initialize sets without automatic progression for first week
+  // Initialize sets with existing database values (no progression calculation)
   useEffect(() => {
-    const initializeSets = async () => {
-      console.log(`=== INICIANDO INICIALIZAÇÃO DE SETS PARA ${exercise.nome} ===`);
-      console.log(`Exercise ID: ${exercise.id}`);
-      console.log(`Treino Usuario ID: ${exercise.treino_usuario_id}`);
+    const initializeSets = () => {
+      console.log(`=== INITIALIZING SETS FOR ${exercise.nome} ===`);
       console.log(`Exercise data:`, exercise);
       
-      const initialSets: SetData[] = Array.from({ length: exercise.series }, (_, index) => ({
-        number: index + 1,
-        weight: null,
-        reps: null,
-        completed: false
-      }));
-
-      // Check if this is the first week
-      const isFirstWeek = await checkIsFirstWeek();
-      console.log(`Is first week for ${exercise.nome}:`, isFirstWeek);
-
-      // Skip automatic progression for first week - let user input baseline
-      if (!isFirstWeek && exercise.incremento_minimo && exercise.incremento_minimo > 0) {
-        const progressionData = await calculateAutomaticProgression();
-        console.log(`Calculated progression for ${exercise.nome}:`, progressionData);
-        
-        if (progressionData) {
-          initialSets[0].weight = progressionData.suggestedWeight;
-          initialSets[0].reps = progressionData.suggestedReps;
-          console.log(`Applied progression to first set:`, initialSets[0]);
+      const initialSets: SetData[] = Array.from({ length: exercise.series }, (_, index) => {
+        // Determine reps for display
+        let displayReps: number | null = null;
+        if (exercise.reps_programadas) {
+          displayReps = exercise.reps_programadas;
+        } else if (exercise.repeticoes) {
+          // Use minimum of range for display
+          if (exercise.repeticoes.includes('-')) {
+            displayReps = parseInt(exercise.repeticoes.split('-')[0]);
+          } else {
+            displayReps = parseInt(exercise.repeticoes);
+          }
         }
-      } else {
-        console.log(`Skipping automatic progression for ${exercise.nome} - first week or no increment configured`);
-      }
 
+        return {
+          number: index + 1,
+          weight: index === 0 ? exercise.peso : null, // Only first set gets pre-filled weight
+          reps: displayReps,
+          completed: false
+        };
+      });
+
+      console.log(`Initialized sets for ${exercise.nome}:`, initialSets);
       setSets(initialSets);
     };
 
     initializeSets();
-  }, [exercise.id, exercise.series, exercise.incremento_minimo]);
-
-  const calculateAutomaticProgression = async () => {
-    try {
-      if (!exercise.exercicio_original_id || !exercise.incremento_minimo) {
-        console.log(`No progression data available for ${exercise.nome}`);
-        return null;
-      }
-
-      // Get current programa_usuario_id
-      const { data: currentWorkout, error: workoutError } = await supabase
-        .from('treinos_usuario')
-        .select('programa_usuario_id')
-        .eq('id', exercise.treino_usuario_id)
-        .single();
-
-      if (workoutError || !currentWorkout) {
-        console.error('Error fetching current workout:', workoutError);
-        return null;
-      }
-
-      const currentProgramaUsuarioId = currentWorkout.programa_usuario_id;
-      console.log(`Current programa_usuario_id: ${currentProgramaUsuarioId}`);
-
-      // Get the last completed exercise WITH SAME PROGRAMA_USUARIO_ID
-      const { data: lastExercises, error: exerciseError } = await supabase
-        .from('exercicios_treino_usuario')
-        .select(`
-          peso, 
-          series, 
-          repeticoes, 
-          reps_programadas,
-          avaliacao_dificuldade, 
-          avaliacao_fadiga, 
-          incremento_minimo,
-          updated_at,
-          treino_usuario_id,
-          treinos_usuario!inner(programa_usuario_id)
-        `)
-        .eq('exercicio_original_id', exercise.exercicio_original_id)
-        .eq('concluido', true)
-        .eq('treinos_usuario.programa_usuario_id', currentProgramaUsuarioId)
-        .not('avaliacao_dificuldade', 'is', null)
-        .neq('id', exercise.id)
-        .order('updated_at', { ascending: false });
-
-      if (exerciseError) {
-        console.error('Error fetching last exercise:', exerciseError);
-        return null;
-      }
-
-      if (!lastExercises || lastExercises.length === 0) {
-        console.log(`No previous exercise data found for ${exercise.nome} in program ${currentProgramaUsuarioId}`);
-        return null;
-      }
-
-      const lastExercise = lastExercises[0];
-      console.log(`Last exercise data for ${exercise.nome} in same program:`, lastExercise);
-
-      // Check if this is the first week
-      const isFirstWeek = await checkIsFirstWeek();
-      console.log(`Is first week for ${exercise.nome}:`, isFirstWeek);
-
-      // Get current reps_programadas
-      let currentRepsProgramadas = exercise.reps_programadas;
-      if (!currentRepsProgramadas) {
-        currentRepsProgramadas = await getCurrentRepsProgramadas(exercise.id);
-      }
-
-      // Use the complete progression calculator with combined evaluation (only avaliacao_fadiga)
-      const progressionParams = {
-        exerciseId: exercise.id,
-        currentWeight: lastExercise.peso || 0,
-        programmedReps: exercise.repeticoes || lastExercise.repeticoes || "10",
-        executedReps: currentRepsProgramadas || lastExercise.reps_programadas || 10,
-        currentSets: lastExercise.series || exercise.series,
-        incrementoMinimo: exercise.incremento_minimo,
-        avaliacaoDificuldade: lastExercise.avaliacao_dificuldade,
-        avaliacaoFadiga: lastExercise.avaliacao_fadiga || 0, // Combined fatigue/pain value
-        isFirstWeek: isFirstWeek
-      };
-
-      console.log(`Progression params for ${exercise.nome}:`, progressionParams);
-
-      const progressionResult = await calculateProgression(progressionParams);
-      console.log(`Progression result for ${exercise.nome}:`, progressionResult);
-
-      // Update exercise with new values
-      const updateData: any = {
-        peso: progressionResult.newWeight,
-        series: progressionResult.newSets
-      };
-
-      if (progressionResult.reps_programadas) {
-        updateData.reps_programadas = progressionResult.reps_programadas;
-        await updateRepsProgramadas(exercise.id, progressionResult.reps_programadas);
-      }
-
-      // Update the exercise in database
-      const { error: updateError } = await supabase
-        .from('exercicios_treino_usuario')
-        .update(updateData)
-        .eq('id', exercise.id);
-
-      if (updateError) {
-        console.error('Error updating exercise with progression:', updateError);
-      } else {
-        console.log(`Updated exercise ${exercise.nome} with progression:`, updateData);
-      }
-
-      // Determine suggested reps for UI
-      let suggestedReps: number;
-      if (progressionResult.reps_programadas) {
-        suggestedReps = progressionResult.reps_programadas;
-      } else if (exercise.repeticoes && !exercise.repeticoes.includes('-')) {
-        suggestedReps = parseInt(exercise.repeticoes);
-      } else if (exercise.repeticoes && exercise.repeticoes.includes('-')) {
-        suggestedReps = parseInt(exercise.repeticoes.split('-')[0]);
-      } else {
-        suggestedReps = 10;
-      }
-
-      return {
-        suggestedWeight: progressionResult.newWeight,
-        suggestedReps: suggestedReps
-      };
-
-    } catch (error) {
-      console.error('Error calculating automatic progression:', error);
-      return null;
-    }
-  };
+  }, [exercise.id, exercise.series, exercise.peso, exercise.reps_programadas, exercise.repeticoes]);
 
   const checkIsFirstWeek = async (): Promise<boolean> => {
     try {
