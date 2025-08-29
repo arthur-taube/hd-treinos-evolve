@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { FeedbackDialog } from "./FeedbackDialog";
@@ -72,6 +71,7 @@ export function ExerciseCard({
     handleSetComplete,
     handleWeightChange,
     handleRepsChange,
+    handleWeightFocus,
     handleExerciseComplete,
     handleSaveDifficultyFeedback,
     handleSaveIncrementSetting,
@@ -143,6 +143,7 @@ export function ExerciseCard({
                 handleSetComplete={handleSetComplete}
                 handleWeightChange={handleWeightChange}
                 handleRepsChange={handleRepsChange}
+                handleWeightFocus={handleWeightFocus}
                 showNoteInput={showNoteInput}
                 setShowNoteInput={setShowNoteInput}
                 exerciseNote={exerciseNote}

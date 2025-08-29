@@ -39,16 +39,58 @@ export const precomputeNextExerciseProgression = async (data: ExerciseProgressio
       return;
     }
 
-    // 3. Determine executed reps (use reps_programadas or worst series for first week)
+    // 3. Determine executed reps with enhanced safeguards
     let executedReps = currentExercise.reps_programadas;
     
     if (!executedReps) {
-      // First week case - use worst series as baseline
-      const worstReps = await getWorstSeriesReps(data.currentExerciseId);
-      if (worstReps !== null) {
-        executedReps = worstReps;
-      } else {
-        console.log('No executed reps found, skipping precomputation');
+      console.log('No reps_programadas found, attempting to get worst series with retry');
+      
+      // First week case - use worst series as baseline with retry mechanism
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (retryCount < maxRetries && !executedReps) {
+        const worstReps = await getWorstSeriesReps(data.currentExerciseId);
+        if (worstReps !== null) {
+          executedReps = worstReps;
+          console.log(`Found worst series reps on attempt ${retryCount + 1}:`, worstReps);
+          
+          // Update reps_programadas in the current exercise for future use
+          await supabase
+            .from('exercicios_treino_usuario')
+            .update({ reps_programadas: worstReps })
+            .eq('id', data.currentExerciseId);
+          
+          break;
+        }
+        
+        retryCount++;
+        if (retryCount < maxRetries) {
+          console.log(`Retry ${retryCount} for worst series reps...`);
+          await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms before retry
+        }
+      }
+      
+      // Final fallback to repeticoes minimum if still no executed reps
+      if (!executedReps && currentExercise.repeticoes) {
+        if (currentExercise.repeticoes.includes('-')) {
+          executedReps = parseInt(currentExercise.repeticoes.split('-')[0]);
+        } else {
+          executedReps = parseInt(currentExercise.repeticoes);
+        }
+        console.log('Using repeticoes minimum as final fallback:', executedReps);
+        
+        // Update reps_programadas with fallback value
+        if (executedReps) {
+          await supabase
+            .from('exercicios_treino_usuario')
+            .update({ reps_programadas: executedReps })
+            .eq('id', data.currentExerciseId);
+        }
+      }
+      
+      if (!executedReps) {
+        console.log('Could not determine executed reps after all attempts, skipping precomputation');
         return;
       }
     }

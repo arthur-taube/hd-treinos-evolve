@@ -2,6 +2,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { precomputeNextExerciseProgression } from "@/utils/nextWorkoutProgression";
+import { ensureBaselineReps } from "@/utils/baselineRepsHandler";
 
 // Constants for feedback options
 export const DIFFICULTY_OPTIONS = [
@@ -149,6 +150,11 @@ export function useExerciseFeedback(exerciseId: string) {
 
   const triggerProgressionPrecomputation = async (exerciseId: string, avaliacaoFadiga: number) => {
     try {
+      console.log('Starting progression precomputation with baseline reps check');
+      
+      // Ensure baseline reps are calculated before progression
+      await ensureBaselineReps(exerciseId);
+      
       // Get exercise data needed for precomputation
       const { data: exercise, error } = await supabase
         .from('exercicios_treino_usuario')
