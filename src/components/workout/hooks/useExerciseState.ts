@@ -76,6 +76,7 @@ export const useExerciseState = (
   }, [isOpen, exercise.concluido, incrementDialogShown, exercise.id]);
 
   // Initialize sets with existing database values (no progression calculation)
+  // Removed exercise.peso, exercise.reps_programadas, exercise.repeticoes from dependencies
   useEffect(() => {
     const initializeSets = () => {
       console.log(`=== INITIALIZING SETS FOR ${exercise.nome} ===`);
@@ -108,7 +109,7 @@ export const useExerciseState = (
     };
 
     initializeSets();
-  }, [exercise.id, exercise.series, exercise.peso, exercise.reps_programadas, exercise.repeticoes]);
+  }, [exercise.id, exercise.series]); // Removed problematic dependencies
 
   const checkIsFirstWeek = async (): Promise<boolean> => {
     try {

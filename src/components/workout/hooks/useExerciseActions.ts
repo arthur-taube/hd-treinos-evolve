@@ -40,6 +40,11 @@ export const useExerciseActions = (
     currentSet.completed = !currentSet.completed;
     setSets(newSets);
 
+    // Call onWeightUpdate when first set is completed with a valid weight
+    if (index === 0 && currentSet.completed && currentSet.weight !== null) {
+      onWeightUpdate(exercise.id, currentSet.weight);
+    }
+
     try {
       await supabase.rpc('save_series', {
         p_exercicio_id: exercise.id,
@@ -62,20 +67,34 @@ export const useExerciseActions = (
     }
   };
 
-  const handleWeightChange = (index: number, weight: number) => {
+  const handleWeightChange = (index: number, value: string) => {
     const newSets = [...sets];
-    newSets[index].weight = weight;
-    setSets(newSets);
-
-    if (weight !== null && weight !== undefined) {
-      onWeightUpdate(exercise.id, weight);
+    
+    // Handle empty string as null, otherwise convert to number
+    if (value === '') {
+      newSets[index].weight = null;
+    } else {
+      const numValue = Number(value);
+      newSets[index].weight = isNaN(numValue) ? null : numValue;
     }
+    
+    setSets(newSets);
   };
 
   const handleRepsChange = (index: number, reps: number) => {
     const newSets = [...sets];
     newSets[index].reps = reps;
     setSets(newSets);
+  };
+
+  const handleWeightFocus = (index: number, suggestedWeight: number) => {
+    const newSets = [...sets];
+    
+    // If weight is null (showing placeholder), fill with suggested value on focus
+    if (newSets[index].weight === null) {
+      newSets[index].weight = suggestedWeight;
+      setSets(newSets);
+    }
   };
 
   const handleExerciseComplete = async () => {
@@ -239,6 +258,7 @@ export const useExerciseActions = (
     handleSetComplete,
     handleWeightChange,
     handleRepsChange,
+    handleWeightFocus,
     handleExerciseComplete,
     handleSaveDifficultyFeedback,
     handleSaveIncrementSetting,

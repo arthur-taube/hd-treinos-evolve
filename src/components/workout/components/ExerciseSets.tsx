@@ -1,4 +1,5 @@
 
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Check, Target } from "lucide-react";
@@ -9,8 +10,9 @@ interface ExerciseSetsProps {
   previousSeries: SeriesData[];
   isLoadingSeries: boolean;
   handleSetComplete: (index: number) => void;
-  handleWeightChange: (index: number, weight: number) => void;
+  handleWeightChange: (index: number, value: string) => void;
   handleRepsChange: (index: number, reps: number) => void;
+  handleWeightFocus: (index: number, suggestedWeight: number) => void;
   showNoteInput: boolean;
   setShowNoteInput: (show: boolean) => void;
   exerciseNote: string;
@@ -33,6 +35,7 @@ export function ExerciseSets({
   handleSetComplete,
   handleWeightChange,
   handleRepsChange,
+  handleWeightFocus,
   showNoteInput,
   setShowNoteInput,
   exerciseNote,
@@ -126,11 +129,11 @@ export function ExerciseSets({
       </div>
       
       {sets.map((set, index) => {
-        // Use the set's actual values if they exist, otherwise use suggested values as placeholder
-        const displayWeight = set.weight !== null ? set.weight : '';
-        const displayReps = set.reps !== null ? set.reps : '';
-        const placeholderWeight = suggestedWeight;
-        const placeholderReps = suggestedReps;
+        // Use the set's actual values if they exist, otherwise empty for placeholder behavior
+        const displayWeight = set.weight !== null ? set.weight.toString() : '';
+        const displayReps = set.reps !== null ? set.reps.toString() : '';
+        const placeholderWeight = suggestedWeight.toString();
+        const placeholderReps = suggestedReps.toString();
 
         return (
           <div key={index} className={`grid grid-cols-4 gap-2 items-center py-2 ${index !== sets.length - 1 ? "border-b" : ""}`}>
@@ -139,8 +142,9 @@ export function ExerciseSets({
               <Input 
                 type="number" 
                 value={displayWeight}
-                placeholder={placeholderWeight.toString()}
-                onChange={(e) => handleWeightChange(index, Number(e.target.value))} 
+                placeholder={placeholderWeight}
+                onFocus={() => handleWeightFocus(index, suggestedWeight)}
+                onChange={(e) => handleWeightChange(index, e.target.value)} 
                 step={0.5} 
                 className="w-20 h-8 text-sm"
               />
@@ -150,7 +154,7 @@ export function ExerciseSets({
               <Input 
                 type="number" 
                 value={displayReps}
-                placeholder={placeholderReps.toString()}
+                placeholder={placeholderReps}
                 onChange={(e) => handleRepsChange(index, Number(e.target.value))} 
                 min={0} 
                 step={1} 
