@@ -97,7 +97,7 @@ export const useExerciseState = (
 
         return {
           number: index + 1,
-          weight: index === 0 ? exercise.peso : null, // Only first set gets pre-filled weight
+          weight: null, // Start all sets with null weight to make them independent
           reps: displayReps,
           completed: false
         };

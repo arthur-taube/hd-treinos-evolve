@@ -1,3 +1,4 @@
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Check, Target } from "lucide-react";
@@ -121,13 +122,15 @@ export function ExerciseSets({
         <div>Série</div>
         <div>Carga</div>
         <div>Reps</div>
-        <div></div>
+        <div>Concluir</div>
       </div>
       
       {sets.map((set, index) => {
-        // Use the set's actual values if they exist, otherwise use suggested values for all sets
-        const displayWeight = set.weight !== null ? set.weight : suggestedWeight;
-        const displayReps = set.reps !== null ? set.reps : suggestedReps;
+        // Use the set's actual values if they exist, otherwise use suggested values as placeholder
+        const displayWeight = set.weight !== null ? set.weight : '';
+        const displayReps = set.reps !== null ? set.reps : '';
+        const placeholderWeight = suggestedWeight;
+        const placeholderReps = suggestedReps;
 
         return (
           <div key={index} className={`grid grid-cols-4 gap-2 items-center py-2 ${index !== sets.length - 1 ? "border-b" : ""}`}>
@@ -136,6 +139,7 @@ export function ExerciseSets({
               <Input 
                 type="number" 
                 value={displayWeight}
+                placeholder={placeholderWeight.toString()}
                 onChange={(e) => handleWeightChange(index, Number(e.target.value))} 
                 step={0.5} 
                 className="w-20 h-8 text-sm"
@@ -146,6 +150,7 @@ export function ExerciseSets({
               <Input 
                 type="number" 
                 value={displayReps}
+                placeholder={placeholderReps.toString()}
                 onChange={(e) => handleRepsChange(index, Number(e.target.value))} 
                 min={0} 
                 step={1} 
