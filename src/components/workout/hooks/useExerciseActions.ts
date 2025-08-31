@@ -1,8 +1,7 @@
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { SetData } from "./useExerciseState";
-import { getWorstSeriesReps } from "@/utils/progressionCalculator";
-import { precomputeNextExerciseProgression } from "@/utils/nextWorkoutProgression";
+import { getLastSeriesData } from "@/utils/lastSeriesHandler";
 
 interface Exercise {
   id: string;
@@ -118,13 +117,13 @@ export const useExerciseActions = (
       if (isFirstWeek) {
         console.log(`First week detected for ${exercise.nome}, calculating baseline reps_programadas`);
         
-        // Calculate baseline reps_programadas from worst series
-        const worstSeriesReps = await getWorstSeriesReps(exercise.id);
+        // Calculate baseline reps_programadas from last series
+        const lastSeriesData = await getLastSeriesData(exercise.id);
         let baselineReps: number | null = null;
 
-        if (worstSeriesReps !== null) {
-          baselineReps = worstSeriesReps;
-          console.log(`Using worst series reps as baseline: ${baselineReps}`);
+        if (lastSeriesData !== null) {
+          baselineReps = lastSeriesData.reps;
+          console.log(`Using last series reps as baseline: ${baselineReps}`);
         } else if (exercise.repeticoes) {
           // Parse repeticoes to get minimum value
           if (exercise.repeticoes.includes('-')) {

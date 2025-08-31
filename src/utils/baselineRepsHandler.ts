@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { getWorstSeriesReps } from "./progressionCalculator";
+import { getLastSeriesData } from "./lastSeriesHandler";
 
 export const ensureBaselineReps = async (exerciseId: string): Promise<number | null> => {
   try {
@@ -23,13 +23,13 @@ export const ensureBaselineReps = async (exerciseId: string): Promise<number | n
       return exercise.reps_programadas;
     }
 
-    // Calculate baseline from worst series
-    const worstSeriesReps = await getWorstSeriesReps(exerciseId);
+    // Calculate baseline from last series
+    const lastSeriesData = await getLastSeriesData(exerciseId);
     let baselineReps: number | null = null;
 
-    if (worstSeriesReps !== null) {
-      baselineReps = worstSeriesReps;
-      console.log('Using worst series reps as baseline:', baselineReps);
+    if (lastSeriesData !== null) {
+      baselineReps = lastSeriesData.reps;
+      console.log('Using last series reps as baseline:', baselineReps);
     } else if (exercise.repeticoes) {
       // Parse repeticoes to get minimum value as fallback
       if (exercise.repeticoes.includes('-')) {

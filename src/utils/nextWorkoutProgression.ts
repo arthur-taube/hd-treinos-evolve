@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { calculateProgression, getCurrentRepsProgramadas, getWorstSeriesReps } from "./progressionCalculator";
+import { calculateProgression, getCurrentRepsProgramadas } from "./progressionCalculator";
+import { getLastSeriesData } from "./lastSeriesHandler";
 
 interface ExerciseProgressionData {
   currentExerciseId: string;
@@ -39,69 +40,61 @@ export const precomputeNextExerciseProgression = async (data: ExerciseProgressio
       return;
     }
 
-    // 3. Determine executed reps with enhanced safeguards
+    // 3. Determine executed reps and weight from last series
     let executedReps = currentExercise.reps_programadas;
+    let currentWeight = currentExercise.peso || 0;
     
     if (!executedReps) {
-      console.log('No reps_programadas found, attempting to get worst series with retry');
+      console.log('No reps_programadas found, getting last series data');
       
-      // First week case - use worst series as baseline with retry mechanism
-      let retryCount = 0;
-      const maxRetries = 3;
-      
-      while (retryCount < maxRetries && !executedReps) {
-        const worstReps = await getWorstSeriesReps(data.currentExerciseId);
-        if (worstReps !== null) {
-          executedReps = worstReps;
-          console.log(`Found worst series reps on attempt ${retryCount + 1}:`, worstReps);
-          
-          // Update reps_programadas in the current exercise for future use
-          await supabase
-            .from('exercicios_treino_usuario')
-            .update({ reps_programadas: worstReps })
-            .eq('id', data.currentExerciseId);
-          
-          break;
-        }
+      const lastSeriesData = await getLastSeriesData(data.currentExerciseId);
+      if (lastSeriesData) {
+        executedReps = lastSeriesData.reps;
+        currentWeight = lastSeriesData.weight;
+        console.log('Using last series data:', lastSeriesData);
         
-        retryCount++;
-        if (retryCount < maxRetries) {
-          console.log(`Retry ${retryCount} for worst series reps...`);
-          await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms before retry
-        }
-      }
-      
-      // Final fallback to repeticoes minimum if still no executed reps
-      if (!executedReps && currentExercise.repeticoes) {
-        if (currentExercise.repeticoes.includes('-')) {
-          executedReps = parseInt(currentExercise.repeticoes.split('-')[0]);
-        } else {
-          executedReps = parseInt(currentExercise.repeticoes);
-        }
-        console.log('Using repeticoes minimum as final fallback:', executedReps);
-        
-        // Update reps_programadas with fallback value
-        if (executedReps) {
-          await supabase
-            .from('exercicios_treino_usuario')
-            .update({ reps_programadas: executedReps })
-            .eq('id', data.currentExerciseId);
+        // Update reps_programadas in the current exercise for future use
+        await supabase
+          .from('exercicios_treino_usuario')
+          .update({ reps_programadas: executedReps })
+          .eq('id', data.currentExerciseId);
+      } else {
+        // Final fallback to repeticoes minimum
+        if (currentExercise.repeticoes) {
+          if (currentExercise.repeticoes.includes('-')) {
+            executedReps = parseInt(currentExercise.repeticoes.split('-')[0]);
+          } else {
+            executedReps = parseInt(currentExercise.repeticoes);
+          }
+          console.log('Using repeticoes minimum as final fallback:', executedReps);
+          
+          // Update reps_programadas with fallback value
+          if (executedReps) {
+            await supabase
+              .from('exercicios_treino_usuario')
+              .update({ reps_programadas: executedReps })
+              .eq('id', data.currentExerciseId);
+          }
         }
       }
       
       if (!executedReps) {
-        console.log('Could not determine executed reps after all attempts, skipping precomputation');
+        console.log('Could not determine executed reps, skipping precomputation');
         return;
       }
     }
 
-    // 4. Check if this is first week for the current exercise
-    const isFirstWeek = currentExercise.reps_programadas === null;
+    // 4. Check if this is first week - improved detection
+    const isFirstWeek = await checkIsFirstWeekForProgram(
+      data.exercicioOriginalId,
+      data.programaUsuarioId,
+      data.currentExerciseId
+    );
 
     // 5. Calculate progression using existing algorithm
     const progressionResult = await calculateProgression({
       exerciseId: data.currentExerciseId,
-      currentWeight: currentExercise.peso || 0,
+      currentWeight: currentWeight,
       programmedReps: currentExercise.repeticoes || "10",
       executedReps: executedReps,
       currentSets: currentExercise.series,
@@ -136,6 +129,40 @@ export const precomputeNextExerciseProgression = async (data: ExerciseProgressio
 
   } catch (error) {
     console.error('Error in precomputeNextExerciseProgression:', error);
+  }
+};
+
+const checkIsFirstWeekForProgram = async (
+  exercicioOriginalId: string,
+  programaUsuarioId: string,
+  currentExerciseId: string
+): Promise<boolean> => {
+  try {
+    // Check for previous completed exercises in the same program (excluding current)
+    const { data, error } = await supabase
+      .from('exercicios_treino_usuario')
+      .select(`
+        id,
+        treino_usuario_id,
+        treinos_usuario!inner(programa_usuario_id)
+      `)
+      .eq('exercicio_original_id', exercicioOriginalId)
+      .eq('concluido', true)
+      .eq('treinos_usuario.programa_usuario_id', programaUsuarioId)
+      .neq('id', currentExerciseId)
+      .limit(1);
+
+    if (error) {
+      console.error('Error checking first week:', error);
+      return true;
+    }
+
+    const isFirstWeek = !data || data.length === 0;
+    console.log(`Is first week for exercise ${exercicioOriginalId} in program ${programaUsuarioId}:`, isFirstWeek);
+    return isFirstWeek;
+  } catch (error) {
+    console.error('Error in checkIsFirstWeekForProgram:', error);
+    return true;
   }
 };
 

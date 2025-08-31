@@ -86,7 +86,53 @@ export const getPreviousExerciseData = async (exerciseId: string): Promise<{
       .neq('id', exerciseId)
       .order('updated_at', { ascending: false });
 
-    if (!previousExercises || previousExercises.length === 0) return null;
+    if (!previousExercises || previousExercises.length === 0) {
+      console.log('No previous exercises found, attempting fallback to current exercise');
+      
+      // Fallback: use current exercise data if it's completed
+      const { data: completedCurrentExercise } = await supabase
+        .from('exercicios_treino_usuario')
+        .select(`
+          peso, 
+          series, 
+          reps_programadas, 
+          avaliacao_dificuldade, 
+          avaliacao_fadiga, 
+          repeticoes
+        `)
+        .eq('id', exerciseId)
+        .eq('concluido', true)
+        .single();
+
+      if (!completedCurrentExercise) {
+        console.log('Current exercise not completed, cannot use as fallback');
+        return null;
+      }
+
+      // Get last series data for reps
+      const { data: series } = await supabase.rpc(
+        'get_series_by_exercise',
+        { exercise_id: exerciseId }
+      );
+
+      let lastSeriesReps = completedCurrentExercise.reps_programadas || 10;
+      if (series && series.length > 0) {
+        const sortedSeries = series.sort((a, b) => b.numero_serie - a.numero_serie);
+        lastSeriesReps = sortedSeries[0].repeticoes;
+      }
+
+      console.log('Using current exercise as previousData (first week fallback)');
+      return {
+        weight: completedCurrentExercise.peso || 0,
+        reps: lastSeriesReps,
+        sets: completedCurrentExercise.series || 3,
+        repsProgramadas: completedCurrentExercise.reps_programadas || lastSeriesReps,
+        avaliacaoDificuldade: completedCurrentExercise.avaliacao_dificuldade || 'moderado',
+        avaliacaoFadiga: completedCurrentExercise.avaliacao_fadiga || 0,
+        repeticoes: completedCurrentExercise.repeticoes || currentExercise.repeticoes || '',
+        previousExerciseId: exerciseId // Use current exercise id as fallback
+      };
+    }
 
     // Filtrar apenas exercícios do mesmo programa
     const exerciciosDoPrograma = [];
@@ -102,7 +148,49 @@ export const getPreviousExerciseData = async (exerciseId: string): Promise<{
       }
     }
 
-    if (exerciciosDoPrograma.length === 0) return null;
+    if (exerciciosDoPrograma.length === 0) {
+      console.log('No exercises from same program found, attempting current exercise fallback');
+      
+      // Same fallback logic as above
+      const { data: completedCurrentExercise } = await supabase
+        .from('exercicios_treino_usuario')
+        .select(`
+          peso, 
+          series, 
+          reps_programadas, 
+          avaliacao_dificuldade, 
+          avaliacao_fadiga, 
+          repeticoes
+        `)
+        .eq('id', exerciseId)
+        .eq('concluido', true)
+        .single();
+
+      if (!completedCurrentExercise) return null;
+
+      const { data: series } = await supabase.rpc(
+        'get_series_by_exercise',
+        { exercise_id: exerciseId }
+      );
+
+      let lastSeriesReps = completedCurrentExercise.reps_programadas || 10;
+      if (series && series.length > 0) {
+        const sortedSeries = series.sort((a, b) => b.numero_serie - a.numero_serie);
+        lastSeriesReps = sortedSeries[0].repeticoes;
+      }
+
+      console.log('Using current exercise as previousData (no program history fallback)');
+      return {
+        weight: completedCurrentExercise.peso || 0,
+        reps: lastSeriesReps,
+        sets: completedCurrentExercise.series || 3,
+        repsProgramadas: completedCurrentExercise.reps_programadas || lastSeriesReps,
+        avaliacaoDificuldade: completedCurrentExercise.avaliacao_dificuldade || 'moderado',
+        avaliacaoFadiga: completedCurrentExercise.avaliacao_fadiga || 0,
+        repeticoes: completedCurrentExercise.repeticoes || currentExercise.repeticoes || '',
+        previousExerciseId: exerciseId
+      };
+    }
 
     // Pegar o mais recente (primeiro da lista já ordenada)
     const previousExercise = exerciciosDoPrograma[0];
@@ -110,7 +198,7 @@ export const getPreviousExerciseData = async (exerciseId: string): Promise<{
     // Buscar melhor série executada do exercício anterior usando o ID do exercício ATUAL (não o anterior)
     const { data: series } = await supabase.rpc(
       'get_series_by_exercise',
-      { exercise_id: exerciseId } // Voltando a usar o ID do exercício atual
+      { exercise_id: exerciseId }
     );
 
     let bestReps = previousExercise.reps_programadas || 10;
@@ -129,7 +217,7 @@ export const getPreviousExerciseData = async (exerciseId: string): Promise<{
       sets: previousExercise.series || 3,
       repsProgramadas: previousExercise.reps_programadas || bestReps,
       avaliacaoDificuldade: previousExercise.avaliacao_dificuldade || 'moderado',
-      avaliacaoFadiga: previousExercise.avaliacao_fadiga || 0, // Combined fatigue/pain value
+      avaliacaoFadiga: previousExercise.avaliacao_fadiga || 0,
       repeticoes: previousExercise.repeticoes || currentExercise.repeticoes || '',
       previousExerciseId: previousExercise.id
     };
@@ -289,6 +377,7 @@ export const calculateProgression = async (params: ProgressionParams): Promise<P
   // Buscar dados do exercício anterior
   const previousData = await getPreviousExerciseData(exerciseId);
   if (!previousData) {
+    console.log('No previous data found, treating as first week');
     return calculateProgression({ ...params, isFirstWeek: true });
   }
 
