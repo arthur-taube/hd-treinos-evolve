@@ -40,58 +40,40 @@ export const precomputeNextExerciseProgression = async (data: ExerciseProgressio
       return;
     }
 
-    // 3. Determine executed reps and weight from last series
-    let executedReps = currentExercise.reps_programadas;
-    let currentWeight = currentExercise.peso || 0;
-    
-    if (!executedReps) {
-      console.log('No reps_programadas found, getting last series data');
-      
-      const lastSeriesData = await getLastSeriesData(data.currentExerciseId);
-      if (lastSeriesData) {
-        executedReps = lastSeriesData.reps;
-        currentWeight = lastSeriesData.weight;
-        console.log('Using last series data:', lastSeriesData);
-        
-        // Update reps_programadas in the current exercise for future use
-        await supabase
-          .from('exercicios_treino_usuario')
-          .update({ reps_programadas: executedReps })
-          .eq('id', data.currentExerciseId);
-      } else {
-        // Final fallback to repeticoes minimum
-        if (currentExercise.repeticoes) {
-          if (currentExercise.repeticoes.includes('-')) {
-            executedReps = parseInt(currentExercise.repeticoes.split('-')[0]);
-          } else {
-            executedReps = parseInt(currentExercise.repeticoes);
-          }
-          console.log('Using repeticoes minimum as final fallback:', executedReps);
-          
-          // Update reps_programadas with fallback value
-          if (executedReps) {
-            await supabase
-              .from('exercicios_treino_usuario')
-              .update({ reps_programadas: executedReps })
-              .eq('id', data.currentExerciseId);
-          }
-        }
-      }
-      
-      if (!executedReps) {
-        console.log('Could not determine executed reps, skipping precomputation');
-        return;
-      }
-    }
-
-    // 4. Check if this is first week - improved detection
+    // 3. Check if this is first week
     const isFirstWeek = await checkIsFirstWeekForProgram(
       data.exercicioOriginalId,
       data.programaUsuarioId,
       data.currentExerciseId
     );
 
-    // 5. Calculate progression using existing algorithm
+    // 4. Determine data to use for progression calculation
+    let executedReps: number;
+    let currentWeight: number;
+    
+    if (isFirstWeek) {
+      console.log('First week - using last series data for baseline');
+      // For first week only: use executed data from last series
+      const lastSeriesData = await getLastSeriesData(data.currentExerciseId);
+      if (lastSeriesData) {
+        executedReps = lastSeriesData.reps;
+        currentWeight = lastSeriesData.weight;
+        console.log('Using last series data for first week:', lastSeriesData);
+      } else {
+        // Fallback to programmed values if no series data
+        executedReps = currentExercise.reps_programadas || 10;
+        currentWeight = currentExercise.peso || 0;
+        console.log('Using fallback values for first week:', { executedReps, currentWeight });
+      }
+    } else {
+      console.log('Not first week - using programmed values from database');
+      // For subsequent weeks: use programmed values only
+      executedReps = currentExercise.reps_programadas || 10;
+      currentWeight = currentExercise.peso || 0;
+      console.log('Using programmed values:', { executedReps, currentWeight });
+    }
+
+    // 5. Calculate progression using current exercise data
     const progressionResult = await calculateProgression({
       exerciseId: data.currentExerciseId,
       currentWeight: currentWeight,
@@ -101,7 +83,8 @@ export const precomputeNextExerciseProgression = async (data: ExerciseProgressio
       incrementoMinimo: currentExercise.incremento_minimo || 2.5,
       avaliacaoDificuldade: data.avaliacaoDificuldade,
       avaliacaoFadiga: data.avaliacaoFadiga,
-      isFirstWeek: isFirstWeek
+      isFirstWeek: isFirstWeek,
+      currentRepsProgramadas: currentExercise.reps_programadas
     });
 
     console.log('Calculated progression for next exercise:', progressionResult);

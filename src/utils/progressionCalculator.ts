@@ -10,6 +10,7 @@ export interface ProgressionParams {
   avaliacaoDificuldade: string;
   avaliacaoFadiga?: number;
   isFirstWeek?: boolean;
+  currentRepsProgramadas?: number;
 }
 
 export interface ProgressionResult {
@@ -37,8 +38,8 @@ export const isDoubleProgression = (repeticoes: string): boolean => {
   return repeticoes && repeticoes.includes('-');
 };
 
-// Função para buscar dados do exercício anterior com filtro por programa
-export const getPreviousExerciseData = async (exerciseId: string): Promise<{
+// Função para buscar dados do exercício atual (para primeira semana ou fallback)
+export const getCurrentExerciseData = async (exerciseId: string): Promise<{
   weight: number;
   reps: number;
   sets: number;
@@ -46,183 +47,62 @@ export const getPreviousExerciseData = async (exerciseId: string): Promise<{
   avaliacaoDificuldade: string;
   avaliacaoFadiga: number;
   repeticoes: string;
-  previousExerciseId: string;
+  exerciseId: string;
 } | null> => {
   try {
+    console.log('Getting current exercise data for:', exerciseId);
+
     // Buscar exercício atual
-    const { data: currentExercise } = await supabase
-      .from('exercicios_treino_usuario')
-      .select('exercicio_original_id, treino_usuario_id, repeticoes')
-      .eq('id', exerciseId)
-      .single();
-
-    if (!currentExercise) return null;
-
-    // Buscar programa do treino atual
-    const { data: currentTreino } = await supabase
-      .from('treinos_usuario')
-      .select('programa_usuario_id')
-      .eq('id', currentExercise.treino_usuario_id)
-      .single();
-
-    if (!currentTreino) return null;
-
-    // Buscar exercícios anteriores no mesmo programa com ORDER BY para garantir consistência
-    const { data: previousExercises } = await supabase
+    const { data: currentExercise, error } = await supabase
       .from('exercicios_treino_usuario')
       .select(`
-        id,
         peso, 
         series, 
         reps_programadas, 
         avaliacao_dificuldade, 
         avaliacao_fadiga, 
-        treino_usuario_id, 
-        repeticoes,
-        updated_at
+        repeticoes
       `)
-      .eq('exercicio_original_id', currentExercise.exercicio_original_id)
+      .eq('id', exerciseId)
       .eq('concluido', true)
-      .neq('id', exerciseId)
-      .order('updated_at', { ascending: false });
+      .single();
 
-    if (!previousExercises || previousExercises.length === 0) {
-      console.log('No previous exercises found, attempting fallback to current exercise');
-      
-      // Fallback: use current exercise data if it's completed
-      const { data: completedCurrentExercise } = await supabase
-        .from('exercicios_treino_usuario')
-        .select(`
-          peso, 
-          series, 
-          reps_programadas, 
-          avaliacao_dificuldade, 
-          avaliacao_fadiga, 
-          repeticoes
-        `)
-        .eq('id', exerciseId)
-        .eq('concluido', true)
-        .single();
-
-      if (!completedCurrentExercise) {
-        console.log('Current exercise not completed, cannot use as fallback');
-        return null;
-      }
-
-      // Get last series data for reps
-      const { data: series } = await supabase.rpc(
-        'get_series_by_exercise',
-        { exercise_id: exerciseId }
-      );
-
-      let lastSeriesReps = completedCurrentExercise.reps_programadas || 10;
-      if (series && series.length > 0) {
-        const sortedSeries = series.sort((a, b) => b.numero_serie - a.numero_serie);
-        lastSeriesReps = sortedSeries[0].repeticoes;
-      }
-
-      console.log('Using current exercise as previousData (first week fallback)');
-      return {
-        weight: completedCurrentExercise.peso || 0,
-        reps: lastSeriesReps,
-        sets: completedCurrentExercise.series || 3,
-        repsProgramadas: completedCurrentExercise.reps_programadas || lastSeriesReps,
-        avaliacaoDificuldade: completedCurrentExercise.avaliacao_dificuldade || 'moderado',
-        avaliacaoFadiga: completedCurrentExercise.avaliacao_fadiga || 0,
-        repeticoes: completedCurrentExercise.repeticoes || currentExercise.repeticoes || '',
-        previousExerciseId: exerciseId // Use current exercise id as fallback
-      };
+    if (error || !currentExercise) {
+      console.log('Current exercise not found or not completed:', error);
+      return null;
     }
 
-    // Filtrar apenas exercícios do mesmo programa
-    const exerciciosDoPrograma = [];
-    for (const ex of previousExercises) {
-      const { data: treino } = await supabase
-        .from('treinos_usuario')
-        .select('programa_usuario_id')
-        .eq('id', ex.treino_usuario_id)
-        .single();
-
-      if (treino && treino.programa_usuario_id === currentTreino.programa_usuario_id) {
-        exerciciosDoPrograma.push(ex);
-      }
-    }
-
-    if (exerciciosDoPrograma.length === 0) {
-      console.log('No exercises from same program found, attempting current exercise fallback');
-      
-      // Same fallback logic as above
-      const { data: completedCurrentExercise } = await supabase
-        .from('exercicios_treino_usuario')
-        .select(`
-          peso, 
-          series, 
-          reps_programadas, 
-          avaliacao_dificuldade, 
-          avaliacao_fadiga, 
-          repeticoes
-        `)
-        .eq('id', exerciseId)
-        .eq('concluido', true)
-        .single();
-
-      if (!completedCurrentExercise) return null;
-
-      const { data: series } = await supabase.rpc(
-        'get_series_by_exercise',
-        { exercise_id: exerciseId }
-      );
-
-      let lastSeriesReps = completedCurrentExercise.reps_programadas || 10;
-      if (series && series.length > 0) {
-        const sortedSeries = series.sort((a, b) => b.numero_serie - a.numero_serie);
-        lastSeriesReps = sortedSeries[0].repeticoes;
-      }
-
-      console.log('Using current exercise as previousData (no program history fallback)');
-      return {
-        weight: completedCurrentExercise.peso || 0,
-        reps: lastSeriesReps,
-        sets: completedCurrentExercise.series || 3,
-        repsProgramadas: completedCurrentExercise.reps_programadas || lastSeriesReps,
-        avaliacaoDificuldade: completedCurrentExercise.avaliacao_dificuldade || 'moderado',
-        avaliacaoFadiga: completedCurrentExercise.avaliacao_fadiga || 0,
-        repeticoes: completedCurrentExercise.repeticoes || currentExercise.repeticoes || '',
-        previousExerciseId: exerciseId
-      };
-    }
-
-    // Pegar o mais recente (primeiro da lista já ordenada)
-    const previousExercise = exerciciosDoPrograma[0];
-
-    // Buscar melhor série executada do exercício anterior usando o ID do exercício ATUAL (não o anterior)
+    // Get last series data for reps
     const { data: series } = await supabase.rpc(
       'get_series_by_exercise',
       { exercise_id: exerciseId }
     );
 
-    let bestReps = previousExercise.reps_programadas || 10;
+    let lastSeriesReps = currentExercise.reps_programadas || 10;
     if (series && series.length > 0) {
-      const bestSeries = series.reduce((best, current) => {
-        const bestVolume = best.peso * best.repeticoes;
-        const currentVolume = current.peso * current.repeticoes;
-        return currentVolume > bestVolume ? current : best;
-      }, series[0]);
-      bestReps = bestSeries.repeticoes;
+      const sortedSeries = series.sort((a, b) => b.numero_serie - a.numero_serie);
+      lastSeriesReps = sortedSeries[0].repeticoes;
     }
 
+    console.log('Using current exercise data:', {
+      weight: currentExercise.peso || 0,
+      reps: lastSeriesReps,
+      sets: currentExercise.series || 3,
+      repsProgramadas: currentExercise.reps_programadas || lastSeriesReps
+    });
+
     return {
-      weight: previousExercise.peso || 0,
-      reps: bestReps,
-      sets: previousExercise.series || 3,
-      repsProgramadas: previousExercise.reps_programadas || bestReps,
-      avaliacaoDificuldade: previousExercise.avaliacao_dificuldade || 'moderado',
-      avaliacaoFadiga: previousExercise.avaliacao_fadiga || 0,
-      repeticoes: previousExercise.repeticoes || currentExercise.repeticoes || '',
-      previousExerciseId: previousExercise.id
+      weight: currentExercise.peso || 0,
+      reps: lastSeriesReps,
+      sets: currentExercise.series || 3,
+      repsProgramadas: currentExercise.reps_programadas || lastSeriesReps,
+      avaliacaoDificuldade: currentExercise.avaliacao_dificuldade || 'moderado',
+      avaliacaoFadiga: currentExercise.avaliacao_fadiga || 0,
+      repeticoes: currentExercise.repeticoes || '',
+      exerciseId: exerciseId
     };
   } catch (error) {
-    console.error('Erro ao buscar dados do exercício anterior:', error);
+    console.error('Erro ao buscar dados do exercício atual:', error);
     return null;
   }
 };
@@ -278,7 +158,7 @@ const calculateDoubleProgressionWeight = (
 // Calcular novas repetições para progressão dupla
 const calculateDoubleProgressionReps = (
   repeticoes: string,
-  previousRepsProgramadas: number,
+  currentRepsProgramadas: number,
   dificuldade: string
 ): number => {
   const { min, max } = parseRepsRange(repeticoes);
@@ -286,16 +166,16 @@ const calculateDoubleProgressionReps = (
   
   // Socorro! (Deload)
   if (diffValue === -2) {
-    return Math.ceil(previousRepsProgramadas / 2);
+    return Math.ceil(currentRepsProgramadas / 2);
   }
   
   // Casos normais
-  let newReps = previousRepsProgramadas + diffValue;
+  let newReps = currentRepsProgramadas + diffValue;
   
   // Caso especial: muito fácil (+2)
   if (diffValue === 2) {
     // Calcular 1 unidade por vez
-    let tempReps = previousRepsProgramadas + 1;
+    let tempReps = currentRepsProgramadas + 1;
     if (tempReps > max) {
       return min;
     }
@@ -314,9 +194,9 @@ const calculateDoubleProgressionReps = (
   return Math.max(min, newReps);
 };
 
-// Calcular novas séries - agora usando apenas avaliacao_fadiga (combinada)
+// Calcular novas séries - usando apenas avaliacao_fadiga (combinada)
 const calculateNewSets = (
-  previousSets: number,
+  currentSets: number,
   dificuldade: string,
   avaliacaoFadiga: number = 0
 ): number => {
@@ -324,11 +204,11 @@ const calculateNewSets = (
   
   // Socorro! (Deload) - Regra superior
   if (diffValue === -2) {
-    return previousSets / 2;
+    return currentSets / 2;
   }
   
   // Regra geral: X = S + F (apenas fadiga combinada, sem dor separada)
-  const newSets = previousSets + avaliacaoFadiga;
+  const newSets = currentSets + avaliacaoFadiga;
   
   return Math.max(0.5, newSets);
 };
@@ -343,7 +223,7 @@ export const roundSetsForDisplay = (sets: number): number => {
   }
 };
 
-// Função principal para calcular progressão - atualizada para usar apenas avaliacao_fadiga
+// Função principal para calcular progressão - agora usa dados do exercício atual
 export const calculateProgression = async (params: ProgressionParams): Promise<ProgressionResult> => {
   const {
     exerciseId,
@@ -354,10 +234,11 @@ export const calculateProgression = async (params: ProgressionParams): Promise<P
     incrementoMinimo,
     avaliacaoDificuldade,
     avaliacaoFadiga = 0,
-    isFirstWeek = false
+    isFirstWeek = false,
+    currentRepsProgramadas
   } = params;
 
-  console.log('Calculando progressão com avaliação combinada:', params);
+  console.log('Calculando progressão com dados atuais:', params);
 
   // Primeira semana: usar valores executados como baseline
   if (isFirstWeek) {
@@ -374,46 +255,41 @@ export const calculateProgression = async (params: ProgressionParams): Promise<P
     };
   }
 
-  // Buscar dados do exercício anterior
-  const previousData = await getPreviousExerciseData(exerciseId);
-  if (!previousData) {
-    console.log('No previous data found, treating as first week');
-    return calculateProgression({ ...params, isFirstWeek: true });
-  }
-
-  const useDoubleProgression = isDoubleProgression(previousData.repeticoes);
+  // Para semanas seguintes: usar dados programados do dia atual
+  const useDoubleProgression = isDoubleProgression(programmedReps);
+  const actualRepsProgramadas = currentRepsProgramadas || executedReps;
   
-  // Calcular novas séries usando apenas avaliacao_fadiga
+  // Calcular novas séries usando dados atuais
   const newSets = calculateNewSets(
-    previousData.sets,
+    currentSets,
     avaliacaoDificuldade,
     avaliacaoFadiga
   );
   
-  // Se séries aumentaram, manter peso e reps da semana anterior
-  if (newSets > previousData.sets) {
+  // Se séries aumentaram, manter peso e reps do dia atual
+  if (newSets > currentSets) {
     return {
-      newWeight: previousData.weight,
-      newReps: useDoubleProgression ? previousData.repeticoes : previousData.repsProgramadas,
+      newWeight: currentWeight,
+      newReps: useDoubleProgression ? programmedReps : actualRepsProgramadas,
       newSets: newSets,
       progressionType: useDoubleProgression ? 'double' : 'linear',
       isDeload: getDifficultyValue(avaliacaoDificuldade) === -2,
-      reasoning: 'Séries aumentaram - mantendo peso e reps anteriores',
-      reps_programadas: previousData.repsProgramadas
+      reasoning: 'Séries aumentaram - mantendo peso e reps atuais',
+      reps_programadas: actualRepsProgramadas
     };
   }
 
-  // Calcular progressão normal
+  // Calcular progressão normal baseada nos dados atuais
   if (useDoubleProgression) {
     const newRepsProgramadas = calculateDoubleProgressionReps(
-      previousData.repeticoes,
-      previousData.repsProgramadas,
+      programmedReps,
+      actualRepsProgramadas,
       avaliacaoDificuldade
     );
     
     const newWeight = calculateDoubleProgressionWeight(
-      previousData.weight,
-      previousData.repsProgramadas,
+      currentWeight,
+      actualRepsProgramadas,
       newRepsProgramadas,
       avaliacaoDificuldade,
       incrementoMinimo
@@ -421,17 +297,17 @@ export const calculateProgression = async (params: ProgressionParams): Promise<P
 
     return {
       newWeight: newWeight,
-      newReps: previousData.repeticoes,
+      newReps: programmedReps,
       newSets: newSets,
       progressionType: 'double',
       isDeload: getDifficultyValue(avaliacaoDificuldade) === -2,
-      reasoning: 'Progressão dupla aplicada',
+      reasoning: 'Progressão dupla aplicada com base nos dados atuais',
       reps_programadas: newRepsProgramadas
     };
   } else {
     // Progressão linear
     const diffValue = getDifficultyValue(avaliacaoDificuldade);
-    let newWeight = previousData.weight;
+    let newWeight = currentWeight;
     
     if (diffValue === 2) {
       newWeight += incrementoMinimo * 2;
@@ -447,12 +323,12 @@ export const calculateProgression = async (params: ProgressionParams): Promise<P
 
     return {
       newWeight: newWeight,
-      newReps: previousData.repsProgramadas,
+      newReps: actualRepsProgramadas,
       newSets: newSets,
       progressionType: 'linear',
       isDeload: diffValue === -2,
-      reasoning: 'Progressão linear aplicada',
-      reps_programadas: previousData.repsProgramadas
+      reasoning: 'Progressão linear aplicada com base nos dados atuais',
+      reps_programadas: actualRepsProgramadas
     };
   }
 };

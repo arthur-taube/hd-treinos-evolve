@@ -39,10 +39,8 @@ export const useExerciseActions = (
     currentSet.completed = !currentSet.completed;
     setSets(newSets);
 
-    // Call onWeightUpdate when first set is completed with a valid weight
-    if (index === 0 && currentSet.completed && currentSet.weight !== null) {
-      onWeightUpdate(exercise.id, currentSet.weight);
-    }
+    // Remove onWeightUpdate call to prevent overwriting programmed weights
+    // Weight updates now only happen for first week baseline in handleExerciseComplete
 
     try {
       await supabase.rpc('save_series', {
@@ -112,43 +110,53 @@ export const useExerciseActions = (
     try {
       await onExerciseComplete(exercise.id, true);
 
-      // Check if this is the first week and handle reps_programadas baseline
+      // Check if this is the first week and handle baseline data only
       const isFirstWeek = await checkIsFirstWeek();
       if (isFirstWeek) {
-        console.log(`First week detected for ${exercise.nome}, calculating baseline reps_programadas`);
+        console.log(`First week detected for ${exercise.nome}, saving baseline data`);
         
-        // Calculate baseline reps_programadas from last series
+        // Get last series data for baseline
         const lastSeriesData = await getLastSeriesData(exercise.id);
         let baselineReps: number | null = null;
+        let baselineWeight: number | null = null;
 
         if (lastSeriesData !== null) {
           baselineReps = lastSeriesData.reps;
-          console.log(`Using last series reps as baseline: ${baselineReps}`);
+          baselineWeight = lastSeriesData.weight;
+          console.log(`Using last series data as baseline: ${baselineReps} reps @ ${baselineWeight}kg`);
         } else if (exercise.repeticoes) {
-          // Parse repeticoes to get minimum value
+          // Parse repeticoes to get minimum value as fallback for reps
           if (exercise.repeticoes.includes('-')) {
             baselineReps = parseInt(exercise.repeticoes.split('-')[0]);
           } else {
             baselineReps = parseInt(exercise.repeticoes);
           }
-          console.log(`Using minimum repeticoes as baseline: ${baselineReps}`);
+          console.log(`Using minimum repeticoes as baseline: ${baselineReps} reps`);
         }
 
-        // Save baseline reps_programadas if we have a value
+        // Save baseline data if we have values
+        const updateData: any = {};
         if (baselineReps !== null) {
+          updateData.reps_programadas = baselineReps;
+        }
+        if (baselineWeight !== null) {
+          updateData.peso = baselineWeight;
+        }
+
+        if (Object.keys(updateData).length > 0) {
           const { error: updateError } = await supabase
             .from('exercicios_treino_usuario')
-            .update({ reps_programadas: baselineReps })
+            .update(updateData)
             .eq('id', exercise.id);
 
           if (updateError) {
-            console.error('Error saving baseline reps_programadas:', updateError);
+            console.error('Error saving baseline data:', updateError);
           } else {
-            console.log(`Saved baseline reps_programadas: ${baselineReps} for ${exercise.nome}`);
+            console.log(`Saved baseline data for ${exercise.nome}:`, updateData);
           }
-        } else {
-          console.log(`No baseline reps_programadas to save for ${exercise.nome} (acceptable for hidden exercises)`);
         }
+      } else {
+        console.log(`Not first week for ${exercise.nome}, baseline data already established`);
       }
 
       setIsOpen(false);
