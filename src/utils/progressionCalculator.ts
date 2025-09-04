@@ -255,16 +255,33 @@ export const calculateProgression = async (params: ProgressionParams): Promise<P
     avaliacaoDificuldade,
     avaliacaoFadiga
   );
+
+  console.log('Séries calculadas:', { currentSets, newSets });
+
+  // Verificar se há aumento real de séries (comparando valores arredondados)
+  const currentRoundedSets = roundSetsForDisplay(currentSets);
+  const newRoundedSets = roundSetsForDisplay(newSets);
+  const hasRealSetsIncrease = newRoundedSets > currentRoundedSets;
   
-  // Se séries aumentaram, manter peso e reps do dia atual
-  if (newSets > currentSets) {
+  console.log('Comparação de séries:', { 
+    currentSets, 
+    newSets, 
+    currentRoundedSets, 
+    newRoundedSets, 
+    hasRealSetsIncrease 
+  });
+  
+  // Se há aumento REAL de séries (arredondadas), não aplicar progressão de peso e repetições
+  if (hasRealSetsIncrease) {
+    console.log('Aumento REAL de séries detectado - não aplicando progressão de peso/reps');
+    
     return {
       newWeight: currentWeight,
       newReps: useDoubleProgression ? programmedReps : actualRepsProgramadas,
-      newSets: newSets,
+      newSets: newSets, // Mantém valor fracionado na database
       progressionType: useDoubleProgression ? 'double' : 'linear',
       isDeload: getDifficultyValue(avaliacaoDificuldade) === -2,
-      reasoning: 'Séries aumentaram - mantendo peso e reps atuais',
+      reasoning: `Aumento real de séries (${currentRoundedSets} → ${newRoundedSets}) - peso e repetições mantidos`,
       reps_programadas: actualRepsProgramadas
     };
   }
@@ -288,7 +305,7 @@ export const calculateProgression = async (params: ProgressionParams): Promise<P
     return {
       newWeight: newWeight,
       newReps: programmedReps,
-      newSets: newSets,
+      newSets: newSets, // Mantém valor fracionado na database
       progressionType: 'double',
       isDeload: getDifficultyValue(avaliacaoDificuldade) === -2,
       reasoning: 'Progressão dupla aplicada com base nos dados atuais',
@@ -314,7 +331,7 @@ export const calculateProgression = async (params: ProgressionParams): Promise<P
     return {
       newWeight: newWeight,
       newReps: actualRepsProgramadas,
-      newSets: newSets,
+      newSets: newSets, // Mantém valor fracionado na database
       progressionType: 'linear',
       isDeload: diffValue === -2,
       reasoning: 'Progressão linear aplicada com base nos dados atuais',
