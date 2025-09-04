@@ -240,24 +240,14 @@ export const calculateProgression = async (params: ProgressionParams): Promise<P
 
   console.log('Calculando progressão com dados atuais:', params);
 
-  // Primeira semana: usar valores executados como baseline
-  if (isFirstWeek) {
-    const useDoubleProgression = isDoubleProgression(programmedReps);
-    
-    return {
-      newWeight: currentWeight,
-      newReps: useDoubleProgression ? programmedReps : executedReps,
-      newSets: currentSets,
-      progressionType: useDoubleProgression ? 'double' : 'linear',
-      isDeload: false,
-      reasoning: 'Primeira semana - baseline estabelecido',
-      reps_programadas: executedReps
-    };
-  }
-
-  // Para semanas seguintes: usar dados programados do dia atual
+  // Determinar se usa progressão dupla
   const useDoubleProgression = isDoubleProgression(programmedReps);
-  const actualRepsProgramadas = currentRepsProgramadas || executedReps;
+  
+  // Primeira semana: usar valores executados como baseline
+  // Semanas seguintes: usar dados programados do dia atual
+  const actualRepsProgramadas = isFirstWeek ? executedReps : (currentRepsProgramadas || executedReps);
+  
+  console.log(`Semana ${isFirstWeek ? '1 (baseline)' : 'seguinte'} - usando reps programadas:`, actualRepsProgramadas);
   
   // Calcular novas séries usando dados atuais
   const newSets = calculateNewSets(
