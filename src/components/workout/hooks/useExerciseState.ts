@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useExerciseFeedback } from "@/hooks/use-exercise-feedback";
+import { roundSetsForDisplay } from "@/utils/progressionCalculator";
 
 export interface SetData {
   number: number;
@@ -82,7 +83,11 @@ export const useExerciseState = (
       console.log(`=== INITIALIZING SETS FOR ${exercise.nome} ===`);
       console.log(`Exercise data:`, exercise);
       
-      const initialSets: SetData[] = Array.from({ length: exercise.series }, (_, index) => {
+      // Use rounded sets for display to match header
+      const setsCount = roundSetsForDisplay(exercise.series);
+      console.log(`Series: ${exercise.series} -> Rounded for display: ${setsCount}`);
+      
+      const initialSets: SetData[] = Array.from({ length: setsCount }, (_, index) => {
         // Determine reps for display
         let displayReps: number | null = null;
         if (exercise.reps_programadas) {
