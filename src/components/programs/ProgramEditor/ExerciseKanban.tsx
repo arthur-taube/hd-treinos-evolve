@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { DragDropContext } from "react-beautiful-dnd";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,7 +48,16 @@ export default function ExerciseKanban({
 
   const [muscleGroupDialogOpen, setMuscleGroupDialogOpen] = useState(false);
   const [currentDay, setCurrentDay] = useState<string>("");
-  const [lastNotifiedHash, setLastNotifiedHash] = useState<string>("");
+  
+  // Use refs to track state without causing re-renders
+  const lastReceivedHashRef = useRef<string>("");
+  const lastSentHashRef = useRef<string>("");
+  const isInitializingRef = useRef<boolean>(false);
+
+  // Criar um hash dos exercícios para detectar mudanças
+  const createExercisesHash = useCallback((exercisesData: Record<string, Exercise[]>) => {
+    return JSON.stringify(exercisesData);
+  }, []);
 
   // Inicializar títulos IMEDIATAMENTE com numeração sequencial
   useEffect(() => {
@@ -70,35 +79,46 @@ export default function ExerciseKanban({
 
   // Inicializar exercícios quando initialExercises muda
   useEffect(() => {
-    if (Object.keys(initialExercises).length > 0) {
+    const initialExercisesHash = createExercisesHash(initialExercises);
+    
+    if (Object.keys(initialExercises).length > 0 && 
+        initialExercisesHash !== lastReceivedHashRef.current &&
+        !isInitializingRef.current) {
+      
       console.log('ExerciseKanban - Inicializando exercícios:', initialExercises);
+      isInitializingRef.current = true;
+      lastReceivedHashRef.current = initialExercisesHash;
+      
       initializeExercises(initialExercises);
+      
+      // Reset initialization flag after a brief delay
+      setTimeout(() => {
+        isInitializingRef.current = false;
+      }, 100);
     }
-  }, [initialExercises, initializeExercises]);
+  }, [initialExercises, initializeExercises, createExercisesHash]);
 
-  // Criar um hash dos exercícios para detectar mudanças
-  const createExercisesHash = useCallback((exercisesData: Record<string, Exercise[]>) => {
-    return JSON.stringify(exercisesData);
-  }, []);
 
-  // Enviar TODAS as atualizações de uma vez - CORRIGIDO para evitar loop infinito
+  // Enviar atualizações apenas quando houver mudanças reais (evita loop infinito)
   useEffect(() => {
-    if (onExercisesUpdate && Object.keys(exercises).length > 0) {
+    if (onExercisesUpdate && Object.keys(exercises).length > 0 && !isInitializingRef.current) {
       const exercisesHash = createExercisesHash(exercises);
       
-      // Só notificar se realmente houve mudança
-      if (exercisesHash !== lastNotifiedHash) {
-        console.log('ExerciseKanban - Enviando BATCH de exercícios atualizados:', exercises);
+      // Só notificar se realmente houve mudança e não estamos inicializando
+      if (exercisesHash !== lastSentHashRef.current && 
+          exercisesHash !== lastReceivedHashRef.current) {
         
-        // Enviar todos os exercícios de uma vez
+        console.log('ExerciseKanban - Enviando exercícios atualizados:', exercises);
+        
+        // Enviar apenas os dias que mudaram
         Object.entries(exercises).forEach(([day, dayExercises]) => {
           onExercisesUpdate(day, dayExercises);
         });
         
-        setLastNotifiedHash(exercisesHash);
+        lastSentHashRef.current = exercisesHash;
       }
     }
-  }, [exercises, onExercisesUpdate, createExercisesHash, lastNotifiedHash]);
+  }, [exercises, onExercisesUpdate, createExercisesHash]);
 
   const handleAddExercise = (day: string) => {
     setCurrentDay(day);

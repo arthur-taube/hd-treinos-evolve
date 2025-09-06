@@ -9,6 +9,10 @@ import { ExerciseDetails } from "./components/ExerciseDetails";
 import { Database } from "@/integrations/supabase/types";
 import { RepsRange } from "./types";
 
+// Module-level cache for reps ranges
+let repsRangesCache: RepsRange[] | null = null;
+let repsRangesFetchPromise: Promise<RepsRange[]> | null = null;
+
 interface ExerciseCardProps {
   exercise: Exercise;
   provided: any;
@@ -27,7 +31,7 @@ export function ExerciseCard({
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const fetchRepsRanges = async () => {
+    const fetchRepsRanges = async (): Promise<RepsRange[]> => {
       const { data, error } = await supabase
         .from('faixas_repeticoes')
         .select('*')
@@ -35,7 +39,7 @@ export function ExerciseCard({
       
       if (error) {
         console.error('Error fetching reps ranges:', error);
-        return;
+        return [];
       }
 
       if (data) {
@@ -46,11 +50,38 @@ export function ExerciseCard({
           max_reps: range.max_reps,
           tipo: range.tipo
         }));
-        setRepsRanges(typedRanges);
+        return typedRanges;
       }
+      
+      return [];
     };
 
-    fetchRepsRanges();
+    const loadRepsRanges = async () => {
+      // Use cache if available
+      if (repsRangesCache) {
+        setRepsRanges(repsRangesCache);
+        return;
+      }
+
+      // Use existing promise if one is in flight
+      if (repsRangesFetchPromise) {
+        const ranges = await repsRangesFetchPromise;
+        setRepsRanges(ranges);
+        return;
+      }
+
+      // Create new fetch promise
+      repsRangesFetchPromise = fetchRepsRanges();
+      const ranges = await repsRangesFetchPromise;
+      
+      // Cache the result
+      repsRangesCache = ranges;
+      repsRangesFetchPromise = null;
+      
+      setRepsRanges(ranges);
+    };
+
+    loadRepsRanges();
   }, []);
 
   useEffect(() => {
