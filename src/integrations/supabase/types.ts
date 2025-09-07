@@ -842,9 +842,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_temporary_substitution: {
+        Args: {
+          p_exercise_id: string
+          p_is_custom_substitute?: boolean
+          p_substitute_exercise_id: string
+          p_substitute_name: string
+        }
+        Returns: undefined
+      }
       ensure_series_table: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      get_available_exercises: {
+        Args: { p_muscle_group: string }
+        Returns: {
+          id: string
+          is_custom: boolean
+          nome: string
+          user_id: string
+        }[]
       }
       get_distinct_muscle_groups: {
         Args: Record<PropertyKey, never>
@@ -865,6 +883,18 @@ export type Database = {
           updated_at: string | null
           user_id: string | null
         }[]
+      }
+      replace_exercise_future_instances: {
+        Args: {
+          p_current_exercise_id: string
+          p_is_custom_exercise?: boolean
+          p_new_exercise_id: string
+          p_new_exercise_name: string
+          p_new_muscle_group: string
+          p_new_reps: string
+          p_new_series: number
+        }
+        Returns: undefined
       }
       save_series: {
         Args: {
