@@ -37,6 +37,10 @@ interface ExercicioUsuario {
   reps_programadas?: number | null;
   incremento_minimo?: number | null;
   treino_usuario_id: string;
+  substituicao_neste_treino?: boolean;
+  substituto_oficial_id?: string | null;
+  substituto_custom_id?: string | null;
+  substituto_nome?: string | null;
 }
 
 export default function Workout() {
@@ -86,7 +90,11 @@ export default function Workout() {
             configuracao_inicial,
             reps_programadas,
             incremento_minimo,
-            treino_usuario_id
+            treino_usuario_id,
+            substituicao_neste_treino,
+            substituto_oficial_id,
+            substituto_custom_id,
+            substituto_nome
           `)
           .eq('treino_usuario_id', treinoId)
           .order('ordem', { ascending: true });

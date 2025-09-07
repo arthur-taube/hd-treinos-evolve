@@ -240,17 +240,17 @@ export const useExerciseActions = (
   };
 
   const replaceExerciseThisWorkout = async () => {
-    toast({
-      title: "Funcionalidade em desenvolvimento",
-      description: "Em breve você poderá substituir exercícios."
-    });
+    // This will be handled by the parent component via dialog
+    if ((window as any).openExerciseSubstitution) {
+      (window as any).openExerciseSubstitution('replace-this');
+    }
   };
 
   const replaceExerciseAllWorkouts = async () => {
-    toast({
-      title: "Funcionalidade em desenvolvimento", 
-      description: "Em breve você poderá substituir exercícios em todos os treinos."
-    });
+    // This will be handled by the parent component via dialog
+    if ((window as any).openExerciseSubstitution) {
+      (window as any).openExerciseSubstitution('replace-all');
+    }
   };
 
   const addNote = async (setShowNoteInput: React.Dispatch<React.SetStateAction<boolean>>) => {

@@ -1,6 +1,8 @@
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { FeedbackDialog } from "./FeedbackDialog";
+import { ExerciseSubstitutionDialog } from "./ExerciseSubstitutionDialog";
 import { DIFFICULTY_OPTIONS, COMBINED_FATIGUE_OPTIONS } from "@/hooks/use-exercise-feedback";
 import { useExerciseState } from "./hooks/useExerciseState";
 import { useExerciseActions } from "./hooks/useExerciseActions";
@@ -8,6 +10,8 @@ import { usePreviousSeries } from "./hooks/usePreviousSeries";
 import { ExerciseHeader } from "./components/ExerciseHeader";
 import { ExerciseObservation } from "./components/ExerciseObservation";
 import { ExerciseSets } from "./components/ExerciseSets";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 interface ExerciseCardProps {
   exercise: {
@@ -39,6 +43,9 @@ export function ExerciseCard({
 }: ExerciseCardProps) {
   console.log(`=== RENDERING ExerciseCard for ${exercise.nome} ===`);
   console.log(`Exercise data:`, exercise);
+
+  const [showSubstitutionDialog, setShowSubstitutionDialog] = useState(false);
+  const [substitutionType, setSubstitutionType] = useState<'replace-all' | 'replace-this'>('replace-this');
 
   const {
     isOpen,
@@ -107,6 +114,91 @@ export function ExerciseCard({
 
   const handleSaveIncrement = (value: number) => {
     handleSaveIncrementSetting(value, saveIncrementSetting);
+  };
+
+  // Set up global function for opening substitution dialog
+  useEffect(() => {
+    (window as any).openExerciseSubstitution = (type: 'replace-all' | 'replace-this') => {
+      setSubstitutionType(type);
+      setShowSubstitutionDialog(true);
+    };
+    return () => {
+      delete (window as any).openExerciseSubstitution;
+    };
+  }, []);
+
+  const handleSubstitutionConfirm = async (data: {
+    exerciseId: string;
+    exerciseName: string;
+    muscleGroup: string;
+    series: number;
+    reps: string;
+    isCustom: boolean;
+  }) => {
+    try {
+      if (substitutionType === 'replace-this') {
+        // Apply temporary substitution
+        const exerciseIdToUse = data.isCustom ? 
+          (await createCustomExercise(data.exerciseName, data.muscleGroup)) : 
+          data.exerciseId;
+
+        await supabase.rpc('apply_temporary_substitution', {
+          p_exercise_id: exercise.id,
+          p_substitute_exercise_id: exerciseIdToUse,
+          p_substitute_name: data.exerciseName,
+          p_is_custom_substitute: data.isCustom
+        });
+
+        toast({
+          title: "Exercício substituído",
+          description: `${data.exerciseName} substituirá ${exercise.nome} apenas neste treino.`
+        });
+      } else {
+        // Replace in all future workouts
+        const exerciseIdToUse = data.isCustom ? 
+          (await createCustomExercise(data.exerciseName, data.muscleGroup)) : 
+          data.exerciseId;
+
+        await supabase.rpc('replace_exercise_future_instances', {
+          p_current_exercise_id: exercise.id,
+          p_new_exercise_id: exerciseIdToUse,
+          p_new_exercise_name: data.exerciseName,
+          p_new_series: data.series,
+          p_new_reps: data.reps,
+          p_new_muscle_group: data.muscleGroup,
+          p_is_custom_exercise: data.isCustom
+        });
+
+        toast({
+          title: "Exercício alterado",
+          description: `${data.exerciseName} substituirá ${exercise.nome} em todos os treinos futuros.`
+        });
+      }
+
+      // Refresh the page to show changes
+      window.location.reload();
+    } catch (error: any) {
+      toast({
+        title: "Erro na substituição",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const createCustomExercise = async (name: string, muscleGroup: string): Promise<string> => {
+    const { data, error } = await supabase
+      .from('exercicios_custom')
+      .insert({
+        nome: name,
+        grupo_muscular: muscleGroup,
+        user_id: (await supabase.auth.getUser()).data.user?.id
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data.id;
   };
 
   return (
@@ -191,6 +283,21 @@ export function ExerciseCard({
         minValue={0.5} 
         maxValue={10} 
         step={0.5} 
+      />
+
+      <ExerciseSubstitutionDialog
+        isOpen={showSubstitutionDialog}
+        onClose={() => setShowSubstitutionDialog(false)}
+        currentExercise={{
+          id: exercise.id,
+          nome: exercise.nome,
+          grupo_muscular: exercise.grupo_muscular,
+          series: exercise.series,
+          repeticoes: exercise.repeticoes,
+          exercicio_original_id: exercise.exercicio_original_id
+        }}
+        type={substitutionType}
+        onConfirm={handleSubstitutionConfirm}
       />
     </>
   );
