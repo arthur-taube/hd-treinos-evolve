@@ -47,6 +47,33 @@ export type Database = {
         }
         Relationships: []
       }
+      exercicios_custom: {
+        Row: {
+          created_at: string
+          grupo_muscular: string
+          id: string
+          nome: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          grupo_muscular: string
+          id?: string
+          nome: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          grupo_muscular?: string
+          id?: string
+          nome?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       exercicios_iniciantes: {
         Row: {
           created_at: string
@@ -208,6 +235,10 @@ export type Database = {
           reps_programadas: number | null
           secondary_muscle: string | null
           series: number
+          substituicao_neste_treino: boolean
+          substituto_custom_id: string | null
+          substituto_nome: string | null
+          substituto_oficial_id: string | null
           treino_usuario_id: string
           updated_at: string
           video_url: string | null
@@ -234,6 +265,10 @@ export type Database = {
           reps_programadas?: number | null
           secondary_muscle?: string | null
           series: number
+          substituicao_neste_treino?: boolean
+          substituto_custom_id?: string | null
+          substituto_nome?: string | null
+          substituto_oficial_id?: string | null
           treino_usuario_id: string
           updated_at?: string
           video_url?: string | null
@@ -260,11 +295,29 @@ export type Database = {
           reps_programadas?: number | null
           secondary_muscle?: string | null
           series?: number
+          substituicao_neste_treino?: boolean
+          substituto_custom_id?: string | null
+          substituto_nome?: string | null
+          substituto_oficial_id?: string | null
           treino_usuario_id?: string
           updated_at?: string
           video_url?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "ex_tu_subst_custom_fk"
+            columns: ["substituto_custom_id"]
+            isOneToOne: false
+            referencedRelation: "exercicios_custom"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ex_tu_subst_oficial_fk"
+            columns: ["substituto_oficial_id"]
+            isOneToOne: false
+            referencedRelation: "exercicios_iniciantes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "exercicios_treino_usuario_exercicio_original_id_fkey"
             columns: ["exercicio_original_id"]
