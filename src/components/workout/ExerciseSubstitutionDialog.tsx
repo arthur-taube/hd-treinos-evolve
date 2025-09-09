@@ -34,6 +34,7 @@ interface ExerciseSubstitutionDialogProps {
     series: number;
     repeticoes: string | null;
     exercicio_original_id: string;
+    treino_usuario_id: string;
   };
   type: 'replace-all' | 'replace-this';
   onConfirm: (data: {
@@ -63,16 +64,49 @@ export function ExerciseSubstitutionDialog({
   const [customExerciseName, setCustomExerciseName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-
-  // Check if exercise allows multiple groups (has orange badge)
-  const allowsMultipleGroups = true; // For now, we'll allow changing muscle groups
+  const [availableMuscleGroups, setAvailableMuscleGroups] = useState<string[]>([]);
+  const [allowsMultipleGroups, setAllowsMultipleGroups] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
+      fetchExerciseDetails();
       fetchExercises();
       fetchRepsRanges();
     }
   }, [isOpen, selectedMuscleGroup]);
+
+  const fetchExerciseDetails = async () => {
+    try {
+      // Get treino details first
+      const { data: treinoData, error: treinoError } = await supabase
+        .from('treinos_usuario')
+        .select('treino_original_id')
+        .eq('id', currentExercise.treino_usuario_id)
+        .single();
+
+      if (treinoError) throw treinoError;
+
+      // Get original exercise details from exercicios_treino
+      const { data: exercicioTreino, error: exercicioError } = await supabase
+        .from('exercicios_treino')
+        .select('available_groups, allow_multiple_groups')
+        .eq('treino_id', treinoData.treino_original_id)
+        .eq('exercicio_original_id', currentExercise.exercicio_original_id)
+        .single();
+
+      if (exercicioError) {
+        console.error("Error fetching exercise details:", exercicioError);
+        return;
+      }
+
+      if (exercicioTreino) {
+        setAllowsMultipleGroups(exercicioTreino.allow_multiple_groups || false);
+        setAvailableMuscleGroups(exercicioTreino.available_groups || [currentExercise.grupo_muscular]);
+      }
+    } catch (error) {
+      console.error("Error fetching exercise details:", error);
+    }
+  };
 
   const fetchExercises = async () => {
     setIsLoading(true);
@@ -218,7 +252,7 @@ export function ExerciseSubstitutionDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md bg-background z-50">
         <DialogHeader>
           <DialogTitle>
             {type === 'replace-all' 
@@ -249,12 +283,13 @@ export function ExerciseSubstitutionDialog({
                 <SelectTrigger className="mt-2">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  {/* Would need to fetch available muscle groups */}
-                  <SelectItem value={currentExercise.grupo_muscular}>
-                    {currentExercise.grupo_muscular}
-                  </SelectItem>
-                </SelectContent>
+                 <SelectContent className="bg-background z-50">
+                   {availableMuscleGroups.map((group) => (
+                     <SelectItem key={group} value={group}>
+                       {group}
+                     </SelectItem>
+                   ))}
+                 </SelectContent>
               </Select>
             </div>
           )}
@@ -266,8 +301,8 @@ export function ExerciseSubstitutionDialog({
               <SelectTrigger className="mt-2">
                 <SelectValue placeholder="Selecione um exercício" />
               </SelectTrigger>
-              <SelectContent>
-                <ScrollArea className="h-[200px]">
+               <SelectContent className="bg-background z-50">
+                 <ScrollArea className="h-[200px]">
                   {isLoading ? (
                     <SelectItem disabled value="loading">Carregando exercícios...</SelectItem>
                   ) : availableExercises.length > 0 ? (
@@ -332,8 +367,8 @@ export function ExerciseSubstitutionDialog({
                   <SelectTrigger className="mt-2">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    {[1, 2, 3, 4, 5].map((num) => (
+                   <SelectContent className="bg-background z-50">
+                     {[1, 2, 3, 4, 5].map((num) => (
                       <SelectItem key={num} value={String(num)}>
                         {num}
                       </SelectItem>
@@ -347,8 +382,8 @@ export function ExerciseSubstitutionDialog({
                   <SelectTrigger className="mt-2">
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {repsRanges.map((range) => {
+                   <SelectContent className="bg-background z-50">
+                     {repsRanges.map((range) => {
                       const displayValue = formatRepsRange(range);
                       const storeValue = range.min_reps === range.max_reps 
                         ? String(range.min_reps) 

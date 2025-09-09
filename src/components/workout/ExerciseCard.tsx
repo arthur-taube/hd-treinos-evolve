@@ -84,8 +84,6 @@ export function ExerciseCard({
     handleSaveIncrementSetting,
     saveObservation,
     skipIncompleteSets,
-    replaceExerciseThisWorkout,
-    replaceExerciseAllWorkouts,
     addNote
   } = useExerciseActions(
     exercise,
@@ -116,16 +114,11 @@ export function ExerciseCard({
     handleSaveIncrementSetting(value, saveIncrementSetting);
   };
 
-  // Set up global function for opening substitution dialog
-  useEffect(() => {
-    (window as any).openExerciseSubstitution = (type: 'replace-all' | 'replace-this') => {
-      setSubstitutionType(type);
-      setShowSubstitutionDialog(true);
-    };
-    return () => {
-      delete (window as any).openExerciseSubstitution;
-    };
-  }, []);
+  // Local handlers for substitution
+  const handleOpenSubstitution = (type: 'replace-all' | 'replace-this') => {
+    setSubstitutionType(type);
+    setShowSubstitutionDialog(true);
+  };
 
   const handleSubstitutionConfirm = async (data: {
     exerciseId: string;
@@ -212,8 +205,7 @@ export function ExerciseCard({
           setShowObservationInput={setShowObservationInput}
           setShowIncrementDialog={setShowIncrementDialog}
           skipIncompleteSets={skipIncompleteSets}
-          replaceExerciseThisWorkout={replaceExerciseThisWorkout}
-          replaceExerciseAllWorkouts={replaceExerciseAllWorkouts}
+          onSubstitutionRequest={handleOpenSubstitution}
         />
 
         <ExerciseObservation
@@ -294,7 +286,8 @@ export function ExerciseCard({
           grupo_muscular: exercise.grupo_muscular,
           series: exercise.series,
           repeticoes: exercise.repeticoes,
-          exercicio_original_id: exercise.exercicio_original_id
+          exercicio_original_id: exercise.exercicio_original_id,
+          treino_usuario_id: exercise.treino_usuario_id
         }}
         type={substitutionType}
         onConfirm={handleSubstitutionConfirm}

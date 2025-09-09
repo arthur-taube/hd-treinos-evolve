@@ -16,6 +16,7 @@ interface ExerciseHeaderProps {
     observacao?: string | null;
     video_url?: string | null;
     reps_programadas?: number | null;
+    substituto_nome?: string | null;
   };
   observation: string;
   isOpen: boolean;
@@ -23,8 +24,7 @@ interface ExerciseHeaderProps {
   setShowObservationInput: (show: boolean) => void;
   setShowIncrementDialog: (show: boolean) => void;
   skipIncompleteSets: () => void;
-  replaceExerciseThisWorkout: () => void;
-  replaceExerciseAllWorkouts: () => void;
+  onSubstitutionRequest: (type: 'replace-all' | 'replace-this') => void;
 }
 
 export function ExerciseHeader({
@@ -35,8 +35,7 @@ export function ExerciseHeader({
   setShowObservationInput,
   setShowIncrementDialog,
   skipIncompleteSets,
-  replaceExerciseThisWorkout,
-  replaceExerciseAllWorkouts
+  onSubstitutionRequest
 }: ExerciseHeaderProps) {
   // Função para formatar a exibição das séries/reps/peso
   const formatExerciseDisplay = () => {
@@ -102,10 +101,10 @@ export function ExerciseHeader({
                 Pular séries não concluídas
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={replaceExerciseThisWorkout}>
+              <DropdownMenuItem onClick={() => onSubstitutionRequest('replace-this')}>
                 Substituir exercício neste treino
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={replaceExerciseAllWorkouts}>
+              <DropdownMenuItem onClick={() => onSubstitutionRequest('replace-all')}>
                 Mudar exercício em todos os treinos
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -115,7 +114,9 @@ export function ExerciseHeader({
       
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-lg font-medium">{exercise.nome}</h3>
+          <h3 className="text-lg font-medium">
+            {exercise.substituto_nome || exercise.nome}
+          </h3>
           <p className="text-sm text-muted-foreground">
             {formatExerciseDisplay()}
           </p>

@@ -271,8 +271,6 @@ export const useExerciseActions = (
     handleSaveIncrementSetting,
     saveObservation,
     skipIncompleteSets,
-    replaceExerciseThisWorkout,
-    replaceExerciseAllWorkouts,
     addNote
   };
 };
