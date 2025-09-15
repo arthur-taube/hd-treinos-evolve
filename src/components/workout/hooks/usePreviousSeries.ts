@@ -3,9 +3,18 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SeriesData } from "./useExerciseState";
 
+export interface PreviousSeriesData {
+  date: string;
+  allSeries: {
+    number: number;
+    weight: number;
+    reps: number;
+  }[];
+}
+
 export function usePreviousSeries(isOpen: boolean, exercicioOriginalId: string) {
   const [isLoadingSeries, setIsLoadingSeries] = useState(false);
-  const [previousSeries, setPreviousSeries] = useState<SeriesData[]>([]);
+  const [previousSeries, setPreviousSeries] = useState<PreviousSeriesData[]>([]);
 
   useEffect(() => {
     if (isOpen && exercicioOriginalId) {
@@ -98,23 +107,23 @@ export function usePreviousSeries(isOpen: boolean, exercicioOriginalId: string) 
 
       const formattedSeries = trainingResults
         .filter(result => result !== null && result.date !== null)
+        .slice(0, 1) // Only get the most recent workout
         .map(result => {
           if (!result!.series.length) return {
             date: new Date(result!.date!).toLocaleDateString('pt-BR'),
-            weight: 0,
-            reps: 0
+            allSeries: []
           };
           
-          const bestSeries = result!.series.reduce((best, current) => {
-            const bestValue = best.peso * best.repeticoes;
-            const currentValue = current.peso * current.repeticoes;
-            return currentValue > bestValue ? current : best;
-          }, result!.series[0]);
+          // Return all series instead of just the best one
+          const allSeries = result!.series.map((series, index) => ({
+            number: index + 1,
+            weight: series.peso,
+            reps: series.repeticoes
+          }));
           
           return {
             date: new Date(result!.date!).toLocaleDateString('pt-BR'),
-            weight: bestSeries ? bestSeries.peso : 0,
-            reps: bestSeries ? bestSeries.repeticoes : 0
+            allSeries
           };
         });
 

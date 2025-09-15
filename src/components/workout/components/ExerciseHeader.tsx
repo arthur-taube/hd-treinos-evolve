@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Youtube, MoreHorizontal, Check, Play, TrendingUp } from "lucide-react";
 import { roundSetsForDisplay } from "@/utils/progressionCalculator";
+import { useProgressionIndicator } from "@/hooks/useProgressionIndicator";
 
 interface ExerciseHeaderProps {
   exercise: {
+    id: string;
     nome: string;
     grupo_muscular: string;
     series: number;
@@ -17,6 +19,7 @@ interface ExerciseHeaderProps {
     video_url?: string | null;
     reps_programadas?: number | null;
     substituto_nome?: string | null;
+    exercicio_original_id?: string | null;
   };
   observation: string;
   isOpen: boolean;
@@ -37,6 +40,7 @@ export function ExerciseHeader({
   skipIncompleteSets,
   onSubstitutionRequest
 }: ExerciseHeaderProps) {
+  const progressionMessage = useProgressionIndicator(exercise.id, exercise.exercicio_original_id || '');
   // Função para formatar a exibição das séries/reps/peso
   const formatExerciseDisplay = () => {
     // Arredondar séries para exibição (valores decimais arredondados)
@@ -121,20 +125,12 @@ export function ExerciseHeader({
             {formatExerciseDisplay()}
           </p>
           
-          {/* Indicador de progressão aplicada */}
-          {hasProgression && (
+          {/* Indicador de progressão */}
+          {progressionMessage && (
             <div className="flex items-center gap-1 mt-1">
               <TrendingUp className="h-3 w-3 text-green-600" />
               <span className="text-xs text-green-600 font-medium">
-                Carga sugerida: {exercise.peso}kg
-              </span>
-            </div>
-          )}
-
-          {exercise.reps_programadas && (
-            <div className="mt-1">
-              <span className="text-xs text-blue-600 font-medium">
-                Meta: {exercise.reps_programadas} reps por série
+                {progressionMessage}
               </span>
             </div>
           )}

@@ -4,10 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Check, Target } from "lucide-react";
 import { SetData, SeriesData } from "../hooks/useExerciseState";
+import { PreviousSeriesData } from "../hooks/usePreviousSeries";
 
 interface ExerciseSetsProps {
   sets: SetData[];
-  previousSeries: SeriesData[];
+  previousSeries: PreviousSeriesData[];
   isLoadingSeries: boolean;
   handleSetComplete: (index: number) => void;
   handleWeightChange: (index: number, value: string) => void;
@@ -105,11 +106,16 @@ export function ExerciseSets({
       {previousSeries.length > 0 && (
         <div className="mb-4 p-3 rounded-md bg-slate-600">
           <h4 className="text-sm font-medium mb-2">Histórico recente:</h4>
-          <div className="space-y-1">
-            {previousSeries.map((seriesData, idx) => (
-              <p key={idx} className="text-sm">
-                {seriesData.date}: <span className="font-medium">{seriesData.weight}kg</span> x {seriesData.reps} reps
-              </p>
+          <div className="space-y-2">
+            {previousSeries.map((workoutData, idx) => (
+              <div key={idx} className="space-y-1">
+                <p className="text-sm font-medium">{workoutData.date}:</p>
+                {workoutData.allSeries.map((series) => (
+                  <p key={series.number} className="text-sm text-muted-foreground ml-2">
+                    {series.number} - <span className="font-medium">{series.weight}kg</span> x {series.reps} reps
+                  </p>
+                ))}
+              </div>
             ))}
           </div>
         </div>

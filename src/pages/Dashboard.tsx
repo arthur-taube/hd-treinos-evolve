@@ -4,11 +4,23 @@ import NextWorkoutCard from "@/components/dashboard/NextWorkoutCard";
 import ProgramCard from "@/components/dashboard/ProgramCard";
 import StatCard from "@/components/dashboard/StatCard";
 import { Calendar, CalendarDaysIcon, Dumbbell, History } from "lucide-react";
+import { useDashboardData } from "@/hooks/useDashboardData";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
-  // Mock data - would come from API in real app
-  const hasActiveProgram = true;
-  const totalWorkouts = 36;
+  const navigate = useNavigate();
+  const { activeProgram, nextWorkout, stats, lastWorkout, loading } = useDashboardData();
+
+  if (loading) {
+    return (
+      <div className="pb-20">
+        <PageHeader title="Meu Painel" />
+        <div className="p-4 text-center">
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pb-20">
@@ -17,17 +29,17 @@ const Dashboard = () => {
       <div className="space-y-6">
         <section>
           <h2 className="text-lg font-medium mb-3">Meus Programas</h2>
-          {hasActiveProgram ? (
+          {activeProgram ? (
             <ProgramCard
-              title="Hipertrofia Total HD"
-              subtitle="Programa ativo - Semana 2"
+              title={activeProgram.nome}
+              subtitle={`Programa ativo - Progresso: ${activeProgram.progresso}%`}
               showPlayButton
-              onClick={() => {}}
+              onClick={() => navigate('/active-program')}
             />
           ) : (
             <div className="bg-card p-4 rounded-lg border border-border/40 text-center">
               <p className="text-muted-foreground">
-                Você ainda não registrou nenhum treino
+                Você ainda não possui um programa ativo
               </p>
             </div>
           )}
@@ -35,13 +47,21 @@ const Dashboard = () => {
 
         <section>
           <h2 className="text-lg font-medium mb-3">Próximo Treino</h2>
-          <NextWorkoutCard
-            programName="Hipertrofia Total HD"
-            workoutDay="Dia 8: Quadríceps + Posterior + Panturrilha"
-            date="19/04/2025"
-            weekday="Sexta-feira"
-            onStart={() => {}}
-          />
+          {nextWorkout ? (
+            <NextWorkoutCard
+              programName={activeProgram?.nome || ""}
+              workoutDay={`${nextWorkout.dia}: ${nextWorkout.nome}`}
+              date={nextWorkout.data}
+              weekday={nextWorkout.diaSemana}
+              onStart={() => navigate('/active-program')}
+            />
+          ) : (
+            <div className="bg-card p-4 rounded-lg border border-border/40 text-center">
+              <p className="text-muted-foreground">
+                Nenhum treino pendente
+              </p>
+            </div>
+          )}
         </section>
 
         <section>
@@ -62,12 +82,12 @@ const Dashboard = () => {
           <div className="grid grid-cols-2 gap-4">
             <StatCard
               title="Total de Treinos"
-              value={totalWorkouts}
+              value={stats.totalWorkouts}
               icon={<Dumbbell size={20} />}
             />
             <StatCard
               title="Treinos este Mês"
-              value={12}
+              value={stats.workoutsThisMonth}
               icon={<Calendar size={20} />}
             />
           </div>
@@ -75,11 +95,19 @@ const Dashboard = () => {
 
         <section>
           <h2 className="text-lg font-medium mb-3">Histórico</h2>
-          <ProgramCard
-            title="Último treino - Hipertrofia Total HD"
-            subtitle="Dia 7: Peito + Tríceps - 17/04/2025"
-            onClick={() => {}}
-          />
+          {lastWorkout ? (
+            <ProgramCard
+              title={`Último treino - ${lastWorkout.programa_nome}`}
+              subtitle={`${lastWorkout.treino_nome} - ${lastWorkout.data}`}
+              onClick={() => navigate('/history')}
+            />
+          ) : (
+            <div className="bg-card p-4 rounded-lg border border-border/40 text-center">
+              <p className="text-muted-foreground">
+                Nenhum treino concluído ainda
+              </p>
+            </div>
+          )}
         </section>
       </div>
     </div>
