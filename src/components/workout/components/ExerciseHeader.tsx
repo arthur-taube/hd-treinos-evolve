@@ -1,11 +1,9 @@
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Youtube, MoreHorizontal, Check, Play, TrendingUp } from "lucide-react";
 import { roundSetsForDisplay } from "@/utils/progressionCalculator";
 import { useProgressionIndicator } from "@/hooks/useProgressionIndicator";
-
 interface ExerciseHeaderProps {
   exercise: {
     id: string;
@@ -29,7 +27,6 @@ interface ExerciseHeaderProps {
   skipIncompleteSets: () => void;
   onSubstitutionRequest: (type: 'replace-all' | 'replace-this') => void;
 }
-
 export function ExerciseHeader({
   exercise,
   observation,
@@ -46,7 +43,7 @@ export function ExerciseHeader({
     // Arredondar séries para exibição (valores decimais arredondados)
     const displaySeries = roundSetsForDisplay(exercise.series);
     const peso = exercise.peso ? `${exercise.peso}kg` : '';
-    
+
     // Se temos reps_programadas, usar esse valor ao invés da faixa
     let repsDisplay;
     if (exercise.reps_programadas) {
@@ -56,37 +53,27 @@ export function ExerciseHeader({
     } else {
       repsDisplay = "10-12";
     }
-    
+
     // Montar o texto final
     let displayText = `${displaySeries} x ${repsDisplay}`;
     if (peso) {
       displayText += ` @ ${peso}`;
     }
-    
     return displayText;
   };
 
   // Verificar se há progressão aplicada (peso > 0 indica que foi calculado)
   const hasProgression = exercise.peso && exercise.peso > 0;
-
-  return (
-    <div className="p-4">
+  return <div className="p-4">
       <div className="flex justify-between items-start mb-2">
         <Badge variant="outline" className="bg-muted">
           {exercise.grupo_muscular}
         </Badge>
         
         <div className="flex items-center gap-2">
-          {exercise.video_url && (
-            <a 
-              href={exercise.video_url} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="text-red-500 hover:text-red-700"
-            >
+          {exercise.video_url && <a href={exercise.video_url} target="_blank" rel="noopener noreferrer" className="text-red-500 hover:text-red-700">
               <Youtube className="h-5 w-5" />
-            </a>
-          )}
+            </a>}
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -126,31 +113,21 @@ export function ExerciseHeader({
           </p>
           
           {/* Indicador de progressão */}
-          {progressionMessage && (
-            <div className="flex items-center gap-1 mt-1">
-              <TrendingUp className="h-3 w-3 text-green-600" />
-              <span className="text-xs text-green-600 font-medium">
+          {progressionMessage && <div className="flex items-center gap-1 mt-1">
+              <TrendingUp className="h-3 w-3 text-blue-600 " />
+              <span className="text-xs font-medium text-blue-600">
                 {progressionMessage}
               </span>
-            </div>
-          )}
+            </div>}
           
-          {observation && (
-            <div className="mt-2 p-1.5 border border-yellow-200 rounded-md text-sm bg-[#aea218]/70">
+          {observation && <div className="mt-2 p-1.5 border border-yellow-200 rounded-md text-sm bg-[#aea218]/70">
               {observation}
-            </div>
-          )}
+            </div>}
         </div>
         
-        <Button 
-          variant="ghost" 
-          size="lg" 
-          className={`rounded-full h-12 w-12 p-0 ${exercise.concluido ? "bg-green-100 text-green-600" : ""}`} 
-          onClick={() => setIsOpen(!isOpen)}
-        >
+        <Button variant="ghost" size="lg" className={`rounded-full h-12 w-12 p-0 ${exercise.concluido ? "bg-green-100 text-green-600" : ""}`} onClick={() => setIsOpen(!isOpen)}>
           {exercise.concluido ? <Check className="h-6 w-6" /> : <Play className="h-6 w-6" />}
         </Button>
       </div>
-    </div>
-  );
+    </div>;
 }
