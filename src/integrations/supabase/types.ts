@@ -598,6 +598,7 @@ export type Database = {
           created_at: string | null
           exercicio_usuario_id: string
           id: string
+          nota: string | null
           numero_serie: number
           peso: number
           repeticoes: number
@@ -609,6 +610,7 @@ export type Database = {
           created_at?: string | null
           exercicio_usuario_id: string
           id?: string
+          nota?: string | null
           numero_serie: number
           peso?: number
           repeticoes?: number
@@ -620,6 +622,7 @@ export type Database = {
           created_at?: string | null
           exercicio_usuario_id?: string
           id?: string
+          nota?: string | null
           numero_serie?: number
           peso?: number
           repeticoes?: number
@@ -877,6 +880,7 @@ export type Database = {
           created_at: string | null
           exercicio_usuario_id: string
           id: string
+          nota: string | null
           numero_serie: number
           peso: number
           repeticoes: number

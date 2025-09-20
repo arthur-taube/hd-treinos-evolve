@@ -10,6 +10,7 @@ export interface PreviousSeriesData {
     weight: number;
     reps: number;
   }[];
+  nota?: string;
 }
 
 export function usePreviousSeries(isOpen: boolean, exercicioOriginalId: string) {
@@ -120,10 +121,15 @@ export function usePreviousSeries(isOpen: boolean, exercicioOriginalId: string) 
             weight: series.peso,
             reps: series.repeticoes
           }));
+
+          // Check if any series has a note
+          const seriesWithNote = result!.series.find((s: any) => s.nota);
+          const nota = seriesWithNote?.nota;
           
           return {
             date: new Date(result!.date!).toLocaleDateString('pt-BR'),
-            allSeries
+            allSeries,
+            nota
           };
         });
 

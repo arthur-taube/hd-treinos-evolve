@@ -102,8 +102,8 @@ export function ExerciseCard({
     saveObservation(observation, setShowObservationInput);
   };
 
-  const handleAddNote = () => {
-    addNote(setShowNoteInput);
+  const handleAddNote = (noteText: string) => {
+    addNote(noteText, setShowNoteInput);
   };
 
   const handleSaveDifficulty = (value: string) => {

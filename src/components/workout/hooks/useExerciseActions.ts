@@ -201,18 +201,88 @@ export const useExerciseActions = (
     setShowObservationInput: React.Dispatch<React.SetStateAction<boolean>>
   ) => {
     try {
-      const { error } = await supabase
+      // First, save observation to current exercise
+      const { error: currentError } = await supabase
         .from('exercicios_treino_usuario')
         .update({ observacao: observation })
         .eq('id', exercise.id);
 
-      if (error) throw error;
-      
+      if (currentError) {
+        console.error('Erro ao salvar observação:', currentError);
+        toast({
+          title: "Erro ao salvar observação",
+          description: currentError.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Get current exercise and workout info to replicate observation to future exercises
+      const { data: currentExercise, error: exerciseError } = await supabase
+        .from('exercicios_treino_usuario')
+        .select(`
+          exercicio_original_id,
+          treino_usuario_id,
+          treinos_usuario!inner(programa_usuario_id)
+        `)
+        .eq('id', exercise.id)
+        .single();
+
+      if (exerciseError || !currentExercise) {
+        console.error('Erro ao buscar dados do exercício:', exerciseError);
+        toast({
+          title: "Observação salva",
+          description: "Observação salva no exercício atual."
+        });
+        setShowObservationInput(false);
+        return;
+      }
+
+      // Replicate observation to all future exercises of the same type in the same program
+      if (currentExercise.exercicio_original_id) {
+        // Get all workout IDs for the same program
+        const { data: workoutIds, error: workoutError } = await supabase
+          .from('treinos_usuario')
+          .select('id')
+          .eq('programa_usuario_id', (currentExercise.treinos_usuario as any).programa_usuario_id);
+
+        if (workoutError) {
+          console.error('Erro ao buscar treinos do programa:', workoutError);
+          toast({
+            title: "Observação salva",
+            description: "Observação salva no exercício atual."
+          });
+        } else {
+          const workoutIdList = workoutIds.map(w => w.id);
+          
+          const { error: replicationError } = await supabase
+            .from('exercicios_treino_usuario')
+            .update({ observacao: observation })
+            .eq('exercicio_original_id', currentExercise.exercicio_original_id)
+            .eq('concluido', false)
+            .in('treino_usuario_id', workoutIdList);
+
+          if (replicationError) {
+            console.error('Erro ao replicar observação:', replicationError);
+            toast({
+              title: "Observação salva",
+              description: "Observação salva no exercício atual."
+            });
+          } else {
+            toast({
+              title: "Observação salva",
+              description: "Observação salva e replicada para exercícios futuros!"
+            });
+          }
+        }
+      } else {
+        toast({
+          title: "Observação salva",
+          description: "Sua observação foi registrada com sucesso."
+        });
+      }
+
       setShowObservationInput(false);
-      toast({
-        title: "Observação salva",
-        description: "Sua observação foi registrada com sucesso."
-      });
     } catch (error: any) {
       toast({
         title: "Erro ao salvar observação",
@@ -239,26 +309,66 @@ export const useExerciseActions = (
     }
   };
 
-  const replaceExerciseThisWorkout = async () => {
-    // This will be handled by the parent component via dialog
-    if ((window as any).openExerciseSubstitution) {
-      (window as any).openExerciseSubstitution('replace-this');
-    }
-  };
 
-  const replaceExerciseAllWorkouts = async () => {
-    // This will be handled by the parent component via dialog
-    if ((window as any).openExerciseSubstitution) {
-      (window as any).openExerciseSubstitution('replace-all');
-    }
-  };
+  const addNote = async (noteText: string, setShowNoteInput: React.Dispatch<React.SetStateAction<boolean>>) => {
+    try {
+      // Find the first completed series for this exercise to attach the note
+      const { data: completedSeries, error: seriesError } = await supabase
+        .from('series_exercicio_usuario')
+        .select('id')
+        .eq('exercicio_usuario_id', exercise.id)
+        .eq('concluida', true)
+        .order('numero_serie', { ascending: true })
+        .limit(1);
 
-  const addNote = async (setShowNoteInput: React.Dispatch<React.SetStateAction<boolean>>) => {
-    setShowNoteInput(false);
-    toast({
-      title: "Nota adicionada",
-      description: "Sua anotação foi salva."
-    });
+      if (seriesError) {
+        console.error('Erro ao buscar séries:', seriesError);
+        toast({
+          title: "Erro ao salvar nota",
+          description: seriesError.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!completedSeries || completedSeries.length === 0) {
+        toast({
+          title: "Erro ao salvar nota",
+          description: "Complete pelo menos uma série antes de adicionar uma nota",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Save note to the first completed series
+      const { error: updateError } = await supabase
+        .from('series_exercicio_usuario')
+        .update({ nota: noteText })
+        .eq('id', completedSeries[0].id);
+
+      if (updateError) {
+        console.error('Erro ao salvar nota:', updateError);
+        toast({
+          title: "Erro ao salvar nota",
+          description: updateError.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "Nota salva",
+        description: "Sua anotação foi salva com sucesso."
+      });
+      setShowNoteInput(false);
+    } catch (error: any) {
+      console.error('Erro ao salvar nota:', error);
+      toast({
+        title: "Erro ao salvar nota",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   };
 
   return {

@@ -15,7 +15,7 @@ interface ExerciseSetsProps {
   setShowNoteInput: (show: boolean) => void;
   exerciseNote: string;
   setExerciseNote: (note: string) => void;
-  addNote: () => void;
+  addNote: (noteText: string) => void;
   handleExerciseComplete: () => void;
   allSetsCompleted: boolean;
   exerciseConcluido: boolean;
@@ -77,12 +77,17 @@ export function ExerciseSets({
 
       {previousSeries.length > 0 && <div className="mb-4 p-3 rounded-md bg-slate-600">
           <h4 className="text-sm font-medium mb-2">Histórico recente:</h4>
-          <div className="space-y-2">
+           <div className="space-y-2">
             {previousSeries.map((workoutData, idx) => <div key={idx} className="space-y-1">
                 <p className="text-sm font-medium">{workoutData.date}:</p>
                 {workoutData.allSeries.map(series => <p key={series.number} className="text-sm text-muted-foreground ml-2">
                     {series.number} - <span className="font-medium">{series.weight}kg</span> x {series.reps} reps
                   </p>)}
+                {workoutData.nota && (
+                  <p className="text-sm text-muted-foreground ml-2 italic">
+                    Nota: {workoutData.nota}
+                  </p>
+                )}
               </div>)}
           </div>
         </div>}
@@ -128,7 +133,12 @@ export function ExerciseSets({
               <Button variant="outline" size="sm" onClick={() => setShowNoteInput(false)}>
                 Cancelar
               </Button>
-              <Button size="sm" onClick={addNote}>
+              <Button size="sm" onClick={() => {
+                if (exerciseNote.trim()) {
+                  addNote(exerciseNote.trim());
+                  setExerciseNote('');
+                }
+              }}>
                 Salvar nota
               </Button>
             </div>
