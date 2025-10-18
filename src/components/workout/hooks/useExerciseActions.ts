@@ -110,8 +110,21 @@ export const useExerciseActions = (
     try {
       await onExerciseComplete(exercise.id, true);
 
-      // Check if this is the first week and handle baseline data only
-      const isFirstWeek = await checkIsFirstWeek();
+      // DUPLA CHECAGEM: Check if this is the first week
+      // Force first week if peso or reps_programadas are null (e.g., after exercise substitution)
+      const { data: exerciseData } = await supabase
+        .from('exercicios_treino_usuario')
+        .select('peso, reps_programadas')
+        .eq('id', exercise.id)
+        .single();
+      
+      const isFirstWeek = (exerciseData?.peso === null || exerciseData?.reps_programadas === null)
+        ? true
+        : await checkIsFirstWeek();
+      
+      if (exerciseData?.peso === null || exerciseData?.reps_programadas === null) {
+        console.log(`DUPLA CHECAGEM: Null data detected for ${exercise.nome} - forcing first week treatment`);
+      }
       if (isFirstWeek) {
         console.log(`First week detected for ${exercise.nome}, saving baseline data`);
         
