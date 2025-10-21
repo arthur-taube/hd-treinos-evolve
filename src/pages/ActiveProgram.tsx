@@ -267,7 +267,7 @@ export default function ActiveProgram() {
                     )}
                     <Card 
                       className={`p-4 hover:bg-muted/10 transition-colors cursor-pointer ${
-                        treino.concluido ? "border-green-200 bg-green-50/30 opacity-80" : "border-primary/20"
+                        treino.concluido ? "border-green-400 bg-green-900/30 opacity-80" : "border-primary/20"
                       }`}
                       onClick={() => navigateToWorkout(treino.id)}
                     >
