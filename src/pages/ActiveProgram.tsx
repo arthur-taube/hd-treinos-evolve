@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -98,12 +98,13 @@ export default function ActiveProgram() {
 
         setProgramaOriginal(programaOriginalData);
 
-        // Buscar treinos do usuário - ordem cronológica
+        // Buscar treinos do usuário - ordem cronológica estável
         const { data: treinosData, error: treinosError } = await supabase
           .from('treinos_usuario')
           .select('*')
           .eq('programa_usuario_id', programaUsuarioData.id)
-          .order('ordem_semana', { ascending: true });
+          .order('ordem_semana', { ascending: true })
+          .order('created_at', { ascending: true });
 
         if (treinosError) throw treinosError;
 
@@ -242,38 +243,50 @@ export default function ActiveProgram() {
             </div>
           </div>
 
-          {/* Lista de treinos - ordem cronológica com nova nomenclatura */}
+          {/* Lista de treinos - ordem cronológica em coluna única */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Treinos</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="flex flex-col gap-4 max-w-2xl mx-auto">
               {treinos.map((treino, index) => {
                 const weekNumber = getWeekNumber(index, programaOriginal.frequencia_semanal);
+                const prevWeekNumber = index > 0 ? getWeekNumber(index - 1, programaOriginal.frequencia_semanal) : 0;
+                const isNewWeek = weekNumber !== prevWeekNumber;
                 const displayName = getTreinoDisplayName(treino, index);
                 
                 return (
-                  <Card 
-                    key={treino.id} 
-                    className={`p-4 hover:bg-muted/10 transition-colors cursor-pointer ${
-                      treino.concluido ? "border-green-200 bg-green-50/50" : ""
-                    }`}
-                    onClick={() => navigateToWorkout(treino.id)}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-medium">{displayName}</h4>
-                        <p className="text-sm text-muted-foreground">Semana {weekNumber}</p>
-                      </div>
-                      {treino.concluido && (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                      )}
-                    </div>
-                    {treino.concluido && treino.data_concluido && (
-                      <div className="mt-2 text-xs text-muted-foreground">
-                        Concluído em: {formatDate(treino.data_concluido)}
+                  <Fragment key={treino.id}>
+                    {isNewWeek && (
+                      <div className="flex items-center gap-2 mt-4 mb-2 first:mt-0">
+                        <div className="h-px flex-1 bg-border"></div>
+                        <span className="text-sm font-semibold text-muted-foreground px-2">
+                          Semana {weekNumber}
+                        </span>
+                        <div className="h-px flex-1 bg-border"></div>
                       </div>
                     )}
-                  </Card>
+                    <Card 
+                      className={`p-4 hover:bg-muted/10 transition-colors cursor-pointer ${
+                        treino.concluido ? "border-green-200 bg-green-50/30 opacity-80" : "border-primary/20"
+                      }`}
+                      onClick={() => navigateToWorkout(treino.id)}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-medium">{displayName}</h4>
+                          <p className="text-sm text-muted-foreground">Semana {weekNumber}</p>
+                        </div>
+                        {treino.concluido && (
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                        )}
+                      </div>
+                      {treino.concluido && treino.data_concluido && (
+                        <div className="mt-2 text-xs text-muted-foreground">
+                          Concluído em: {formatDate(treino.data_concluido)}
+                        </div>
+                      )}
+                    </Card>
+                  </Fragment>
                 );
               })}
             </div>
