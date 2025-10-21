@@ -204,25 +204,80 @@ export function ExerciseSubstitutionDialog({
     }
   };
 
-  const handleConfirm = () => {
+  const handleCreateCustomExerciseInline = async (): Promise<string | null> => {
+    if (!customExerciseName.trim()) return null;
+
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      
+      const { data, error } = await supabase
+        .from('exercicios_custom')
+        .insert({
+          nome: customExerciseName.trim(),
+          grupo_muscular: selectedMuscleGroup,
+          user_id: user.user?.id
+        })
+        .select()
+        .single();
+
+      if (error) {
+        // Se erro for de duplicata (23505), buscar o exercício existente
+        if (error.code === '23505') {
+          const { data: existing } = await supabase
+            .from('exercicios_custom')
+            .select('id')
+            .eq('nome', customExerciseName.trim())
+            .eq('grupo_muscular', selectedMuscleGroup)
+            .eq('user_id', user.user?.id)
+            .maybeSingle();
+          
+          if (existing) {
+            console.log('Exercício custom já existe, usando ID existente:', existing.id);
+            return existing.id;
+          }
+        }
+        throw error;
+      }
+
+      return data.id;
+    } catch (error) {
+      console.error('Erro ao criar exercício custom:', error);
+      return null;
+    }
+  };
+
+  const handleConfirm = async () => {
     let exerciseId = selectedExercise;
     let exerciseName = "";
     let isCustom = false;
 
+    // Se está criando custom, criar ANTES de confirmar
     if (isCreatingCustom && customExerciseName.trim()) {
-      // Handle custom exercise creation inline
+      if (!selectedExercise || selectedExercise === "create-new") {
+        // Criar o exercício custom primeiro
+        const customId = await handleCreateCustomExerciseInline();
+        if (!customId) {
+          toast({
+            title: "Erro ao criar exercício",
+            description: "Não foi possível criar o exercício personalizado.",
+            variant: "destructive"
+          });
+          return;
+        }
+        exerciseId = customId;
+      }
       exerciseName = customExerciseName.trim();
       isCustom = true;
-      exerciseId = ""; // Will be created on confirm
-    } else if (selectedExercise) {
+    } else if (selectedExercise && selectedExercise !== "create-new") {
       const exercise = availableExercises.find(ex => ex.id === selectedExercise);
       if (exercise) {
+        exerciseId = exercise.id;
         exerciseName = exercise.nome;
         isCustom = exercise.is_custom;
       }
     }
 
-    if (!exerciseName) {
+    if (!exerciseName || !exerciseId) {
       toast({
         title: "Seleção obrigatória",
         description: "Selecione um exercício ou crie um novo.",

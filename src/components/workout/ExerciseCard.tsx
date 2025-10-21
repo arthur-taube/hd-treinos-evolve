@@ -130,14 +130,10 @@ export function ExerciseCard({
   }) => {
     try {
       if (substitutionType === 'replace-this') {
-        // Apply temporary substitution
-        const exerciseIdToUse = data.isCustom ? 
-          (await createCustomExercise(data.exerciseName, data.muscleGroup)) : 
-          data.exerciseId;
-
+        // Apply temporary substitution - ID já vem criado do diálogo
         await supabase.rpc('apply_temporary_substitution', {
           p_exercise_id: exercise.id,
-          p_substitute_exercise_id: exerciseIdToUse,
+          p_substitute_exercise_id: data.exerciseId,
           p_substitute_name: data.exerciseName,
           p_is_custom_substitute: data.isCustom
         });
@@ -147,14 +143,10 @@ export function ExerciseCard({
           description: `${data.exerciseName} substituirá ${exercise.nome} apenas neste treino.`
         });
       } else {
-        // Replace in all future workouts
-        const exerciseIdToUse = data.isCustom ? 
-          (await createCustomExercise(data.exerciseName, data.muscleGroup)) : 
-          data.exerciseId;
-
+        // Replace in all future workouts - ID já vem criado do diálogo
         await supabase.rpc('replace_exercise_future_instances', {
           p_current_exercise_id: exercise.id,
-          p_new_exercise_id: exerciseIdToUse,
+          p_new_exercise_id: data.exerciseId,
           p_new_exercise_name: data.exerciseName,
           p_new_series: data.series,
           p_new_reps: data.reps,
@@ -177,21 +169,6 @@ export function ExerciseCard({
         variant: "destructive"
       });
     }
-  };
-
-  const createCustomExercise = async (name: string, muscleGroup: string): Promise<string> => {
-    const { data, error } = await supabase
-      .from('exercicios_custom')
-      .insert({
-        nome: name,
-        grupo_muscular: muscleGroup,
-        user_id: (await supabase.auth.getUser()).data.user?.id
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data.id;
   };
 
   return (
