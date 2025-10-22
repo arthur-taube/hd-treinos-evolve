@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { PlusCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { customExerciseNameSchema } from "@/lib/validation";
 
 interface Exercise {
   id: string;
@@ -160,10 +161,12 @@ export function ExerciseSubstitutionDialog({
   };
 
   const handleCreateCustomExercise = async () => {
-    if (!customExerciseName.trim()) {
+    // Validate exercise name
+    const validation = customExerciseNameSchema.safeParse(customExerciseName);
+    if (!validation.success) {
       toast({
-        title: "Nome obrigatório",
-        description: "Digite o nome do exercício personalizado.",
+        title: "Nome inválido",
+        description: validation.error.errors[0].message,
         variant: "destructive"
       });
       return;
@@ -174,7 +177,7 @@ export function ExerciseSubstitutionDialog({
       const { data, error } = await supabase
         .from('exercicios_custom')
         .insert({
-          nome: customExerciseName.trim(),
+          nome: validation.data,
           grupo_muscular: selectedMuscleGroup,
           user_id: (await supabase.auth.getUser()).data.user?.id
         })
@@ -205,7 +208,16 @@ export function ExerciseSubstitutionDialog({
   };
 
   const handleCreateCustomExerciseInline = async (): Promise<string | null> => {
-    if (!customExerciseName.trim()) return null;
+    // Validate exercise name
+    const validation = customExerciseNameSchema.safeParse(customExerciseName);
+    if (!validation.success) {
+      toast({
+        title: "Nome inválido",
+        description: validation.error.errors[0].message,
+        variant: "destructive"
+      });
+      return null;
+    }
 
     try {
       const { data: user } = await supabase.auth.getUser();
@@ -213,7 +225,7 @@ export function ExerciseSubstitutionDialog({
       const { data, error } = await supabase
         .from('exercicios_custom')
         .insert({
-          nome: customExerciseName.trim(),
+          nome: validation.data,
           grupo_muscular: selectedMuscleGroup,
           user_id: user.user?.id
         })

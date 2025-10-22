@@ -24,7 +24,12 @@ const Programs = () => {
         const { data: { user } } = await supabase.auth.getUser();
         
         if (user) {
-          setIsDeveloper(user.email === "arthurtaube.com.br@gmail.com");
+          // Check if user has admin role using the secure has_role function
+          const { data: roleData } = await supabase.rpc('has_role', {
+            _user_id: user.id,
+            _role: 'admin'
+          });
+          setIsDeveloper(roleData === true);
           
           // Buscar programa ativo do usuário
           const { data: programaUsuarioAtivo, error: activeProgramError } = await supabase
