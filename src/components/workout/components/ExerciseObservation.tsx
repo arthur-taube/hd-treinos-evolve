@@ -38,7 +38,7 @@ export function ExerciseObservation({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     // Prevent typing beyond limit
-    if (newValue.length <= 1000) {
+    if (newValue.length <= 45) {
       setObservation(newValue);
     }
   };
@@ -50,10 +50,10 @@ export function ExerciseObservation({
           value={observation} 
           onChange={handleChange}
           placeholder="Digite sua observação sobre o exercício" 
-          maxLength={1000}
+          maxLength={45}
         />
         <span className="absolute right-2 bottom-[-20px] text-xs text-muted-foreground">
-          {observation.length}/1000
+          {observation.length}/45
         </span>
       </div>
       <div className="flex justify-end gap-2 mt-6">

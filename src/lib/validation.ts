@@ -12,15 +12,15 @@ export const customExerciseNameSchema = z.string()
   .max(45, "Nome do exercício deve ter no máximo 45 caracteres")
   .regex(/^[a-zA-Z0-9\sáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\-_.()]+$/, "Nome contém caracteres inválidos");
 
-// Exercise observation validation (max 1000 characters as per database constraint)
+// Exercise observation validation (max 45 characters as per database constraint)
 export const exerciseObservationSchema = z.string()
-  .max(1000, "Observação deve ter no máximo 1000 caracteres")
+  .max(45, "Observação deve ter no máximo 45 caracteres")
   .optional()
   .nullable();
 
 // Exercise note validation
 export const exerciseNoteSchema = z.string()
-  .max(500, "Nota deve ter no máximo 500 caracteres")
+  .max(100, "Nota deve ter no máximo 100 caracteres")
   .optional()
   .nullable();
 
@@ -50,7 +50,7 @@ export const repsRangeSchema = z.string()
     return min > 0 && max > min && max <= 100;
   }, "Faixa de repetições inválida");
 
-// Weight validation
+// Weight validation (allows negative values for exercises like gravitron)
 export const weightSchema = z.number()
-  .min(0, "Peso não pode ser negativo")
+  .min(-100, "Peso deve ser no mínimo -100 kg")
   .max(1000, "Peso deve ser no máximo 1000 kg");
