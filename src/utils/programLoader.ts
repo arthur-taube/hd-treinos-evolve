@@ -49,7 +49,7 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       .select('*')
       .eq('programa_id', programId)
       .eq('ordem_semana', 1)
-      .order('ordem_semana');
+      .order('nome'); // Ordenar por nome para garantir ordem consistente (A, B, C, etc.)
 
     if (treinosError) {
       console.error('Erro ao carregar treinos:', treinosError);
@@ -103,11 +103,19 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       // Filtrar treinos da semana 1 para este mesociclo
       const treinosMesociclo = treinos?.filter(t => t.mesociclo_id === mesociclo.id) || [];
       
+      console.log(`Mesociclo ${mesociclo.numero} - Treinos encontrados:`, treinosMesociclo.map(t => ({ 
+        id: t.id, 
+        nome: t.nome, 
+        dia_semana: t.dia_semana 
+      })));
+      
       treinosMesociclo.forEach((treino, index) => {
-        // Usar o índice como chave do dia ao invés de dia_semana
-        const dayKey = `day${index + 1}`;
+        // Usar dia_semana como chave (day1, day2, etc.)
+        const dayKey = treino.dia_semana;
         
         const exerciciosTreino = exercicios?.filter(e => e.treino_id === treino.id) || [];
+        
+        console.log(`Treino ${treino.nome} (${dayKey}) - Exercícios:`, exerciciosTreino.length);
         
         if (!exercisesPerDay[mesocicloKey][dayKey]) {
           exercisesPerDay[mesocicloKey][dayKey] = [];

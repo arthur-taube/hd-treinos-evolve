@@ -2,8 +2,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { programNameSchema, programDescriptionSchema } from "@/lib/validation";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,6 +64,10 @@ export default function ProgramExercisesForm({
   const [isSaving, setIsSaving] = useState(false);
   const [exercisesPerDay, setExercisesPerDay] = useState<Record<string, Record<string, Exercise[]>>>(initialExercisesPerDay);
   const [dayTitles, setDayTitles] = useState<Record<string, string>>({});
+  
+  // Estados para edição de nome e descrição
+  const [editableProgramName, setEditableProgramName] = useState(programName);
+  const [editableDescription, setEditableDescription] = useState(programData.description || "");
 
   console.log('ProgramExercisesForm - Props:', {
     programName,
@@ -171,12 +179,20 @@ export default function ProgramExercisesForm({
   };
 
   const createNewProgram = async (userId: string) => {
+    // Validar nome e descrição
+    try {
+      programNameSchema.parse(editableProgramName);
+      programDescriptionSchema.parse(editableDescription);
+    } catch (error: any) {
+      throw new Error(error.errors?.[0]?.message || "Erro de validação");
+    }
+    
     // 1. Criar o programa
     const { data: programa, error: programaError } = await supabase
       .from('programas')
       .insert({
-        nome: programName,
-        descricao: programData.description || `Programa de treino ${programLevel}`,
+        nome: editableProgramName,
+        descricao: editableDescription || `Programa de treino ${programLevel}`,
         nivel: programLevel,
         objetivo: programData.goals,
         frequencia_semanal: weeklyFrequency,
@@ -195,12 +211,20 @@ export default function ProgramExercisesForm({
   };
 
   const updateExistingProgram = async (programId: string) => {
+    // Validar nome e descrição
+    try {
+      programNameSchema.parse(editableProgramName);
+      programDescriptionSchema.parse(editableDescription);
+    } catch (error: any) {
+      throw new Error(error.errors?.[0]?.message || "Erro de validação");
+    }
+    
     // 1. Atualizar dados do programa
     const { error: programaError } = await supabase
       .from('programas')
       .update({
-        nome: programName,
-        descricao: programData.description || `Programa de treino ${programLevel}`,
+        nome: editableProgramName,
+        descricao: editableDescription || `Programa de treino ${programLevel}`,
         nivel: programLevel,
         objetivo: programData.goals,
         frequencia_semanal: weeklyFrequency,
@@ -392,6 +416,54 @@ export default function ProgramExercisesForm({
           </div>
         </div>
       </div>
+
+      {isEditing && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Editar Informações do Programa</CardTitle>
+            <CardDescription>
+              Atualize o nome e a descrição do programa
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="program-name" className="text-sm font-medium">
+                Nome do Programa
+              </label>
+              <Input
+                id="program-name"
+                value={editableProgramName}
+                onChange={(e) => setEditableProgramName(e.target.value)}
+                placeholder="Ex: Hipertrofia Avançada"
+                maxLength={100}
+              />
+              <p className="text-xs text-muted-foreground">
+                {editableProgramName.length}/100 caracteres
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="program-description" className="text-sm font-medium">
+                Descrição
+              </label>
+              <div className="relative">
+                <Textarea
+                  id="program-description"
+                  value={editableDescription}
+                  onChange={(e) => setEditableDescription(e.target.value)}
+                  placeholder="Descreva o programa de treino..."
+                  maxLength={400}
+                  className="resize-none"
+                  rows={3}
+                />
+                <span className="absolute right-2 bottom-2 text-xs text-muted-foreground">
+                  {editableDescription.length}/400
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <WeeklyScheduleForm 
         weeklyFrequency={weeklyFrequency} 
