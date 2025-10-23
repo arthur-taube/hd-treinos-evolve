@@ -30,6 +30,12 @@ export const programNameSchema = z.string()
   .min(1, "Nome do programa é obrigatório")
   .max(100, "Nome do programa deve ter no máximo 100 caracteres");
 
+// Program description validation
+export const programDescriptionSchema = z.string()
+  .max(400, "Descrição deve ter no máximo 400 caracteres")
+  .optional()
+  .nullable();
+
 // Exercise name validation for user exercises (max 100 characters as per database constraint)
 export const exerciseNameSchema = z.string()
   .trim()

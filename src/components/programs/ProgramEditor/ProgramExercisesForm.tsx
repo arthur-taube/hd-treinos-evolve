@@ -25,6 +25,7 @@ interface ProgramExercisesFormProps {
   weeklyFrequency: number;
   mesocycles: number;
   programData: {
+    description?: string;
     duration: string;
     goals: string[];
     split: string;
@@ -175,7 +176,7 @@ export default function ProgramExercisesForm({
       .from('programas')
       .insert({
         nome: programName,
-        descricao: `Programa de treino ${programLevel}`,
+        descricao: programData.description || `Programa de treino ${programLevel}`,
         nivel: programLevel,
         objetivo: programData.goals,
         frequencia_semanal: weeklyFrequency,
@@ -199,7 +200,7 @@ export default function ProgramExercisesForm({
       .from('programas')
       .update({
         nome: programName,
-        descricao: `Programa de treino ${programLevel}`,
+        descricao: programData.description || `Programa de treino ${programLevel}`,
         nivel: programLevel,
         objetivo: programData.goals,
         frequencia_semanal: weeklyFrequency,

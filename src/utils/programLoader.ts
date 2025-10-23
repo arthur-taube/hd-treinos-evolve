@@ -7,6 +7,7 @@ export interface LoadedProgramData {
   weeklyFrequency: number;
   mesocycles: number;
   programData: {
+    description?: string;
     duration: string;
     goals: string[];
     split: string;
@@ -139,6 +140,7 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       weeklyFrequency: programa.frequencia_semanal,
       mesocycles: mesociclos?.length || 0,
       programData: {
+        description: programa.descricao,
         duration: `${programa.duracao_semanas} semanas`,
         goals: programa.objetivo,
         split: programa.split

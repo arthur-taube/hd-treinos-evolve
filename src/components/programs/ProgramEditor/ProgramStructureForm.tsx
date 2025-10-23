@@ -13,6 +13,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -35,6 +36,7 @@ import {
 
 const formSchema = z.object({
   name: z.string().min(1, "Nome do programa é obrigatório"),
+  description: z.string().max(400, "Descrição deve ter no máximo 400 caracteres").optional(),
   level: z.enum(["iniciante", "intermediario", "avancado"]),
   mesocycles: z.number().min(1, "Mínimo de 1 mesociclo"),
   duration: z.string().min(1, "Duração é obrigatória"),
@@ -73,6 +75,7 @@ export default function ProgramStructureForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
+      description: "",
       level: "iniciante",
       mesocycles: 1,
       duration: "",
@@ -104,6 +107,7 @@ export default function ProgramStructureForm() {
           weeklyFrequency={form.getValues().weeklyFrequency}
           mesocycles={form.getValues().mesocycles}
           programData={{
+            description: form.getValues().description,
             duration: form.getValues().duration,
             goals: form.getValues().goals,
             split: form.getValues().split,
@@ -125,6 +129,31 @@ export default function ProgramStructureForm() {
                 <FormLabel>Nome do Programa</FormLabel>
                 <FormControl>
                   <Input placeholder="Ex: Hipertrofia Avançada" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Descrição</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Textarea 
+                      placeholder="Descreva o programa de treino..." 
+                      maxLength={400}
+                      className="resize-none"
+                      rows={3}
+                      {...field} 
+                    />
+                    <span className="absolute right-2 bottom-2 text-xs text-muted-foreground">
+                      {field.value?.length || 0}/400
+                    </span>
+                  </div>
                 </FormControl>
                 <FormMessage />
               </FormItem>
