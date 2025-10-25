@@ -15,6 +15,7 @@ export interface LoadedProgramData {
   exercisesPerDay: Record<string, Record<string, any[]>>;
   savedSchedules: string[][];
   mesocycleDurations: number[];
+  dayTitles: Record<string, string>;
 }
 
 export const loadExistingProgram = async (programId: string): Promise<LoadedProgramData | null> => {
@@ -95,6 +96,7 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
 
     // Organizar exercícios por mesociclo e treino (apenas semana 1)
     const exercisesPerDay: Record<string, Record<string, any[]>> = {};
+    const dayTitles: Record<string, string> = {};
 
     mesociclos?.forEach(mesociclo => {
       const mesocicloKey = `mesocycle-${mesociclo.numero}`;
@@ -112,6 +114,14 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       treinosMesociclo.forEach((treino, index) => {
         // Usar dia_semana como chave (day1, day2, etc.)
         const dayKey = treino.dia_semana;
+        
+        // Construir o título do dia combinando nome e nome_personalizado
+        if (mesociclo.numero === 1 && !dayTitles[dayKey]) {
+          const titulo = treino.nome_personalizado 
+            ? `${treino.nome} - ${treino.nome_personalizado}`
+            : treino.nome;
+          dayTitles[dayKey] = titulo;
+        }
         
         const exerciciosTreino = exercicios?.filter(e => e.treino_id === treino.id) || [];
         
@@ -138,6 +148,7 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
     });
 
     console.log('Exercícios organizados (apenas semana 1):', exercisesPerDay);
+    console.log('Títulos dos dias carregados:', dayTitles);
 
     // Extrair durações dos mesociclos
     const mesocycleDurations = mesociclos?.map(m => m.duracao_semanas) || [];
@@ -155,7 +166,8 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       },
       exercisesPerDay,
       savedSchedules,
-      mesocycleDurations
+      mesocycleDurations,
+      dayTitles
     };
   } catch (error) {
     console.error('Erro ao carregar programa para edição:', error);

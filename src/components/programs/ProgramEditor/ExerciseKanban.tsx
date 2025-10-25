@@ -13,6 +13,7 @@ import { getDayRows } from "./hooks/useScheduleHelpers";
 interface ExtendedExerciseKanbanProps extends ExerciseKanbanProps {
   initialExercises?: Record<string, Exercise[]>;
   onDayTitlesUpdate?: (dayTitles: Record<string, string>) => void;
+  initialDayTitles?: Record<string, string>;
 }
 
 export default function ExerciseKanban({
@@ -25,6 +26,7 @@ export default function ExerciseKanban({
   onExercisesUpdate,
   onDayTitlesUpdate,
   initialExercises = {},
+  initialDayTitles = {},
 }: ExtendedExerciseKanbanProps) {
   const schedule =
     daysSchedule.length > 0
@@ -59,16 +61,16 @@ export default function ExerciseKanban({
     return JSON.stringify(exercisesData);
   }, []);
 
-  // Inicializar títulos IMEDIATAMENTE com numeração sequencial
+  // Inicializar títulos com dados do banco ou numeração sequencial
   useEffect(() => {
     schedule.forEach((day, index) => {
-      const dayNumber = index + 1;
-      // Garantir que sempre há um título válido
+      // Usar título do banco de dados se disponível, senão usar numeração
       if (!dayTitles[day]) {
-        updateDayTitle(day, dayNumber.toString());
+        const titulo = initialDayTitles[day] || (index + 1).toString();
+        updateDayTitle(day, titulo);
       }
     });
-  }, [schedule, updateDayTitle]); // Removido dayTitles da dependência para evitar loop
+  }, [schedule, updateDayTitle, initialDayTitles]); // Removido dayTitles da dependência para evitar loop
 
   // Enviar dayTitles para o componente pai sempre que mudarem
   useEffect(() => {

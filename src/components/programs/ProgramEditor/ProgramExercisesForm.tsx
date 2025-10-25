@@ -37,6 +37,7 @@ interface ProgramExercisesFormProps {
   initialExercisesPerDay?: Record<string, Record<string, Exercise[]>>;
   initialSavedSchedules?: string[][];
   initialMesocycleDurations?: number[];
+  initialDayTitles?: Record<string, string>;
   isEditing?: boolean;
   programId?: string;
 }
@@ -50,6 +51,7 @@ export default function ProgramExercisesForm({
   initialExercisesPerDay = {},
   initialSavedSchedules = [],
   initialMesocycleDurations = [],
+  initialDayTitles = {},
   isEditing = false,
   programId
 }: ProgramExercisesFormProps) {
@@ -493,6 +495,7 @@ export default function ProgramExercisesForm({
         onExercisesUpdate={handleExercisesUpdate}
         onDayTitlesUpdate={handleDayTitlesUpdate}
         initialExercises={exercisesPerDay[`mesocycle-${currentMesocycle}`]}
+        initialDayTitles={initialDayTitles}
       />
 
       <div className="flex justify-between pt-6">
