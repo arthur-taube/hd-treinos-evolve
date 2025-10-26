@@ -5,7 +5,11 @@ import type { Exercise } from "../types";
 /**
  * Handles exercises per day and day titles state, plus updaters.
  */
-export function useExerciseState(schedule: string[], initialExercises?: Record<string, Exercise[]>) {
+export function useExerciseState(
+  schedule: string[], 
+  initialExercises?: Record<string, Exercise[]>,
+  initialDayTitles?: Record<string, string>
+) {
   const [exercises, setExercises] = useState<Record<string, Exercise[]>>(() => {
     const initialExercisesState: Record<string, Exercise[]> = {};
     schedule.forEach((day) => {
@@ -17,8 +21,8 @@ export function useExerciseState(schedule: string[], initialExercises?: Record<s
   const [dayTitles, setDayTitles] = useState<Record<string, string>>(() => {
     const initialTitles: Record<string, string> = {};
     schedule.forEach((day, index) => {
-      // Garantir que sempre há um título válido inicialmente
-      initialTitles[day] = `${index + 1}`;
+      // Usar título inicial se fornecido, senão usar numeração sequencial
+      initialTitles[day] = initialDayTitles?.[day] || (index + 1).toString();
     });
     return initialTitles;
   });

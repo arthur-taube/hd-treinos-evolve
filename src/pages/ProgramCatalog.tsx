@@ -147,8 +147,10 @@ export default function ProgramCatalog() {
               programa_usuario_id: programaUsuario.id,
               treino_original_id: treinoOriginal.id,
               nome: treinoOriginal.nome,
-              ordem_semana: treinoOriginal.ordem_semana
-            })
+              ordem_semana: treinoOriginal.ordem_semana,
+              ordem_dia: treinoOriginal.ordem_dia,
+              dia_semana: null
+            } as any)
             .select()
             .single();
 
@@ -277,9 +279,10 @@ export default function ProgramCatalog() {
                 programa_id: newProgram.id,
                 mesociclo_id: newMesocicloId,
                 nome: treino.nome,
-                dia_semana: treino.dia_semana,
+                nome_personalizado: treino.nome_personalizado,
+                ordem_dia: treino.ordem_dia,
                 ordem_semana: treino.ordem_semana
-              })
+              } as any)
               .select()
               .single();
               

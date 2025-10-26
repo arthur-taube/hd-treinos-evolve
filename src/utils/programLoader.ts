@@ -15,6 +15,7 @@ export interface LoadedProgramData {
   exercisesPerDay: Record<string, Record<string, any[]>>;
   savedSchedules: string[][];
   mesocycleDurations: number[];
+  dayTitles: Record<string, string>;
 }
 
 export const loadExistingProgram = async (programId: string): Promise<LoadedProgramData | null> => {
@@ -49,7 +50,7 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       .select('*')
       .eq('programa_id', programId)
       .eq('ordem_semana', 1)
-      .order('nome'); // Ordenar por nome para garantir ordem consistente (A, B, C, etc.)
+      .order('ordem_dia'); // Ordenar por ordem_dia
 
     if (treinosError) {
       console.error('Erro ao carregar treinos:', treinosError);
@@ -106,12 +107,12 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       console.log(`Mesociclo ${mesociclo.numero} - Treinos encontrados:`, treinosMesociclo.map(t => ({ 
         id: t.id, 
         nome: t.nome, 
-        dia_semana: t.dia_semana 
+        ordem_dia: t.ordem_dia 
       })));
       
-      treinosMesociclo.forEach((treino, index) => {
-        // Usar dia_semana como chave (day1, day2, etc.)
-        const dayKey = treino.dia_semana;
+      treinosMesociclo.forEach((treino) => {
+        // Usar ordem_dia como chave (day1, day2, etc.)
+        const dayKey = `day${treino.ordem_dia}`;
         
         const exerciciosTreino = exercicios?.filter(e => e.treino_id === treino.id) || [];
         
@@ -142,6 +143,20 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
     // Extrair durações dos mesociclos
     const mesocycleDurations = mesociclos?.map(m => m.duracao_semanas) || [];
 
+    // Criar dayTitles mapeando ordem_dia para título completo
+    const dayTitles: Record<string, string> = {};
+    const treinosFirstMeso = treinos?.filter(t => t.mesociclo_id === mesociclos[0]?.id) || [];
+
+    treinosFirstMeso.forEach(treino => {
+      const dayKey = `day${treino.ordem_dia}`;
+      const titulo = treino.nome_personalizado 
+        ? `${treino.nome} - ${treino.nome_personalizado}`
+        : treino.nome;
+      dayTitles[dayKey] = titulo;
+    });
+
+    console.log('📊 dayTitles extraídos:', dayTitles);
+
     return {
       programName: programa.nome,
       programLevel: programa.nivel,
@@ -155,7 +170,8 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       },
       exercisesPerDay,
       savedSchedules,
-      mesocycleDurations
+      mesocycleDurations,
+      dayTitles
     };
   } catch (error) {
     console.error('Erro ao carregar programa para edição:', error);

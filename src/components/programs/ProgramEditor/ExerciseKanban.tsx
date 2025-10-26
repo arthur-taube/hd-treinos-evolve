@@ -13,6 +13,7 @@ import { getDayRows } from "./hooks/useScheduleHelpers";
 interface ExtendedExerciseKanbanProps extends ExerciseKanbanProps {
   initialExercises?: Record<string, Exercise[]>;
   onDayTitlesUpdate?: (dayTitles: Record<string, string>) => void;
+  initialDayTitles?: Record<string, string>;
 }
 
 export default function ExerciseKanban({
@@ -25,6 +26,7 @@ export default function ExerciseKanban({
   onExercisesUpdate,
   onDayTitlesUpdate,
   initialExercises = {},
+  initialDayTitles = {},
 }: ExtendedExerciseKanbanProps) {
   const schedule =
     daysSchedule.length > 0
@@ -42,7 +44,7 @@ export default function ExerciseKanban({
     deleteExercise,
     updateExercise,
     initializeExercises,
-  } = useExerciseState(schedule, initialExercises);
+  } = useExerciseState(schedule, initialExercises, initialDayTitles);
 
   const { onDragEnd } = useExerciseDrag(exercises, setAllExercises);
 

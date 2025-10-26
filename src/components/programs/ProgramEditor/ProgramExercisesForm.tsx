@@ -37,6 +37,7 @@ interface ProgramExercisesFormProps {
   initialExercisesPerDay?: Record<string, Record<string, Exercise[]>>;
   initialSavedSchedules?: string[][];
   initialMesocycleDurations?: number[];
+  initialDayTitles?: Record<string, string>;
   isEditing?: boolean;
   programId?: string;
 }
@@ -50,6 +51,7 @@ export default function ProgramExercisesForm({
   initialExercisesPerDay = {},
   initialSavedSchedules = [],
   initialMesocycleDurations = [],
+  initialDayTitles = {},
   isEditing = false,
   programId
 }: ProgramExercisesFormProps) {
@@ -288,41 +290,42 @@ export default function ProgramExercisesForm({
       const mesocicloKey = `mesocycle-${mesocicloNumero}`;
       const mesocicloExercises = exercisesPerDay[mesocicloKey] || {};
       
-      // Criar treinos para cada dia do cronograma (usando a primeira opção como padrão)
-      if (scheduleOptions.length > 0) {
-        const schedule = scheduleOptions[0]; // Usar primeira opção como padrão
-        
-        // Para cada semana do mesociclo, criar treinos aplicando as alterações do kanban
-        for (let semana = 1; semana <= mesocycleDurations[i]; semana++) {
-          for (let diaIdx = 0; diaIdx < schedule.length; diaIdx++) {
-            const diaSemana = schedule[diaIdx];
-            
-            // Extrair nome e nome personalizado do dayTitles
-            const dayTitle = dayTitles[diaSemana] || `${diaIdx + 1}`;
-            const [nome, nomePersonalizado] = dayTitle.includes(' - ') 
-              ? dayTitle.split(' - ') 
-              : [dayTitle, null];
-            
-            // 3. Criar o treino
-            const { data: treino, error: treinoError } = await supabase
-              .from('treinos')
-              .insert({
-                programa_id: programaId,
-                mesociclo_id: mesociclo.id,
-                nome: nome.trim(), // Salvar apenas o primeiro campo (ex: "A", "1")
-                nome_personalizado: nomePersonalizado?.trim() || null, // Salvar o segundo campo (ex: "Full Body A")
-                dia_semana: diaSemana,
-                ordem_semana: semana
-              } as any)
-              .select()
-              .single();
+      // Criar treinos para cada dia baseado em weeklyFrequency
+      for (let semana = 1; semana <= mesocycleDurations[i]; semana++) {
+        // Criar treinos baseado em weeklyFrequency e ordem numérica
+        for (let diaIndex = 0; diaIndex < weeklyFrequency; diaIndex++) {
+          const dayKey = `day${diaIndex + 1}`; // day1, day2, day3...
+          
+          // Extrair nome e nome_personalizado do dayTitle
+          const dayTitle = dayTitles[dayKey] || `Treino ${String.fromCharCode(65 + diaIndex)}`; // A, B, C...
+          let nome = dayTitle;
+          let nomePersonalizado = null;
+          
+          // Se título tem formato "Treino X - Nome Personalizado"
+          if (dayTitle.includes(' - ')) {
+            [nome, nomePersonalizado] = dayTitle.split(' - ').map(s => s.trim());
+          }
+          
+          // Criar o treino com ordem_dia
+          const { data: treino, error: treinoError } = await supabase
+            .from('treinos')
+            .insert({
+              programa_id: programaId,
+              mesociclo_id: mesociclo.id,
+              nome: nome.trim(),
+              nome_personalizado: nomePersonalizado?.trim() || null,
+              ordem_dia: diaIndex + 1,
+              ordem_semana: semana
+            } as any)
+            .select()
+            .single();
 
-            if (treinoError || !treino) {
-              throw new Error(`Erro ao criar treino ${nome}: ${treinoError?.message}`);
-            }
+          if (treinoError || !treino) {
+            throw new Error(`Erro ao criar treino ${nome}: ${treinoError?.message}`);
+          }
 
-            // 4. Inserir exercícios do treino (aplicar exercícios do kanban para todas as semanas)
-            const exerciciosDia = mesocicloExercises[diaSemana] || [];
+          // Inserir exercícios do treino (aplicar exercícios do kanban)
+          const exerciciosDia = mesocicloExercises[dayKey] || [];
             if (exerciciosDia.length > 0) {
               const exerciciosToInsert = await Promise.all(
                 exerciciosDia.map(async (ex, index) => {
@@ -363,7 +366,6 @@ export default function ProgramExercisesForm({
                 throw new Error(`Erro ao inserir exercícios: ${exerciciosError.message}`);
               }
             }
-          }
         }
       }
     }
@@ -493,6 +495,7 @@ export default function ProgramExercisesForm({
         onExercisesUpdate={handleExercisesUpdate}
         onDayTitlesUpdate={handleDayTitlesUpdate}
         initialExercises={exercisesPerDay[`mesocycle-${currentMesocycle}`]}
+        initialDayTitles={initialDayTitles}
       />
 
       <div className="flex justify-between pt-6">

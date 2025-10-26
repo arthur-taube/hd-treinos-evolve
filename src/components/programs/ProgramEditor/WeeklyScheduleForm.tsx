@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
 import { X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
@@ -32,7 +32,6 @@ export default function WeeklyScheduleForm({
   const [scheduleOptions, setScheduleOptions] = useState<string[][]>([]);
   const [newSchedule, setNewSchedule] = useState<string[]>(Array(weeklyFrequency).fill(""));
   const [isAddingNew, setIsAddingNew] = useState(false);
-  const [selectedDefault, setSelectedDefault] = useState<number>(0);
   const [isInitialized, setIsInitialized] = useState(false);
 
   console.log('WeeklyScheduleForm - Props:', { weeklyFrequency, initialSchedules });
@@ -129,11 +128,6 @@ export default function WeeklyScheduleForm({
 
     const updatedOptions = scheduleOptions.filter((_, i) => i !== index);
     setScheduleOptions(updatedOptions);
-    
-    // Ajustar seleção padrão se necessário
-    if (selectedDefault >= updatedOptions.length) {
-      setSelectedDefault(0);
-    }
 
     toast({
       title: "Cronograma removido",
@@ -179,21 +173,16 @@ export default function WeeklyScheduleForm({
         {/* Opções existentes */}
         {scheduleOptions.length > 0 && (
           <div className="space-y-3">
-            <Label className="text-sm font-medium">Opções configuradas:</Label>
-            <RadioGroup 
-              value={selectedDefault.toString()} 
-              onValueChange={(value) => setSelectedDefault(Number(value))}
-              className="space-y-2"
-            >
+            <Label className="text-sm font-medium">Cronogramas configurados:</Label>
+            <div className="space-y-2">
               {scheduleOptions.map((schedule, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value={index.toString()} id={`schedule-${index}`} />
-                    <Label htmlFor={`schedule-${index}`} className="font-medium">
+                <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+                  <div className="flex flex-col space-y-1">
+                    <span className="font-medium">
                       {generateScheduleName(schedule)}
-                    </Label>
+                    </span>
                     <span className="text-sm text-muted-foreground">
-                      ({schedule.map(day => daysOfWeek.find(d => d.value === day)?.label).join(", ")})
+                      {schedule.map(day => daysOfWeek.find(d => d.value === day)?.label).join(", ")}
                     </span>
                   </div>
                   {scheduleOptions.length > 1 && (
@@ -208,7 +197,7 @@ export default function WeeklyScheduleForm({
                   )}
                 </div>
               ))}
-            </RadioGroup>
+            </div>
           </div>
         )}
 

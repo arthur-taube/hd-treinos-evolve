@@ -647,6 +647,7 @@ export type Database = {
           mesociclo_id: string
           nome: string
           nome_personalizado: string | null
+          ordem_dia: number
           ordem_semana: number
           programa_id: string
         }
@@ -657,6 +658,7 @@ export type Database = {
           mesociclo_id: string
           nome: string
           nome_personalizado?: string | null
+          ordem_dia: number
           ordem_semana: number
           programa_id: string
         }
@@ -667,6 +669,7 @@ export type Database = {
           mesociclo_id?: string
           nome?: string
           nome_personalizado?: string | null
+          ordem_dia?: number
           ordem_semana?: number
           programa_id?: string
         }
@@ -746,8 +749,10 @@ export type Database = {
           concluido: boolean
           created_at: string
           data_concluido: string | null
+          dia_semana: string | null
           id: string
           nome: string
+          ordem_dia: number
           ordem_semana: number
           programa_usuario_id: string
           treino_original_id: string
@@ -757,8 +762,10 @@ export type Database = {
           concluido?: boolean
           created_at?: string
           data_concluido?: string | null
+          dia_semana?: string | null
           id?: string
           nome: string
+          ordem_dia: number
           ordem_semana: number
           programa_usuario_id: string
           treino_original_id: string
@@ -768,8 +775,10 @@ export type Database = {
           concluido?: boolean
           created_at?: string
           data_concluido?: string | null
+          dia_semana?: string | null
           id?: string
           nome?: string
+          ordem_dia?: number
           ordem_semana?: number
           programa_usuario_id?: string
           treino_original_id?: string
@@ -875,10 +884,7 @@ export type Database = {
         }
         Returns: undefined
       }
-      ensure_series_table: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      ensure_series_table: { Args: never; Returns: undefined }
       get_available_exercises: {
         Args: { p_muscle_group: string }
         Returns: {
@@ -889,7 +895,7 @@ export type Database = {
         }[]
       }
       get_distinct_muscle_groups: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           grupo_muscular: string
         }[]
@@ -908,6 +914,12 @@ export type Database = {
           updated_at: string | null
           user_id: string | null
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "series_exercicio_usuario"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       has_role: {
         Args: {
