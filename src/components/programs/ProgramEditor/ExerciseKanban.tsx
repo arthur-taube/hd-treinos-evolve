@@ -28,12 +28,9 @@ export default function ExerciseKanban({
   initialExercises = {},
   initialDayTitles = {},
 }: ExtendedExerciseKanbanProps) {
-  const schedule =
-    daysSchedule.length > 0
-      ? daysSchedule[0]
-      : Array(weeklyFrequency)
-          .fill("")
-          .map((_, i) => `day${i + 1}`);
+  const schedule = Array(weeklyFrequency)
+    .fill("")
+    .map((_, i) => `day${i + 1}`);
 
   const {
     exercises,
@@ -61,16 +58,14 @@ export default function ExerciseKanban({
     return JSON.stringify(exercisesData);
   }, []);
 
-  // Inicializar títulos IMEDIATAMENTE com numeração sequencial
-  useEffect(() => {
-    schedule.forEach((day, index) => {
-      const dayNumber = index + 1;
-      // Garantir que sempre há um título válido
-      if (!dayTitles[day]) {
-        updateDayTitle(day, dayNumber.toString());
-      }
-    });
-  }, [schedule, updateDayTitle]); // Removido dayTitles da dependência para evitar loop
+  // Debug logs
+  console.log('🔧 ExerciseKanban - Configuração:', {
+    weeklyFrequency,
+    schedule,
+    initialDayTitles,
+    dayTitles,
+    exercises: Object.keys(exercises)
+  });
 
   // Enviar dayTitles para o componente pai sempre que mudarem
   useEffect(() => {
