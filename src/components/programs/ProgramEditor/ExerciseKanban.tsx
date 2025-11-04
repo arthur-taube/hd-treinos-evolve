@@ -14,6 +14,12 @@ interface ExtendedExerciseKanbanProps extends ExerciseKanbanProps {
   initialExercises?: Record<string, Exercise[]>;
   onDayTitlesUpdate?: (dayTitles: Record<string, string>) => void;
   initialDayTitles?: Record<string, string>;
+  mode?: 'edit' | 'customize';
+  onShowHiddenExercises?: () => void;
+  onDeleteExercise?: (dayId: string, exerciseId: string) => void;
+  maxSets?: number;
+  onMoveExerciseBetweenDays?: (sourceDay: string, destDay: string, exercise: Exercise) => void;
+  onReorderDays?: () => void;
 }
 
 export default function ExerciseKanban({
@@ -27,6 +33,12 @@ export default function ExerciseKanban({
   onDayTitlesUpdate,
   initialExercises = {},
   initialDayTitles = {},
+  mode = 'edit',
+  onShowHiddenExercises,
+  onDeleteExercise,
+  maxSets,
+  onMoveExerciseBetweenDays,
+  onReorderDays,
 }: ExtendedExerciseKanbanProps) {
   const schedule = Array(weeklyFrequency)
     .fill("")
@@ -171,7 +183,11 @@ export default function ExerciseKanban({
                 onExerciseUpdate={(exerciseId, field, value) =>
                   updateExercise(day, exerciseId, field, value)
                 }
-                onDeleteExercise={(exerciseId) => deleteExercise(day, exerciseId)}
+                onDeleteExercise={(exerciseId) => 
+                  onDeleteExercise ? onDeleteExercise(day, exerciseId) : deleteExercise(day, exerciseId)
+                }
+                maxSets={maxSets}
+                mode={mode}
               />
             ))}
           </div>
@@ -185,6 +201,20 @@ export default function ExerciseKanban({
           </p>
         </div>
       )}
+
+      <Button 
+        onClick={() => {
+          if (mode === 'customize' && onShowHiddenExercises) {
+            onShowHiddenExercises();
+          } else {
+            setCurrentDay(schedule[0]);
+            setMuscleGroupDialogOpen(true);
+          }
+        }}
+        className="w-full mb-4"
+      >
+        {mode === 'customize' ? 'Adicionar Exercício Extra' : 'Adicionar Exercício'}
+      </Button>
 
       <MuscleGroupDialog
         open={muscleGroupDialogOpen}

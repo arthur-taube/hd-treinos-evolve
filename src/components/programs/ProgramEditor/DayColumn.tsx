@@ -24,6 +24,8 @@ export function DayColumn({
   onAddExercise,
   onExerciseUpdate,
   onDeleteExercise,
+  maxSets = 5,
+  mode = 'edit',
 }: DayColumnProps) {
   // Proteção contra título undefined/null - usar valor padrão
   const safeTitle = title || `Treino ${dayId.replace('day', '')}`;

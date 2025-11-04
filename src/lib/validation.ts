@@ -18,6 +18,16 @@ export const exerciseObservationSchema = z.string()
   .optional()
   .nullable();
 
+// Custom program name validation for user customization
+export const customProgramNameSchema = z.string()
+  .trim()
+  .min(1, "Nome do programa é obrigatório")
+  .max(80, "Nome do programa deve ter no máximo 80 caracteres")
+  .regex(
+    /^[a-zA-Z0-9\sáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\-_.,!?()]+$/,
+    "Nome contém caracteres inválidos"
+  );
+
 // Exercise note validation
 export const exerciseNoteSchema = z.string()
   .max(100, "Nota deve ter no máximo 100 caracteres")

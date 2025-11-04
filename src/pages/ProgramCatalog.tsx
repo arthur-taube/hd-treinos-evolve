@@ -62,144 +62,9 @@ export default function ProgramCatalog() {
     fetchPrograms();
   }, []);
 
-  const selectProgram = async (program: Program) => {
-    setIsSelectingProgram(true);
-    setSelectedProgramName(program.nome);
-    
-    try {
-      // Verificar se o usuário está logado
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast({
-          title: "Usuário não logado",
-          description: "Faça login para selecionar um programa de treino.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Verificar se o usuário já tem este programa (ativo ou inativo)
-      const { data: existingProgram } = await supabase
-        .from('programas_usuario')
-        .select('*')
-        .eq('usuario_id', user.id)
-        .eq('programa_original_id', program.id)
-        .single();
-
-      if (existingProgram) {
-        // Se o programa já existe mas não está ativo, reativá-lo
-        if (!existingProgram.ativo) {
-          await supabase
-            .from('programas_usuario')
-            .update({ 
-              ativo: true,
-              data_inicio: new Date().toISOString()
-            })
-            .eq('id', existingProgram.id);
-          
-          toast({
-            title: "Programa reativado",
-            description: `O programa "${program.nome}" foi reativado.`
-          });
-        } else {
-          toast({
-            title: "Programa já selecionado",
-            description: `Você já está utilizando o programa "${program.nome}".`
-          });
-        }
-        navigate('/active-program');
-        return;
-      }
-
-      // Desativar qualquer programa ativo existente
-      await supabase
-        .from('programas_usuario')
-        .update({ ativo: false })
-        .eq('usuario_id', user.id)
-        .eq('ativo', true);
-
-      // Criar uma cópia do programa para o usuário
-      const { data: programaUsuario, error } = await supabase
-        .from('programas_usuario')
-        .insert({
-          programa_original_id: program.id,
-          usuario_id: user.id,
-          ativo: true
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Buscar todos os treinos do programa original
-      const { data: treinosOriginais } = await supabase
-        .from('treinos')
-        .select('*')
-        .eq('programa_id', program.id);
-
-      if (treinosOriginais && treinosOriginais.length > 0) {
-        // Para cada treino original, criar uma cópia para o usuário
-        for (const treinoOriginal of treinosOriginais) {
-          const { data: treinoUsuario, error: treinoError } = await supabase
-            .from('treinos_usuario')
-            .insert({
-              programa_usuario_id: programaUsuario.id,
-              treino_original_id: treinoOriginal.id,
-              nome: treinoOriginal.nome,
-              ordem_semana: treinoOriginal.ordem_semana,
-              ordem_dia: treinoOriginal.ordem_dia,
-              dia_semana: null
-            } as any)
-            .select()
-            .single();
-
-          if (treinoError) throw treinoError;
-
-          // Buscar exercícios do treino original
-          const { data: exerciciosOriginais } = await supabase
-            .from('exercicios_treino')
-            .select('*')
-            .eq('treino_id', treinoOriginal.id);
-
-          if (exerciciosOriginais && exerciciosOriginais.length > 0) {
-            // Para cada exercício, criar uma cópia para o usuário
-            const exerciciosUsuario = exerciciosOriginais.map(exercicio => ({
-              treino_usuario_id: treinoUsuario.id,
-              exercicio_original_id: exercicio.exercicio_original_id,
-              nome: exercicio.nome,
-              grupo_muscular: exercicio.grupo_muscular,
-              series: exercicio.series,
-              repeticoes: exercicio.repeticoes,
-              oculto: exercicio.oculto,
-              ordem: exercicio.ordem
-            }));
-
-            const { error: exerciciosError } = await supabase
-              .from('exercicios_treino_usuario')
-              .insert(exerciciosUsuario);
-
-            if (exerciciosError) throw exerciciosError;
-          }
-        }
-      }
-
-      toast({
-        title: "Programa selecionado",
-        description: `O programa "${program.nome}" foi selecionado com sucesso.`
-      });
-
-      navigate('/active-program');
-    } catch (error: any) {
-      toast({
-        title: "Erro ao selecionar programa",
-        description: error.message || "Não foi possível selecionar o programa.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSelectingProgram(false);
-      setSelectedProgramName("");
-    }
+  const selectProgram = (program: Program) => {
+    // Redirecionar para página de customização ao invés de copiar diretamente
+    navigate(`/programs/customize/${program.id}`);
   };
 
   const handleEditProgram = (programId: string) => {
@@ -462,9 +327,8 @@ export default function ProgramCatalog() {
                 <Button 
                   onClick={() => selectProgram(program)} 
                   className="flex-grow"
-                  disabled={isSelectingProgram}
                 >
-                  {isSelectingProgram ? "Configurando..." : "Selecionar Programa"}
+                  Selecionar Programa
                 </Button>
                 
                 {isDeveloper && (

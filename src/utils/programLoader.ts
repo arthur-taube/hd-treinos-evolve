@@ -14,6 +14,7 @@ export interface LoadedProgramData {
   };
   exercisesPerDay: Record<string, Record<string, any[]>>;
   savedSchedules: string[][];
+  weeklySchedules: string[][]; // Alias para compatibilidade
   mesocycleDurations: number[];
   dayTitles: Record<string, string>;
 }
@@ -170,6 +171,7 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       },
       exercisesPerDay,
       savedSchedules,
+      weeklySchedules: savedSchedules, // Alias para compatibilidade
       mesocycleDurations,
       dayTitles
     };

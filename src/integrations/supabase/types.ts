@@ -555,30 +555,39 @@ export type Database = {
         Row: {
           ativo: boolean
           created_at: string
+          cronograma_dados: Json | null
           data_inicio: string
           id: string
+          nome_personalizado: string | null
           programa_original_id: string
           progresso: number
+          tipo_cronograma: string | null
           updated_at: string
           usuario_id: string
         }
         Insert: {
           ativo?: boolean
           created_at?: string
+          cronograma_dados?: Json | null
           data_inicio?: string
           id?: string
+          nome_personalizado?: string | null
           programa_original_id: string
           progresso?: number
+          tipo_cronograma?: string | null
           updated_at?: string
           usuario_id: string
         }
         Update: {
           ativo?: boolean
           created_at?: string
+          cronograma_dados?: Json | null
           data_inicio?: string
           id?: string
+          nome_personalizado?: string | null
           programa_original_id?: string
           progresso?: number
+          tipo_cronograma?: string | null
           updated_at?: string
           usuario_id?: string
         }
