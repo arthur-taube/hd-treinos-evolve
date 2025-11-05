@@ -14,6 +14,8 @@ interface DayColumnProps {
   onAddExercise: () => void;
   onExerciseUpdate: (exerciseId: string, field: keyof Exercise, value: string | number | boolean) => void;
   onDeleteExercise: (exerciseId: string) => void;
+  maxSets?: number;
+  mode?: 'edit' | 'customize';
 }
 
 export function DayColumn({
