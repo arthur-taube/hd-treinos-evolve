@@ -21,6 +21,8 @@ export interface LoadedProgramData {
 
 export const loadExistingProgram = async (programId: string): Promise<LoadedProgramData | null> => {
   try {
+    console.log('📊 loadExistingProgram - Carregando programa:', programId);
+    
     // Buscar programa
     const { data: programa, error: programaError } = await supabase
       .from('programas')
@@ -28,8 +30,10 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       .eq('id', programId)
       .single();
 
+    console.log('📊 Programa carregado:', programa);
+
     if (programaError || !programa) {
-      console.error('Erro ao carregar programa:', programaError);
+      console.error('❌ Erro ao carregar programa:', programaError);
       return null;
     }
 
@@ -40,8 +44,10 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       .eq('programa_id', programId)
       .order('numero');
 
+    console.log('📊 Mesociclos carregados:', mesociclos?.length || 0);
+
     if (mesociclosError) {
-      console.error('Erro ao carregar mesociclos:', mesociclosError);
+      console.error('❌ Erro ao carregar mesociclos:', mesociclosError);
       return null;
     }
 
@@ -53,21 +59,27 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       .eq('ordem_semana', 1)
       .order('ordem_dia'); // Ordenar por ordem_dia
 
+    console.log('📊 Treinos carregados (semana 1):', treinos?.length || 0);
+
     if (treinosError) {
-      console.error('Erro ao carregar treinos:', treinosError);
+      console.error('❌ Erro ao carregar treinos:', treinosError);
       return null;
     }
 
     // Buscar exercícios de todos os treinos
     const treinoIds = treinos?.map(t => t.id) || [];
+    console.log('📊 Buscando exercícios para', treinoIds.length, 'treinos');
+    
     const { data: exercicios, error: exerciciosError } = await supabase
       .from('exercicios_treino')
       .select('*')
       .in('treino_id', treinoIds)
       .order('ordem');
 
+    console.log('📊 Exercícios carregados:', exercicios?.length || 0);
+
     if (exerciciosError) {
-      console.error('Erro ao carregar exercícios:', exerciciosError);
+      console.error('❌ Erro ao carregar exercícios:', exerciciosError);
       return null;
     }
 
@@ -147,18 +159,21 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
     // Criar dayTitles mapeando ordem_dia para título completo
     const dayTitles: Record<string, string> = {};
     const treinosFirstMeso = treinos?.filter(t => t.mesociclo_id === mesociclos[0]?.id) || [];
-
+    
+    console.log('📊 Treinos do primeiro mesociclo para dayTitles:', treinosFirstMeso);
+    
     treinosFirstMeso.forEach(treino => {
       const dayKey = `day${treino.ordem_dia}`;
       const titulo = treino.nome_personalizado 
         ? `${treino.nome} - ${treino.nome_personalizado}`
         : treino.nome;
       dayTitles[dayKey] = titulo;
+      console.log(`📊 Título configurado: ${dayKey} = ${titulo}`);
     });
 
-    console.log('📊 dayTitles extraídos:', dayTitles);
+    console.log('📊 dayTitles finais:', dayTitles);
 
-    return {
+    const resultado = {
       programName: programa.nome,
       programLevel: programa.nivel,
       weeklyFrequency: programa.frequencia_semanal,
@@ -175,8 +190,19 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       mesocycleDurations,
       dayTitles
     };
+
+    console.log('📊 Resultado final de loadExistingProgram:', {
+      programName: resultado.programName,
+      weeklyFrequency: resultado.weeklyFrequency,
+      mesocycles: resultado.mesocycles,
+      totalExercises: Object.values(exercisesPerDay).flatMap(day => Object.values(day)).flat().length,
+      dayTitlesCount: Object.keys(dayTitles).length,
+      mesocycleKeys: Object.keys(exercisesPerDay)
+    });
+
+    return resultado;
   } catch (error) {
-    console.error('Erro ao carregar programa para edição:', error);
+    console.error('❌ Exception in loadExistingProgram:', error);
     return null;
   }
 };

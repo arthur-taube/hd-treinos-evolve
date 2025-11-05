@@ -95,8 +95,15 @@ export default function ProgramCustomize() {
     }
 
     const loadProgram = async () => {
+      console.log('🔧 ProgramCustomize - Iniciando carregamento do programa:', programId);
+      setIsLoading(true);
+      
       const data = await loadExistingProgram(programId);
+      
+      console.log('🔧 ProgramCustomize - Dados recebidos:', data);
+
       if (!data) {
+        console.error('❌ ProgramCustomize - Falha ao carregar programa');
         toast({
           title: "Erro",
           description: "Não foi possível carregar o programa",
@@ -106,20 +113,36 @@ export default function ProgramCustomize() {
         return;
       }
 
+      console.log('🔧 ProgramCustomize - Estrutura de exercisesPerDay:', Object.keys(data.exercisesPerDay));
+      console.log('🔧 ProgramCustomize - Day titles:', data.dayTitles);
+
+      console.log('🔧 ProgramCustomize - Configurando programData');
       setProgramData(data);
       setCustomProgramName(data.programName);
 
       // Inicializar exercícios da semana 1 do primeiro mesociclo
       const firstMesocycleKey = "mesocycle-1";
+      console.log('🔧 ProgramCustomize - Verificando exercícios para:', firstMesocycleKey);
+      
       if (data.exercisesPerDay[firstMesocycleKey]) {
+        console.log('✅ Exercícios encontrados para mesocycle-1:', data.exercisesPerDay[firstMesocycleKey]);
         setCustomExercises(data.exercisesPerDay[firstMesocycleKey]);
+      } else {
+        console.warn('⚠️ Nenhum exercício encontrado para mesocycle-1');
+        console.log('Chaves disponíveis em exercisesPerDay:', Object.keys(data.exercisesPerDay));
       }
 
       // Inicializar day titles
-      setCustomDayTitles(data.dayTitles || {});
+      if (data.dayTitles) {
+        console.log('✅ Configurando dayTitles:', data.dayTitles);
+        setCustomDayTitles(data.dayTitles);
+      } else {
+        console.warn('⚠️ dayTitles vazio ou indefinido');
+      }
 
       // Inicializar cronograma recomendado se disponível
       if (data.savedSchedules.length > 0) {
+        console.log('✅ Configurando cronograma recomendado:', data.savedSchedules[0]);
         setCronogramaConfig((prev) => ({
           ...prev,
           recomendadoIndex: 0,
@@ -130,6 +153,7 @@ export default function ProgramCustomize() {
       // Tentar carregar cache
       const cached = loadCache();
       if (cached) {
+        console.log('📦 Cache encontrado, restaurando estado');
         setCustomProgramName(cached.customProgramName);
         setCronogramaConfig(cached.cronogramaConfig);
         setCustomExercises(cached.customExercises);
@@ -137,6 +161,7 @@ export default function ProgramCustomize() {
         setStartDate(cached.startDate);
       }
 
+      console.log('✅ ProgramCustomize - Carregamento concluído com sucesso');
       setIsLoading(false);
     };
 
