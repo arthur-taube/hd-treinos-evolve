@@ -90,7 +90,7 @@ export default function ProgramCustomize() {
     { customProgramName, cronogramaConfig, customExercises, customDayTitles, startDate },
     isLoading
   );
-  const blocker = useNavigationBlocker(hasUnsavedChanges);
+  // const blocker = useNavigationBlocker(hasUnsavedChanges); // Temporarily disabled - requires createBrowserRouter
 
   // Load program data
   useEffect(() => {
@@ -503,9 +503,9 @@ export default function ProgramCustomize() {
         showCancelConfirmation={showCancelConfirmation}
         onCancelConfirm={confirmCancel}
         onCancelCancel={() => setShowCancelConfirmation(false)}
-        showNavigationWarning={blocker.state === "blocked"}
-        onNavigationProceed={() => blocker.proceed?.()}
-        onNavigationCancel={() => blocker.reset?.()}
+        showNavigationWarning={false}
+        onNavigationProceed={() => {}}
+        onNavigationCancel={() => {}}
       />
     </div>
   );
