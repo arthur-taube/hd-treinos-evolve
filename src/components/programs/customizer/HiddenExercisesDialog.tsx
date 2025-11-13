@@ -8,13 +8,20 @@ import {
 } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus } from "lucide-react";
+import { Plus, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { Exercise } from "../ProgramEditor/types";
 
 interface HiddenExercisesDialogProps {
   open: boolean;
   onClose: () => void;
   hiddenExercises: Array<{ dayId: string; exercise: Exercise }>;
+  dayId?: string;
   onAddExercise: (dayId: string, exercise: Exercise) => void;
 }
 
@@ -22,8 +29,13 @@ export function HiddenExercisesDialog({
   open,
   onClose,
   hiddenExercises,
+  dayId,
   onAddExercise,
 }: HiddenExercisesDialogProps) {
+  // Filter exercises by day if dayId is provided
+  const filteredExercises = dayId 
+    ? hiddenExercises.filter(item => item.dayId === dayId)
+    : hiddenExercises;
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -34,24 +46,42 @@ export function HiddenExercisesDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {hiddenExercises.length === 0 ? (
+        {filteredExercises.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             Não há exercícios extras disponíveis para adicionar
           </div>
         ) : (
           <div className="space-y-3">
-            {hiddenExercises.map(({ dayId, exercise }, index) => (
+            {filteredExercises.map(({ dayId, exercise }, index) => (
               <Card key={`${dayId}-${exercise.id}`} className="p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-medium">Exercício Extra {index + 1}</h4>
-                      <Badge variant="outline">{exercise.muscleGroup}</Badge>
+                      <h4 className="font-medium">
+                        Exercício Extra{filteredExercises.length > 1 ? ` ${index + 1}` : ''}
+                      </h4>
+                      {exercise.allowMultipleGroups && exercise.availableGroups ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <div className="cursor-pointer">
+                              <Badge variant="multi" className="flex items-center gap-1">
+                                {exercise.muscleGroup}
+                                <ChevronDown className="h-3 w-3" />
+                              </Badge>
+                            </div>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            {exercise.availableGroups.map((group) => (
+                              <DropdownMenuItem key={group}>
+                                {group}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
+                        <Badge variant="muscle">{exercise.muscleGroup}</Badge>
+                      )}
                     </div>
-                    <p className="text-sm font-semibold">{exercise.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {exercise.sets} séries × {exercise.reps} reps
-                    </p>
                   </div>
                   <Button
                     size="sm"

@@ -5,6 +5,12 @@ import { Input } from "@/components/ui/input";
 import { PlusCircle } from "lucide-react";
 import { Exercise } from "./types";
 import { ExerciseCard } from "./ExerciseCard";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface DayColumnProps {
   dayId: string;
@@ -16,6 +22,7 @@ interface DayColumnProps {
   onDeleteExercise: (exerciseId: string) => void;
   maxSets?: number;
   mode?: 'edit' | 'customize';
+  hiddenExercisesCount?: number;
 }
 
 export function DayColumn({
@@ -28,6 +35,7 @@ export function DayColumn({
   onDeleteExercise,
   maxSets = 5,
   mode = 'edit',
+  hiddenExercisesCount = 0,
 }: DayColumnProps) {
   // Proteção contra título undefined/null - usar valor padrão
   const safeTitle = title || `Treino ${dayId.replace('day', '')}`;
@@ -90,6 +98,7 @@ export function DayColumn({
                         onExerciseUpdate={(field, value) => 
                           onExerciseUpdate(exercise.id, field, value)
                         }
+                        mode={mode}
                       />
                     </div>
                   )}
@@ -100,14 +109,28 @@ export function DayColumn({
           )}
         </Droppable>
         
-        <Button
-          variant="ghost"
-          className="flex w-full justify-center p-2 mt-2"
-          onClick={onAddExercise}
-        >
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Adicionar Exercício
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <Button
+                  variant="ghost"
+                  className="flex w-full justify-center p-2 mt-2"
+                  onClick={onAddExercise}
+                  disabled={mode === 'customize' && hiddenExercisesCount === 0}
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Adicionar Exercício
+                </Button>
+              </div>
+            </TooltipTrigger>
+            {mode === 'customize' && hiddenExercisesCount === 0 && (
+              <TooltipContent>
+                <p>Nenhum exercício extra disponível</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </div>
   );

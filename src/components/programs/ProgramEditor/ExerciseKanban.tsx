@@ -15,7 +15,7 @@ interface ExtendedExerciseKanbanProps extends ExerciseKanbanProps {
   onDayTitlesUpdate?: (dayTitles: Record<string, string>) => void;
   initialDayTitles?: Record<string, string>;
   mode?: 'edit' | 'customize';
-  onShowHiddenExercises?: () => void;
+  onShowDayHiddenExercises?: (dayId: string) => void;
   onDeleteExercise?: (dayId: string, exerciseId: string) => void;
   maxSets?: number;
   onMoveExerciseBetweenDays?: (sourceDay: string, destDay: string, exercise: Exercise) => void;
@@ -34,7 +34,7 @@ export default function ExerciseKanban({
   initialExercises = {},
   initialDayTitles = {},
   mode = 'edit',
-  onShowHiddenExercises,
+  onShowDayHiddenExercises,
   onDeleteExercise,
   maxSets,
   onMoveExerciseBetweenDays,
@@ -148,6 +148,11 @@ export default function ExerciseKanban({
     addExercise(currentDay, newExercise);
   };
 
+  // Get count of hidden exercises for a specific day
+  const getHiddenExercisesCount = (day: string): number => {
+    return (exercises[day] || []).filter(ex => ex.hidden === true).length;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -179,7 +184,11 @@ export default function ExerciseKanban({
                 title={dayTitles[day] || `Treino ${day.replace('day', '')}`}
                 exercises={exercises[day] || []}
                 onTitleChange={(title) => updateDayTitle(day, title)}
-                onAddExercise={() => handleAddExercise(day)}
+                onAddExercise={() => 
+                  mode === 'customize' && onShowDayHiddenExercises
+                    ? onShowDayHiddenExercises(day)
+                    : handleAddExercise(day)
+                }
                 onExerciseUpdate={(exerciseId, field, value) =>
                   updateExercise(day, exerciseId, field, value)
                 }
@@ -188,6 +197,7 @@ export default function ExerciseKanban({
                 }
                 maxSets={maxSets}
                 mode={mode}
+                hiddenExercisesCount={getHiddenExercisesCount(day)}
               />
             ))}
           </div>
@@ -201,20 +211,6 @@ export default function ExerciseKanban({
           </p>
         </div>
       )}
-
-      <Button 
-        onClick={() => {
-          if (mode === 'customize' && onShowHiddenExercises) {
-            onShowHiddenExercises();
-          } else {
-            setCurrentDay(schedule[0]);
-            setMuscleGroupDialogOpen(true);
-          }
-        }}
-        className="w-full mb-4"
-      >
-        {mode === 'customize' ? 'Adicionar Exercício Extra' : 'Adicionar Exercício'}
-      </Button>
 
       <MuscleGroupDialog
         open={muscleGroupDialogOpen}

@@ -15,6 +15,7 @@ interface ExerciseHeaderProps {
   dragHandleProps: any;
   onDelete: () => void;
   onExerciseUpdate: (field: keyof Exercise, value: string | number | boolean) => void;
+  mode?: 'edit' | 'customize';
 }
 
 export function ExerciseHeader({
@@ -22,6 +23,7 @@ export function ExerciseHeader({
   dragHandleProps,
   onDelete,
   onExerciseUpdate,
+  mode = 'edit',
 }: ExerciseHeaderProps) {
   const toggleVisibility = () => {
     onExerciseUpdate('hidden', !exercise.hidden);
@@ -68,25 +70,39 @@ export function ExerciseHeader({
         <div {...dragHandleProps} className="cursor-grab p-1">
           <Grip className="h-3 w-3" />
         </div>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-6 w-6"
-          onClick={toggleVisibility}
-        >
-          {exercise.hidden ? 
-            <EyeOff className="h-3 w-3" /> : 
-            <Eye className="h-3 w-3" />
-          }
-        </Button>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-6 w-6 text-destructive hover:text-destructive/80"
-          onClick={onDelete}
-        >
-          <X className="h-3 w-3" />
-        </Button>
+        {mode === 'customize' ? (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-6 w-6 text-destructive hover:text-destructive/80"
+            onClick={toggleVisibility}
+            title="Ocultar exercício"
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        ) : (
+          <>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-6 w-6"
+              onClick={toggleVisibility}
+            >
+              {exercise.hidden ? 
+                <EyeOff className="h-3 w-3" /> : 
+                <Eye className="h-3 w-3" />
+              }
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-6 w-6 text-destructive hover:text-destructive/80"
+              onClick={onDelete}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );

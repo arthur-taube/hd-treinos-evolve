@@ -78,6 +78,7 @@ export default function ProgramCustomize() {
   const [pendingExerciseMove, setPendingExerciseMove] = useState<any>(null);
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
   const [showHiddenExercisesDialog, setShowHiddenExercisesDialog] = useState(false);
+  const [selectedDayForHidden, setSelectedDayForHidden] = useState<string | null>(null);
 
   // Validation
   const [scheduleValidationError, setScheduleValidationError] = useState<string | null>(null);
@@ -378,6 +379,12 @@ export default function ProgramCustomize() {
               <Label className="text-muted-foreground">Mesociclos</Label>
               <p className="font-medium">{programData.mesocycles}</p>
             </div>
+            <div>
+              <Label className="text-muted-foreground">Duração</Label>
+              <p className="font-medium">
+                {programData.mesocycleDurations?.[0] || 4} semanas
+              </p>
+            </div>
           </div>
         </Card>
 
@@ -449,7 +456,10 @@ export default function ProgramCustomize() {
               setCustomExercises((prev) => ({ ...prev, [dayId]: exercises }))
             }
             onDayTitlesUpdate={setCustomDayTitles}
-            onShowHiddenExercises={() => setShowHiddenExercisesDialog(true)}
+            onShowDayHiddenExercises={(dayId) => {
+              setSelectedDayForHidden(dayId);
+              setShowHiddenExercisesDialog(true);
+            }}
             onDeleteExercise={handleDeleteExercise}
             maxSets={3}
             onMoveExerciseBetweenDays={(sourceDay, destDay, exercise) => {
@@ -468,8 +478,12 @@ export default function ProgramCustomize() {
       {/* Dialogs */}
       <HiddenExercisesDialog
         open={showHiddenExercisesDialog}
-        onClose={() => setShowHiddenExercisesDialog(false)}
+        onClose={() => {
+          setShowHiddenExercisesDialog(false);
+          setSelectedDayForHidden(null);
+        }}
         hiddenExercises={getHiddenExercises()}
+        dayId={selectedDayForHidden || undefined}
         onAddExercise={handleAddHiddenExercise}
       />
 

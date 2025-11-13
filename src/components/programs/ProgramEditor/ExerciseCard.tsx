@@ -18,6 +18,7 @@ interface ExerciseCardProps {
   provided: any;
   onDelete: () => void;
   onExerciseUpdate: (field: keyof Exercise, value: string | number | boolean) => void;
+  mode?: 'edit' | 'customize';
 }
 
 export function ExerciseCard({
@@ -25,6 +26,7 @@ export function ExerciseCard({
   provided,
   onDelete,
   onExerciseUpdate,
+  mode = 'edit',
 }: ExerciseCardProps) {
   const [exercises, setExercises] = useState<Array<{ nome: string }>>([]);
   const [repsRanges, setRepsRanges] = useState<RepsRange[]>([]);
@@ -128,6 +130,7 @@ export function ExerciseCard({
           dragHandleProps={provided.dragHandleProps}
           onDelete={onDelete}
           onExerciseUpdate={onExerciseUpdate}
+          mode={mode}
         />
         <ExerciseNameSelect
           exercise={exercise}
