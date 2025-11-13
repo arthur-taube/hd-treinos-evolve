@@ -38,9 +38,14 @@ interface CronogramaConfig {
 }
 
 export default function ProgramCustomize() {
+  console.log('🚀 ProgramCustomize - Componente iniciado');
+  
   const { programId } = useParams<{ programId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  console.log('🚀 ProgramCustomize - programId:', programId);
+  console.log('🚀 ProgramCustomize - user:', user?.id);
 
   // Program data
   const [programData, setProgramData] = useState<LoadedProgramData | null>(null);
@@ -123,13 +128,16 @@ export default function ProgramCustomize() {
       // Inicializar exercícios da semana 1 do primeiro mesociclo
       const firstMesocycleKey = "mesocycle-1";
       console.log('🔧 ProgramCustomize - Verificando exercícios para:', firstMesocycleKey);
+      console.log('🔧 ProgramCustomize - exercisesPerDay disponível:', data.exercisesPerDay);
       
-      if (data.exercisesPerDay[firstMesocycleKey]) {
+      if (data.exercisesPerDay && data.exercisesPerDay[firstMesocycleKey]) {
         console.log('✅ Exercícios encontrados para mesocycle-1:', data.exercisesPerDay[firstMesocycleKey]);
         setCustomExercises(data.exercisesPerDay[firstMesocycleKey]);
       } else {
         console.warn('⚠️ Nenhum exercício encontrado para mesocycle-1');
-        console.log('Chaves disponíveis em exercisesPerDay:', Object.keys(data.exercisesPerDay));
+        console.log('Chaves disponíveis em exercisesPerDay:', Object.keys(data.exercisesPerDay || {}));
+        // Garantir que sempre temos um objeto válido, mesmo que vazio
+        setCustomExercises({});
       }
 
       // Inicializar day titles
@@ -303,6 +311,31 @@ export default function ProgramCustomize() {
       </div>
     );
   }
+
+  // Validação adicional de dados críticos
+  if (!programData.weeklyFrequency || programData.weeklyFrequency === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen p-4">
+        <Card className="p-6">
+          <p className="text-destructive">
+            Erro: Programa com configuração inválida. Por favor, volte ao catálogo e tente outro programa.
+          </p>
+          <Button onClick={() => navigate("/program-catalog")} className="mt-4">
+            Voltar ao Catálogo
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  console.log('🎨 ProgramCustomize - Renderizando interface completa');
+  console.log('🎨 ProgramCustomize - programData:', {
+    programName: programData.programName,
+    weeklyFrequency: programData.weeklyFrequency,
+    mesocycles: programData.mesocycles,
+    customExercisesKeys: Object.keys(customExercises),
+    customDayTitlesKeys: Object.keys(customDayTitles)
+  });
 
   return (
     <div className="pb-20">
