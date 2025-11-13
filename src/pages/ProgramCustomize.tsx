@@ -408,7 +408,7 @@ export default function ProgramCustomize() {
             daysSchedule={[]}
             currentMesocycle={1}
             totalMesocycles={programData.mesocycles}
-            mesocycleDuration={programData.mesocycleDurations[0]}
+            mesocycleDuration={programData.mesocycleDurations?.[0] || 4}
             initialExercises={customExercises}
             initialDayTitles={customDayTitles}
             mode="customize"
