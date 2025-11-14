@@ -159,11 +159,10 @@ const Programs = () => {
   if (loading) {
     return (
       <div className="pb-20">
-        <PageHeader title="Meus Programas">
-          <Button className="btn-primary" onClick={() => navigate("/program-catalog")}>
-            Escolher um programa
-          </Button>
-        </PageHeader>
+        <PageHeader title="Meus Programas" />
+        <Button className="w-full mb-6 btn-primary" onClick={() => navigate("/program-catalog")}>
+          Escolher um novo programa
+        </Button>
         <div className="flex justify-center my-8">
           <p>Carregando seus programas...</p>
         </div>
@@ -173,11 +172,11 @@ const Programs = () => {
 
   return (
     <div className="pb-20">
-      <PageHeader title="Meus Programas">
-        <Button className="btn-primary" onClick={() => navigate("/program-catalog")}>
-          Escolher um programa
-        </Button>
-      </PageHeader>
+      <PageHeader title="Meus Programas" />
+      
+      <Button className="w-full mb-6 btn-primary" onClick={() => navigate("/program-catalog")}>
+        Escolher um novo programa
+      </Button>
 
       <div className="space-y-6">
         <div>
