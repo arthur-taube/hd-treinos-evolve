@@ -264,7 +264,7 @@ export default function ProgramCatalog() {
   const getLevelBadge = (level: string) => {
     switch(level) {
       case 'iniciante':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Iniciante</Badge>;
+        return <Badge variant="outline" className="bg-green-600 text-white border-green-600">Iniciante</Badge>;
       case 'intermediario':
         return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Intermediário</Badge>;
       case 'avancado':
