@@ -56,10 +56,10 @@ export function HiddenExercisesDialog({
               <Card key={`${dayId}-${exercise.id}`} className="p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-medium">
-                        Exercício Extra{filteredExercises.length > 1 ? ` ${index + 1}` : ''}
-                      </h4>
+                    <h4 className="font-medium">
+                      Exercício Extra{filteredExercises.length > 1 ? ` ${index + 1}` : ''}
+                    </h4>
+                    <div>
                       {exercise.allowMultipleGroups && exercise.availableGroups ? (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
