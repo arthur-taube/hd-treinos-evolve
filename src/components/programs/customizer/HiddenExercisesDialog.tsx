@@ -59,7 +59,7 @@ export function HiddenExercisesDialog({
                     <h4 className="font-medium">
                       Exercício Extra{filteredExercises.length > 1 ? ` ${index + 1}` : ''}
                     </h4>
-                    <div>
+                    <div className="w-fit">
                       {exercise.allowMultipleGroups && exercise.availableGroups ? (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
