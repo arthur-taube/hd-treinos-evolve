@@ -74,13 +74,19 @@ export function DayColumn({
       
       <div className="bg-muted/50 rounded-b-md p-2 flex-1 min-h-[400px] flex flex-col">
         <Droppable droppableId={dayId}>
-          {(provided) => (
-            <div 
-              ref={provided.innerRef}
-              {...provided.droppableProps}
-              className="space-y-3 flex-1"
-            >
-              {exercises?.map((exercise, index) => (
+          {(provided) => {
+            // Filtrar exercícios ocultos no modo customize
+            const visibleExercises = mode === 'customize' 
+              ? exercises?.filter(ex => !ex.hidden) 
+              : exercises;
+            
+            return (
+              <div 
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className="space-y-3 flex-1"
+              >
+                {visibleExercises?.map((exercise, index) => (
                 <Draggable 
                   key={exercise.id} 
                   draggableId={exercise.id} 
@@ -103,10 +109,11 @@ export function DayColumn({
                     </div>
                   )}
                 </Draggable>
-              ))}
-              {provided.placeholder}
-            </div>
-          )}
+                ))}
+                {provided.placeholder}
+              </div>
+            );
+          }}
         </Droppable>
         
         <TooltipProvider>
