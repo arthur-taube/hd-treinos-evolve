@@ -761,6 +761,7 @@ export type Database = {
           dia_semana: string | null
           id: string
           nome: string
+          nome_personalizado: string | null
           ordem_dia: number
           ordem_semana: number
           programa_usuario_id: string
@@ -774,6 +775,7 @@ export type Database = {
           dia_semana?: string | null
           id?: string
           nome: string
+          nome_personalizado?: string | null
           ordem_dia: number
           ordem_semana: number
           programa_usuario_id: string
@@ -787,6 +789,7 @@ export type Database = {
           dia_semana?: string | null
           id?: string
           nome?: string
+          nome_personalizado?: string | null
           ordem_dia?: number
           ordem_semana?: number
           programa_usuario_id?: string
