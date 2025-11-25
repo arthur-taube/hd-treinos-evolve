@@ -24,7 +24,7 @@ export const customProgramNameSchema = z.string()
   .min(1, "Nome do programa é obrigatório")
   .max(80, "Nome do programa deve ter no máximo 80 caracteres")
   .regex(
-    /^[a-zA-Z0-9\sáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\-_.,!?()]+$/,
+    /^[a-zA-Z0-9\sáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\-_.,!?()/:;'"#*+]+$/,
     "Nome contém caracteres inválidos"
   );
 
