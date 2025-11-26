@@ -248,7 +248,7 @@ export async function saveCustomizedProgram(
             treino_usuario_id: treinoUsuario.id,
             exercicio_original_id: exercicio.id.startsWith("exercise-")
               ? null
-              : exercicio.id,
+              : (exercicio.originalId || null),
             nome: exercicio.name,
             grupo_muscular: exercicio.muscleGroup,
             series: exercicio.sets,
