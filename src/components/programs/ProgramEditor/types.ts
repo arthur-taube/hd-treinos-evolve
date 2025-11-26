@@ -8,6 +8,7 @@ export interface Exercise {
   allowMultipleGroups?: boolean;
   availableGroups?: string[];
   hidden?: boolean; // Propriedade para controlar visibilidade
+  originalId?: string | null; // Referência para exercicios_iniciantes
 }
 
 export interface ExerciseKanbanProps {
