@@ -185,12 +185,12 @@ export async function saveCustomizedProgram(
 
   if (programError) throw programError;
 
-  // 4. Buscar todos os treinos do programa original
+  // 4. Buscar apenas treinos da semana 1 (templates) do programa original
   const { data: treinosOriginais, error: treinosError } = await supabase
     .from("treinos")
     .select("*")
     .eq("programa_id", programId)
-    .order("ordem_semana")
+    .eq("ordem_semana", 1)
     .order("ordem_dia");
 
   if (treinosError) throw treinosError;
