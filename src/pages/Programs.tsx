@@ -46,9 +46,8 @@ const Programs = () => {
             setHasActiveProgram(true);
             setActiveProgram({
               id: programaUsuarioAtivo.id,
-              name: programaUsuarioAtivo.programa_original.nome,
-              description: programaUsuarioAtivo.programa_original.descricao || 
-                          "Programa de treino personalizado",
+              name: programaUsuarioAtivo.nome_personalizado || programaUsuarioAtivo.programa_original.nome,
+              description: `Programa base: ${programaUsuarioAtivo.programa_original.nome}`,
             });
           }
           
@@ -65,8 +64,8 @@ const Programs = () => {
           if (programasUsuarioPausados && programasUsuarioPausados.length > 0) {
             setPausedPrograms(programasUsuarioPausados.map(p => ({
               id: p.id,
-              name: p.programa_original.nome,
-              description: p.programa_original.descricao || "Programa de treino personalizado"
+              name: p.nome_personalizado || p.programa_original.nome,
+              description: `Programa base: ${p.programa_original.nome}`
             })));
           }
         }
