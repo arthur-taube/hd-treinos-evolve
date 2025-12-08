@@ -1,24 +1,41 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { calculateProgression, getCurrentRepsProgramadas } from "./progressionCalculator";
 import { getLastSeriesData } from "./lastSeriesHandler";
 
 interface ExerciseProgressionData {
   currentExerciseId: string;
-  exercicioOriginalId: string;
+  exercicioOriginalId: string | null;
   programaUsuarioId: string;
   avaliacaoDificuldade: string;
   avaliacaoFadiga: number;
+  customExerciseId?: string | null;
 }
 
 export const precomputeNextExerciseProgression = async (data: ExerciseProgressionData): Promise<void> => {
   try {
     console.log('Starting precomputation for next exercise progression:', data);
 
-    // 1. Find the next exercise instance
+    // 1. Get current exercise data including substituto_custom_id
+    const { data: currentExercise, error: currentError } = await supabase
+      .from('exercicios_treino_usuario')
+      .select('peso, series, repeticoes, reps_programadas, incremento_minimo, substituto_custom_id')
+      .eq('id', data.currentExerciseId)
+      .single();
+
+    if (currentError || !currentExercise) {
+      console.error('Error fetching current exercise:', currentError);
+      return;
+    }
+
+    // Determine which ID to use for finding next exercise
+    const exercicioOriginalId = data.exercicioOriginalId;
+    const customExerciseId = data.customExerciseId || currentExercise.substituto_custom_id;
+
+    // 2. Find the next exercise instance
     const nextExercise = await findNextExerciseInstance(
-      data.exercicioOriginalId, 
-      data.programaUsuarioId
+      exercicioOriginalId, 
+      data.programaUsuarioId,
+      customExerciseId
     );
 
     if (!nextExercise) {
@@ -28,23 +45,12 @@ export const precomputeNextExerciseProgression = async (data: ExerciseProgressio
 
     console.log('Found next exercise instance:', nextExercise);
 
-    // 2. Get current exercise data for progression calculation
-    const { data: currentExercise, error: currentError } = await supabase
-      .from('exercicios_treino_usuario')
-      .select('peso, series, repeticoes, reps_programadas, incremento_minimo')
-      .eq('id', data.currentExerciseId)
-      .single();
-
-    if (currentError || !currentExercise) {
-      console.error('Error fetching current exercise:', currentError);
-      return;
-    }
-
     // 3. Check if this is first week
     const isFirstWeek = await checkIsFirstWeekForProgram(
-      data.exercicioOriginalId,
+      exercicioOriginalId,
       data.programaUsuarioId,
-      data.currentExerciseId
+      data.currentExerciseId,
+      customExerciseId
     );
 
     // 4. Determine data to use for progression calculation
@@ -116,24 +122,39 @@ export const precomputeNextExerciseProgression = async (data: ExerciseProgressio
 };
 
 const checkIsFirstWeekForProgram = async (
-  exercicioOriginalId: string,
+  exercicioOriginalId: string | null,
   programaUsuarioId: string,
-  currentExerciseId: string
+  currentExerciseId: string,
+  customExerciseId?: string | null
 ): Promise<boolean> => {
   try {
-    // Check for previous completed exercises in the same program (excluding current)
-    const { data, error } = await supabase
+    // Build query based on available identifiers
+    let query = supabase
       .from('exercicios_treino_usuario')
       .select(`
         id,
         treino_usuario_id,
         treinos_usuario!inner(programa_usuario_id)
       `)
-      .eq('exercicio_original_id', exercicioOriginalId)
       .eq('concluido', true)
       .eq('treinos_usuario.programa_usuario_id', programaUsuarioId)
       .neq('id', currentExerciseId)
       .limit(1);
+
+    // If we have exercicio_original_id, use it
+    if (exercicioOriginalId) {
+      query = query.eq('exercicio_original_id', exercicioOriginalId);
+    } 
+    // Otherwise, use substituto_custom_id for custom exercises
+    else if (customExerciseId) {
+      query = query.eq('substituto_custom_id', customExerciseId);
+    } else {
+      // No identifier available, assume first week
+      console.log('No exercise identifier available, assuming first week');
+      return true;
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('Error checking first week:', error);
@@ -141,7 +162,8 @@ const checkIsFirstWeekForProgram = async (
     }
 
     const isFirstWeek = !data || data.length === 0;
-    console.log(`Is first week for exercise ${exercicioOriginalId} in program ${programaUsuarioId}:`, isFirstWeek);
+    const identifier = exercicioOriginalId || customExerciseId;
+    console.log(`Is first week for exercise ${identifier} in program ${programaUsuarioId}:`, isFirstWeek);
     return isFirstWeek;
   } catch (error) {
     console.error('Error in checkIsFirstWeekForProgram:', error);
@@ -150,12 +172,13 @@ const checkIsFirstWeekForProgram = async (
 };
 
 const findNextExerciseInstance = async (
-  exercicioOriginalId: string, 
-  programaUsuarioId: string
+  exercicioOriginalId: string | null, 
+  programaUsuarioId: string,
+  customExerciseId?: string | null
 ): Promise<{ id: string; nome: string } | null> => {
   try {
-    // Find all exercises with same exercicio_original_id in the same program
-    const { data: exercises, error } = await supabase
+    // Build query based on available identifiers
+    let query = supabase
       .from('exercicios_treino_usuario')
       .select(`
         id, 
@@ -165,13 +188,28 @@ const findNextExerciseInstance = async (
         treino_usuario_id,
         treinos_usuario!inner(programa_usuario_id, created_at)
       `)
-      .eq('exercicio_original_id', exercicioOriginalId)
       .eq('treinos_usuario.programa_usuario_id', programaUsuarioId)
       .eq('concluido', false)
       .order('treinos_usuario(created_at)', { ascending: true });
 
+    // If we have exercicio_original_id, use it
+    if (exercicioOriginalId) {
+      query = query.eq('exercicio_original_id', exercicioOriginalId);
+    } 
+    // Otherwise, use substituto_custom_id for custom exercises
+    else if (customExerciseId) {
+      query = query.eq('substituto_custom_id', customExerciseId);
+    } else {
+      // No identifier available, can't find next exercise
+      console.log('No exercise identifier available, cannot find next exercise');
+      return null;
+    }
+
+    const { data: exercises, error } = await query;
+
     if (error || !exercises || exercises.length === 0) {
-      console.log('No future exercises found:', error);
+      const identifier = exercicioOriginalId || customExerciseId;
+      console.log(`No future exercises found for ${identifier}:`, error);
       return null;
     }
 
