@@ -51,22 +51,27 @@ const Programs = () => {
             });
           }
           
-          // Buscar programas pausados do usuário
+          // Buscar programas pausados do usuário com contagem de treinos pendentes
           const { data: programasUsuarioPausados } = await supabase
             .from('programas_usuario')
             .select(`
               *,
-              programa_original:programas(nome, descricao)
+              programa_original:programas(nome, descricao),
+              treinos_usuario(id, concluido)
             `)
             .eq('usuario_id', user.id)
             .eq('ativo', false);
             
           if (programasUsuarioPausados && programasUsuarioPausados.length > 0) {
-            setPausedPrograms(programasUsuarioPausados.map(p => ({
-              id: p.id,
-              name: p.nome_personalizado || p.programa_original.nome,
-              description: `Programa base: ${p.programa_original.nome}`
-            })));
+            setPausedPrograms(programasUsuarioPausados.map(p => {
+              const hasUnfinishedWorkouts = p.treinos_usuario?.some((t: any) => !t.concluido) ?? false;
+              return {
+                id: p.id,
+                name: p.nome_personalizado || p.programa_original.nome,
+                description: `Programa base: ${p.programa_original.nome}`,
+                hasUnfinishedWorkouts
+              };
+            }));
           }
         }
       } catch (error) {
@@ -214,8 +219,8 @@ const Programs = () => {
                     name={program.name}
                     description={program.description}
                     isPaused
+                    hasUnfinishedWorkouts={program.hasUnfinishedWorkouts}
                     onResume={() => handleResumeProgram(program.id)}
-                    onEdit={() => navigate(`/programs/edit/${program.id}`)}
                     onFinish={() => console.log("Finish program", program.id)}
                     onDelete={() => handleDeleteProgram(program.id, true)}
                   />

@@ -22,6 +22,7 @@ import { toast } from "sonner";
 
 interface ProgramOptionsMenuProps {
   isPaused?: boolean;
+  hasUnfinishedWorkouts?: boolean;
   onResume?: () => void;
   onPause?: () => void;
   onEdit?: () => void;
@@ -31,6 +32,7 @@ interface ProgramOptionsMenuProps {
 
 const ProgramOptionsMenu = ({
   isPaused = false,
+  hasUnfinishedWorkouts = true,
   onResume,
   onPause,
   onEdit,
@@ -41,18 +43,18 @@ const ProgramOptionsMenu = ({
   const [showFinishDialog, setShowFinishDialog] = useState(false);
 
   const handleDelete = () => {
-    // Handle delete logic
     if (onDelete) onDelete();
     toast.success("Programa excluído com sucesso");
     setShowDeleteDialog(false);
   };
 
   const handleFinish = () => {
-    // Handle finish logic
     if (onFinish) onFinish();
     toast.success("Programa finalizado com sucesso");
     setShowFinishDialog(false);
   };
+
+  const canResume = isPaused && hasUnfinishedWorkouts;
 
   return (
     <>
@@ -64,20 +66,26 @@ const ProgramOptionsMenu = ({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           {isPaused ? (
-            <DropdownMenuItem onClick={onResume}>
+            <DropdownMenuItem 
+              onClick={onResume}
+              disabled={!canResume}
+              className={!canResume ? "opacity-50 cursor-not-allowed" : ""}
+            >
               <Play className="h-4 w-4 mr-2" />
               Continuar este treino
             </DropdownMenuItem>
           ) : (
-            <DropdownMenuItem onClick={onPause}>
-              <Pause className="h-4 w-4 mr-2" />
-              Pausar este treino
-            </DropdownMenuItem>
+            <>
+              <DropdownMenuItem onClick={onPause}>
+                <Pause className="h-4 w-4 mr-2" />
+                Pausar este treino
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onEdit}>
+                <Pencil className="h-4 w-4 mr-2" />
+                Alterar este treino
+              </DropdownMenuItem>
+            </>
           )}
-          <DropdownMenuItem onClick={onEdit}>
-            <Pencil className="h-4 w-4 mr-2" />
-            Alterar este treino
-          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setShowFinishDialog(true)}>
             <Flag className="h-4 w-4 mr-2" />
             Finalizar este treino
@@ -95,9 +103,19 @@ const ProgramOptionsMenu = ({
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir programa</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir este programa de treino? Esta ação não pode ser desfeita.
+            <AlertDialogTitle>Excluir programa permanentemente?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">
+                Esta ação excluirá permanentemente o programa, incluindo:
+              </span>
+              <ul className="list-disc list-inside text-sm space-y-1">
+                <li>Todos os treinos (concluídos e pendentes)</li>
+                <li>Todo o histórico de séries executadas</li>
+                <li>Todas as configurações de exercícios</li>
+              </ul>
+              <span className="block font-medium text-destructive">
+                Esta ação não pode ser desfeita.
+              </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -106,7 +124,7 @@ const ProgramOptionsMenu = ({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={handleDelete}
             >
-              Excluir
+              Excluir permanentemente
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
