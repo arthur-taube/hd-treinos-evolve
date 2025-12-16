@@ -14,6 +14,7 @@ const Programs = () => {
   const [hasActiveProgram, setHasActiveProgram] = useState(false);
   const [activeProgram, setActiveProgram] = useState<any>(null);
   const [pausedPrograms, setPausedPrograms] = useState<any[]>([]);
+  const [finishedPrograms, setFinishedPrograms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -63,15 +64,27 @@ const Programs = () => {
             .eq('ativo', false);
             
           if (programasUsuarioPausados && programasUsuarioPausados.length > 0) {
-            setPausedPrograms(programasUsuarioPausados.map(p => {
+            const paused: any[] = [];
+            const finished: any[] = [];
+            
+            programasUsuarioPausados.forEach(p => {
               const hasUnfinishedWorkouts = p.treinos_usuario?.some((t: any) => !t.concluido) ?? false;
-              return {
+              const programData = {
                 id: p.id,
                 name: p.nome_personalizado || p.programa_original.nome,
                 description: `Programa base: ${p.programa_original.nome}`,
                 hasUnfinishedWorkouts
               };
-            }));
+              
+              if (hasUnfinishedWorkouts) {
+                paused.push(programData);
+              } else {
+                finished.push(programData);
+              }
+            });
+            
+            setPausedPrograms(paused);
+            setFinishedPrograms(finished);
           }
         }
       } catch (error) {
@@ -151,6 +164,7 @@ const Programs = () => {
       // Atualizar UI
       if (isPaused) {
         setPausedPrograms(pausedPrograms.filter(p => p.id !== programaId));
+        setFinishedPrograms(finishedPrograms.filter(p => p.id !== programaId));
       } else {
         setHasActiveProgram(false);
         setActiveProgram(null);
@@ -222,6 +236,25 @@ const Programs = () => {
                     hasUnfinishedWorkouts={program.hasUnfinishedWorkouts}
                     onResume={() => handleResumeProgram(program.id)}
                     onFinish={() => console.log("Finish program", program.id)}
+                    onDelete={() => handleDeleteProgram(program.id, true)}
+                  />
+                ))}
+              </div>
+          </ScrollArea>
+          </div>
+        )}
+
+        {finishedPrograms.length > 0 && (
+          <div>
+            <h2 className="mb-4">Programas Finalizados</h2>
+            <ScrollArea className="h-auto">
+              <div className="space-y-3">
+                {finishedPrograms.map((program) => (
+                  <ProgramCard
+                    key={program.id}
+                    name={program.name}
+                    description={program.description}
+                    isFinished
                     onDelete={() => handleDeleteProgram(program.id, true)}
                   />
                 ))}
