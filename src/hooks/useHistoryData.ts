@@ -26,20 +26,22 @@ export function useHistoryData() {
         .from('programas_usuario')
         .select(`
           id,
-          updated_at,
+          data_finalizado,
           programas!inner(
             nome,
             duracao_semanas
           )
         `)
         .eq('usuario_id', userId)
-        .eq('ativo', false);
+        .eq('finalizado', true);
 
       if (data) {
         const formattedPrograms = data.map(program => ({
           id: program.id,
           nome: program.programas.nome,
-          dataFinalizacao: new Date(program.updated_at).toLocaleDateString('pt-BR'),
+          dataFinalizacao: program.data_finalizado 
+            ? new Date(program.data_finalizado).toLocaleDateString('pt-BR')
+            : 'Data não registrada',
           detalhes: `Programa de ${program.programas.duracao_semanas} semanas finalizado`
         }));
         
@@ -73,7 +75,12 @@ export function useHistoryData() {
     try {
       const { error } = await supabase
         .from('programas_usuario')
-        .update({ ativo: true, progresso: 0 })
+        .update({ 
+          ativo: true, 
+          progresso: 0,
+          finalizado: false,
+          data_finalizado: null
+        })
         .eq('id', programId);
 
       if (error) throw error;

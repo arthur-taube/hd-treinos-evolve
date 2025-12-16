@@ -52,7 +52,7 @@ const Programs = () => {
             });
           }
           
-          // Buscar programas pausados do usuário com contagem de treinos pendentes
+          // Buscar programas pausados (ativo = false, finalizado = false)
           const { data: programasUsuarioPausados } = await supabase
             .from('programas_usuario')
             .select(`
@@ -61,29 +61,36 @@ const Programs = () => {
               treinos_usuario(id, concluido)
             `)
             .eq('usuario_id', user.id)
-            .eq('ativo', false);
+            .eq('ativo', false)
+            .eq('finalizado', false);
             
           if (programasUsuarioPausados && programasUsuarioPausados.length > 0) {
-            const paused: any[] = [];
-            const finished: any[] = [];
-            
-            programasUsuarioPausados.forEach(p => {
-              const hasUnfinishedWorkouts = p.treinos_usuario?.some((t: any) => !t.concluido) ?? false;
-              const programData = {
-                id: p.id,
-                name: p.nome_personalizado || p.programa_original.nome,
-                description: `Programa base: ${p.programa_original.nome}`,
-                hasUnfinishedWorkouts
-              };
-              
-              if (hasUnfinishedWorkouts) {
-                paused.push(programData);
-              } else {
-                finished.push(programData);
-              }
-            });
-            
+            const paused = programasUsuarioPausados.map(p => ({
+              id: p.id,
+              name: p.nome_personalizado || p.programa_original.nome,
+              description: `Programa base: ${p.programa_original.nome}`,
+              hasUnfinishedWorkouts: p.treinos_usuario?.some((t: any) => !t.concluido) ?? false
+            }));
             setPausedPrograms(paused);
+          }
+          
+          // Buscar programas finalizados (finalizado = true)
+          const { data: programasUsuarioFinalizados } = await supabase
+            .from('programas_usuario')
+            .select(`
+              *,
+              programa_original:programas(nome, descricao)
+            `)
+            .eq('usuario_id', user.id)
+            .eq('finalizado', true);
+            
+          if (programasUsuarioFinalizados && programasUsuarioFinalizados.length > 0) {
+            const finished = programasUsuarioFinalizados.map(p => ({
+              id: p.id,
+              name: p.nome_personalizado || p.programa_original.nome,
+              description: `Programa base: ${p.programa_original.nome}`,
+              dataFinalizado: p.data_finalizado
+            }));
             setFinishedPrograms(finished);
           }
         }
@@ -174,6 +181,42 @@ const Programs = () => {
     }
   };
 
+  const handleFinishProgram = async (programaId: string, isActive: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('programas_usuario')
+        .update({ 
+          ativo: false,
+          finalizado: true, 
+          data_finalizado: new Date().toISOString() 
+        })
+        .eq('id', programaId);
+        
+      if (error) throw error;
+      
+      // Atualizar UI
+      const programToFinish = isActive 
+        ? activeProgram 
+        : pausedPrograms.find(p => p.id === programaId);
+        
+      if (programToFinish) {
+        setFinishedPrograms([...finishedPrograms, {
+          ...programToFinish,
+          dataFinalizado: new Date().toISOString()
+        }]);
+        
+        if (isActive) {
+          setHasActiveProgram(false);
+          setActiveProgram(null);
+        } else {
+          setPausedPrograms(pausedPrograms.filter(p => p.id !== programaId));
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao finalizar programa:", error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="pb-20">
@@ -209,7 +252,7 @@ const Programs = () => {
                     description={activeProgram.description}
                     onPause={() => handlePauseProgram(activeProgram.id)}
                     onEdit={() => navigate(`/programs/edit/${activeProgram.id}`)}
-                    onFinish={() => console.log("Finish program", activeProgram.id)}
+                    onFinish={() => handleFinishProgram(activeProgram.id, true)}
                     onDelete={() => handleDeleteProgram(activeProgram.id, false)}
                   />
                 </div>
@@ -235,7 +278,7 @@ const Programs = () => {
                     isPaused
                     hasUnfinishedWorkouts={program.hasUnfinishedWorkouts}
                     onResume={() => handleResumeProgram(program.id)}
-                    onFinish={() => console.log("Finish program", program.id)}
+                    onFinish={() => handleFinishProgram(program.id, false)}
                     onDelete={() => handleDeleteProgram(program.id, true)}
                   />
                 ))}

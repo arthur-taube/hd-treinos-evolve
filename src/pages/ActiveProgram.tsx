@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
-import { Calendar, CheckCircle } from "lucide-react";
+import { Calendar, CheckCircle, Trophy } from "lucide-react";
+import { toast as sonnerToast } from "sonner";
 
 interface ProgramaUsuario {
   id: string;
@@ -185,6 +186,29 @@ export default function ActiveProgram() {
     return displayName;
   };
 
+  const handleFinishProgram = async () => {
+    if (!programaUsuario) return;
+    
+    try {
+      const { error } = await supabase
+        .from('programas_usuario')
+        .update({ 
+          ativo: false,
+          finalizado: true, 
+          data_finalizado: new Date().toISOString() 
+        })
+        .eq('id', programaUsuario.id);
+        
+      if (error) throw error;
+      
+      sonnerToast.success("Programa finalizado com sucesso!");
+      navigate('/programs');
+    } catch (error) {
+      console.error("Erro ao finalizar programa:", error);
+      sonnerToast.error("Erro ao finalizar programa");
+    }
+  };
+
   return (
     <div className="pb-20">
       <PageHeader title="Meu Programa Ativo">
@@ -290,6 +314,26 @@ export default function ActiveProgram() {
                 );
               })}
             </div>
+            
+            {/* Botão Concluir Programa quando 100% */}
+            {getProgramProgress() === 100 && (
+              <div className="mt-8 p-6 bg-green-900/20 border border-green-500/30 rounded-lg text-center">
+                <Trophy className="h-12 w-12 text-green-400 mx-auto mb-3" />
+                <h4 className="text-lg font-semibold text-green-400 mb-2">
+                  Parabéns! Você completou todos os treinos!
+                </h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Finalize o programa para movê-lo para o histórico.
+                </p>
+                <Button 
+                  onClick={handleFinishProgram}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Trophy className="h-4 w-4 mr-2" />
+                  Concluir Programa
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}

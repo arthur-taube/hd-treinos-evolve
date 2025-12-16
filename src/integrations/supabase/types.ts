@@ -556,7 +556,9 @@ export type Database = {
           ativo: boolean
           created_at: string
           cronograma_dados: Json | null
+          data_finalizado: string | null
           data_inicio: string
+          finalizado: boolean
           id: string
           nome_personalizado: string | null
           programa_original_id: string
@@ -569,7 +571,9 @@ export type Database = {
           ativo?: boolean
           created_at?: string
           cronograma_dados?: Json | null
+          data_finalizado?: string | null
           data_inicio?: string
+          finalizado?: boolean
           id?: string
           nome_personalizado?: string | null
           programa_original_id: string
@@ -582,7 +586,9 @@ export type Database = {
           ativo?: boolean
           created_at?: string
           cronograma_dados?: Json | null
+          data_finalizado?: string | null
           data_inicio?: string
+          finalizado?: boolean
           id?: string
           nome_personalizado?: string | null
           programa_original_id?: string
