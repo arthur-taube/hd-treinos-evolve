@@ -6,6 +6,7 @@ interface ProgramCardProps {
   name: string;
   description?: string;
   isPaused?: boolean;
+  isFinished?: boolean;
   hasUnfinishedWorkouts?: boolean;
   onResume?: () => void;
   onPause?: () => void;
@@ -18,6 +19,7 @@ const ProgramCard = ({
   name,
   description,
   isPaused = false,
+  isFinished = false,
   hasUnfinishedWorkouts = true,
   onResume,
   onPause,
@@ -33,6 +35,7 @@ const ProgramCard = ({
       </div>
       <ProgramOptionsMenu 
         isPaused={isPaused}
+        isFinished={isFinished}
         hasUnfinishedWorkouts={hasUnfinishedWorkouts}
         onResume={onResume}
         onPause={onPause}
