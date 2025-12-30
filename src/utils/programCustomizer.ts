@@ -270,3 +270,148 @@ export async function saveCustomizedProgram(
 
   return programaUsuario.id;
 }
+
+interface UpdateUserProgramParams {
+  programaUsuarioId: string;
+  customName: string;
+  customExercises: Record<string, Exercise[]>;
+  customDayTitles: Record<string, string>;
+}
+
+/**
+ * Atualiza um programa do usuário existente (programas_usuario)
+ * Propaga alterações para treinos NÃO CONCLUÍDOS
+ */
+export async function updateUserProgram(
+  params: UpdateUserProgramParams
+): Promise<void> {
+  const {
+    programaUsuarioId,
+    customName,
+    customExercises,
+    customDayTitles,
+  } = params;
+
+  console.log('📝 updateUserProgram - Iniciando atualização:', programaUsuarioId);
+
+  // 1. Atualizar nome personalizado do programa
+  const { error: programError } = await supabase
+    .from("programas_usuario")
+    .update({ nome_personalizado: customName })
+    .eq("id", programaUsuarioId);
+
+  if (programError) throw programError;
+
+  // 2. Buscar todos os treinos do usuário (para propagar alterações)
+  const { data: allTreinos, error: treinosError } = await supabase
+    .from("treinos_usuario")
+    .select("*")
+    .eq("programa_usuario_id", programaUsuarioId)
+    .order("ordem_semana")
+    .order("ordem_dia");
+
+  if (treinosError) throw treinosError;
+
+  // 3. Agrupar treinos por ordem_dia
+  const treinosByDay: Record<number, typeof allTreinos> = {};
+  allTreinos?.forEach(treino => {
+    if (!treinosByDay[treino.ordem_dia]) {
+      treinosByDay[treino.ordem_dia] = [];
+    }
+    treinosByDay[treino.ordem_dia].push(treino);
+  });
+
+  // 4. Para cada dia, atualizar títulos e exercícios
+  for (const [dayKey, exercises] of Object.entries(customExercises)) {
+    const ordemDia = parseInt(dayKey.replace('day', ''));
+    const treinosDoDia = treinosByDay[ordemDia] || [];
+    
+    // Extrair nome e nome_personalizado do título
+    const customTitle = customDayTitles[dayKey];
+    let nome = '';
+    let nomePersonalizado: string | null = null;
+    
+    if (customTitle) {
+      if (customTitle.includes(" - ")) {
+        [nome, nomePersonalizado] = customTitle.split(" - ").map(s => s.trim());
+      } else {
+        nome = customTitle.trim();
+      }
+    }
+
+    // 5. Atualizar cada treino do dia (todas as semanas não concluídas)
+    for (const treino of treinosDoDia) {
+      if (treino.concluido) continue; // Pular treinos já concluídos
+
+      // Atualizar título do treino
+      if (nome) {
+        await supabase
+          .from("treinos_usuario")
+          .update({ 
+            nome: nome, 
+            nome_personalizado: nomePersonalizado 
+          })
+          .eq("id", treino.id);
+      }
+
+      // 6. Buscar exercícios atuais deste treino
+      const { data: exerciciosAtuais } = await supabase
+        .from("exercicios_treino_usuario")
+        .select("*")
+        .eq("treino_usuario_id", treino.id)
+        .order("ordem");
+
+      // 7. Remover exercícios que não estão mais na lista (foram ocultados)
+      const exerciseIdsToKeep = exercises.filter(e => !e.hidden).map(e => e.id);
+      const exerciciosParaRemover = exerciciosAtuais?.filter(
+        ex => !exerciseIdsToKeep.includes(ex.id) && !ex.concluido
+      ) || [];
+
+      if (exerciciosParaRemover.length > 0) {
+        await supabase
+          .from("exercicios_treino_usuario")
+          .delete()
+          .in("id", exerciciosParaRemover.map(e => e.id));
+      }
+
+      // 8. Atualizar ou criar exercícios
+      const visibleExercises = exercises.filter(e => !e.hidden);
+      for (let i = 0; i < visibleExercises.length; i++) {
+        const exercise = visibleExercises[i];
+        const existingExercise = exerciciosAtuais?.find(ex => ex.id === exercise.id);
+
+        if (existingExercise) {
+          // Atualizar exercício existente (se não foi concluído)
+          if (!existingExercise.concluido) {
+            await supabase
+              .from("exercicios_treino_usuario")
+              .update({
+                nome: exercise.name,
+                grupo_muscular: exercise.muscleGroup,
+                series: exercise.sets,
+                repeticoes: exercise.reps?.toString() || null,
+                ordem: i,
+              })
+              .eq("id", existingExercise.id);
+          }
+        } else {
+          // Inserir novo exercício
+          await supabase
+            .from("exercicios_treino_usuario")
+            .insert({
+              treino_usuario_id: treino.id,
+              exercicio_original_id: exercise.originalId || null,
+              nome: exercise.name,
+              grupo_muscular: exercise.muscleGroup,
+              series: exercise.sets,
+              repeticoes: exercise.reps?.toString() || null,
+              oculto: false,
+              ordem: i,
+            });
+        }
+      }
+    }
+  }
+
+  console.log('✅ updateUserProgram - Atualização concluída');
+}
