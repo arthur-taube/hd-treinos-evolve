@@ -22,6 +22,7 @@ import NotFound from "./pages/NotFound";
 import ProgramEditor from "./pages/ProgramEditor";
 import ProgramEditorEdit from "./pages/ProgramEditorEdit";
 import ProgramCustomize from "./pages/ProgramCustomize";
+import ProgramUserEdit from "./pages/ProgramUserEdit";
 
 const queryClient = new QueryClient();
 
@@ -98,6 +99,14 @@ const App = () => (
               element={
                 <AppLayout>
                   <ProgramCustomize />
+                </AppLayout>
+              }
+            />
+            <Route
+              path="/programs/user/edit/:programaUsuarioId"
+              element={
+                <AppLayout>
+                  <ProgramUserEdit />
                 </AppLayout>
               }
             />

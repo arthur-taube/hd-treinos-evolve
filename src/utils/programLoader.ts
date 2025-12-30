@@ -211,3 +211,155 @@ export const loadProgramForEdit = async (programId: string) => {
   // Keep existing function for backward compatibility
   return loadExistingProgram(programId);
 };
+
+/**
+ * Carrega um programa do USUÁRIO (programas_usuario) para edição/customização
+ * Diferente de loadExistingProgram que carrega de programas (templates)
+ */
+export const loadUserProgramForCustomize = async (programaUsuarioId: string): Promise<LoadedProgramData | null> => {
+  try {
+    console.log('📊 loadUserProgramForCustomize - Carregando programa do usuário:', programaUsuarioId);
+    
+    // 1. Buscar programa do usuário com programa original
+    const { data: programaUsuario, error: programaError } = await supabase
+      .from('programas_usuario')
+      .select(`
+        *,
+        programa_original:programas(*)
+      `)
+      .eq('id', programaUsuarioId)
+      .maybeSingle();
+
+    if (programaError || !programaUsuario) {
+      console.error('❌ Erro ao carregar programa do usuário:', programaError);
+      return null;
+    }
+
+    const programaOriginal = programaUsuario.programa_original;
+    console.log('📊 Programa do usuário carregado:', programaUsuario.nome_personalizado || programaOriginal.nome);
+
+    // 2. Buscar treinos do usuário (apenas semana 1 para o kanban)
+    const { data: treinosUsuario, error: treinosError } = await supabase
+      .from('treinos_usuario')
+      .select('*')
+      .eq('programa_usuario_id', programaUsuarioId)
+      .eq('ordem_semana', 1)
+      .order('ordem_dia');
+
+    if (treinosError) {
+      console.error('❌ Erro ao carregar treinos do usuário:', treinosError);
+      return null;
+    }
+
+    console.log('📊 Treinos do usuário carregados (semana 1):', treinosUsuario?.length || 0);
+
+    // 3. Buscar exercícios desses treinos
+    const treinoIds = treinosUsuario?.map(t => t.id) || [];
+    const { data: exercicios, error: exerciciosError } = await supabase
+      .from('exercicios_treino_usuario')
+      .select('*')
+      .in('treino_usuario_id', treinoIds)
+      .eq('oculto', false)
+      .order('ordem');
+
+    if (exerciciosError) {
+      console.error('❌ Erro ao carregar exercícios do usuário:', exerciciosError);
+      return null;
+    }
+
+    console.log('📊 Exercícios do usuário carregados:', exercicios?.length || 0);
+
+    // 4. Calcular total de semanas e mesociclos
+    const { data: allTreinos } = await supabase
+      .from('treinos_usuario')
+      .select('ordem_semana')
+      .eq('programa_usuario_id', programaUsuarioId)
+      .order('ordem_semana', { ascending: false })
+      .limit(1);
+
+    const totalWeeks = allTreinos?.[0]?.ordem_semana || programaOriginal.duracao_semanas;
+
+    // 5. Organizar exercícios por dia
+    const exercisesPerDay: Record<string, Record<string, any[]>> = {
+      'mesocycle-1': {}
+    };
+
+    treinosUsuario?.forEach((treino) => {
+      const dayKey = `day${treino.ordem_dia}`;
+      const exerciciosTreino = exercicios?.filter(e => e.treino_usuario_id === treino.id) || [];
+      
+      exercisesPerDay['mesocycle-1'][dayKey] = exerciciosTreino.map(exercicio => ({
+        id: exercicio.id,
+        name: exercicio.nome,
+        muscleGroup: exercicio.grupo_muscular,
+        sets: exercicio.series,
+        reps: exercicio.repeticoes,
+        hidden: exercicio.oculto,
+        originalId: exercicio.exercicio_original_id,
+        allowMultipleGroups: false,
+        availableGroups: undefined
+      }));
+    });
+
+    // 6. Criar dayTitles
+    const dayTitles: Record<string, string> = {};
+    treinosUsuario?.forEach(treino => {
+      const dayKey = `day${treino.ordem_dia}`;
+      const titulo = treino.nome_personalizado 
+        ? `${treino.nome} - ${treino.nome_personalizado}`
+        : treino.nome;
+      dayTitles[dayKey] = titulo;
+    });
+
+    // 7. Buscar cronogramas do programa original
+    const { data: mesociclos } = await supabase
+      .from('mesociclos')
+      .select('cronogramas_recomendados, duracao_semanas')
+      .eq('programa_id', programaOriginal.id)
+      .order('numero');
+
+    let savedSchedules: string[][] = [];
+    if (mesociclos && mesociclos.length > 0 && mesociclos[0].cronogramas_recomendados) {
+      const cronogramas = mesociclos[0].cronogramas_recomendados;
+      if (Array.isArray(cronogramas) && cronogramas.length > 0) {
+        if (cronogramas.every(item => Array.isArray(item))) {
+          savedSchedules = cronogramas as string[][];
+        } else if (cronogramas.every(item => typeof item === 'string')) {
+          savedSchedules = [cronogramas as string[]];
+        }
+      }
+    }
+
+    const mesocycleDurations = mesociclos?.map(m => m.duracao_semanas) || [totalWeeks];
+
+    const resultado: LoadedProgramData = {
+      programName: programaUsuario.nome_personalizado || programaOriginal.nome,
+      programLevel: programaOriginal.nivel,
+      weeklyFrequency: programaOriginal.frequencia_semanal,
+      mesocycles: mesociclos?.length || 1,
+      programData: {
+        description: programaOriginal.descricao,
+        duration: `${totalWeeks} semanas`,
+        goals: programaOriginal.objetivo,
+        split: programaOriginal.split
+      },
+      exercisesPerDay,
+      savedSchedules,
+      weeklySchedules: savedSchedules,
+      mesocycleDurations,
+      dayTitles
+    };
+
+    console.log('📊 Resultado final de loadUserProgramForCustomize:', {
+      programName: resultado.programName,
+      weeklyFrequency: resultado.weeklyFrequency,
+      totalExercises: Object.values(exercisesPerDay['mesocycle-1']).flat().length,
+      dayTitlesCount: Object.keys(dayTitles).length
+    });
+
+    return resultado;
+  } catch (error) {
+    console.error('❌ Exception in loadUserProgramForCustomize:', error);
+    return null;
+  }
+};

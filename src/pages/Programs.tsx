@@ -251,7 +251,7 @@ const Programs = () => {
                     name={activeProgram.name}
                     description={activeProgram.description}
                     onPause={() => handlePauseProgram(activeProgram.id)}
-                    onEdit={() => navigate(`/programs/edit/${activeProgram.id}`)}
+                    onEdit={() => navigate(`/programs/user/edit/${activeProgram.id}`)}
                     onFinish={() => handleFinishProgram(activeProgram.id, true)}
                     onDelete={() => handleDeleteProgram(activeProgram.id, false)}
                   />
