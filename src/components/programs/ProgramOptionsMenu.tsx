@@ -61,7 +61,7 @@ const ProgramOptionsMenu = ({
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
+        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
           <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground">
             <MoreVertical className="h-4 w-4" />
           </Button>
