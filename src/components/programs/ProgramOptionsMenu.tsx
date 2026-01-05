@@ -61,8 +61,13 @@ const ProgramOptionsMenu = ({
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-          <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground">
+        <DropdownMenuTrigger asChild>
+          <Button 
+            variant="ghost" 
+            className="h-8 w-8 p-0 text-muted-foreground"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
@@ -70,7 +75,7 @@ const ProgramOptionsMenu = ({
           {isFinished ? (
             // Programas finalizados: apenas excluir
             <DropdownMenuItem 
-              onClick={() => setShowDeleteDialog(true)}
+              onSelect={() => setShowDeleteDialog(true)}
               className="text-destructive focus:text-destructive"
             >
               <Trash2 className="h-4 w-4 mr-2" />
@@ -80,19 +85,19 @@ const ProgramOptionsMenu = ({
             // Programas pausados: continuar, finalizar, excluir
             <>
               <DropdownMenuItem 
-                onClick={onResume}
+                onSelect={() => onResume?.()}
                 disabled={!canResume}
                 className={!canResume ? "opacity-50 cursor-not-allowed" : ""}
               >
                 <Play className="h-4 w-4 mr-2" />
                 Continuar este treino
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowFinishDialog(true)}>
+              <DropdownMenuItem onSelect={() => setShowFinishDialog(true)}>
                 <Flag className="h-4 w-4 mr-2" />
                 Finalizar este treino
               </DropdownMenuItem>
               <DropdownMenuItem 
-                onClick={() => setShowDeleteDialog(true)}
+                onSelect={() => setShowDeleteDialog(true)}
                 className="text-destructive focus:text-destructive"
               >
                 <Trash2 className="h-4 w-4 mr-2" />
@@ -102,20 +107,20 @@ const ProgramOptionsMenu = ({
           ) : (
             // Programa ativo: pausar, alterar, finalizar, excluir
             <>
-              <DropdownMenuItem onClick={onPause}>
+              <DropdownMenuItem onSelect={() => onPause?.()}>
                 <Pause className="h-4 w-4 mr-2" />
                 Pausar este treino
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onEdit}>
+              <DropdownMenuItem onSelect={() => onEdit?.()}>
                 <Pencil className="h-4 w-4 mr-2" />
                 Alterar este treino
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowFinishDialog(true)}>
+              <DropdownMenuItem onSelect={() => setShowFinishDialog(true)}>
                 <Flag className="h-4 w-4 mr-2" />
                 Finalizar este treino
               </DropdownMenuItem>
               <DropdownMenuItem 
-                onClick={() => setShowDeleteDialog(true)}
+                onSelect={() => setShowDeleteDialog(true)}
                 className="text-destructive focus:text-destructive"
               >
                 <Trash2 className="h-4 w-4 mr-2" />
