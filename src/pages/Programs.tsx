@@ -245,17 +245,16 @@ const Programs = () => {
           <ScrollArea className="h-auto">
             <div className="space-y-3">
               {hasActiveProgram && activeProgram ? (
-                <div onClick={() => navigate("/active-program")} className="cursor-pointer">
-                  <ProgramCard
-                    key={activeProgram.id}
-                    name={activeProgram.name}
-                    description={activeProgram.description}
-                    onPause={() => handlePauseProgram(activeProgram.id)}
-                    onEdit={() => navigate(`/programs/user/edit/${activeProgram.id}`)}
-                    onFinish={() => handleFinishProgram(activeProgram.id, true)}
-                    onDelete={() => handleDeleteProgram(activeProgram.id, false)}
-                  />
-                </div>
+                <ProgramCard
+                  key={activeProgram.id}
+                  name={activeProgram.name}
+                  description={activeProgram.description}
+                  onOpen={() => navigate("/active-program")}
+                  onPause={() => handlePauseProgram(activeProgram.id)}
+                  onEdit={() => navigate(`/programs/user/edit/${activeProgram.id}`)}
+                  onFinish={() => handleFinishProgram(activeProgram.id, true)}
+                  onDelete={() => handleDeleteProgram(activeProgram.id, false)}
+                />
               ) : (
                 <p className="text-muted-foreground">
                   Nenhum programa ativo no momento

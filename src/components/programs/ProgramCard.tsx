@@ -8,6 +8,7 @@ interface ProgramCardProps {
   isPaused?: boolean;
   isFinished?: boolean;
   hasUnfinishedWorkouts?: boolean;
+  onOpen?: () => void;
   onResume?: () => void;
   onPause?: () => void;
   onEdit?: () => void;
@@ -21,6 +22,7 @@ const ProgramCard = ({
   isPaused = false,
   isFinished = false,
   hasUnfinishedWorkouts = true,
+  onOpen,
   onResume,
   onPause,
   onEdit,
@@ -29,7 +31,10 @@ const ProgramCard = ({
 }: ProgramCardProps) => {
   return (
     <Card className="flex justify-between items-center p-4 program-card">
-      <div>
+      <div 
+        onClick={onOpen} 
+        className={onOpen ? "flex-1 cursor-pointer" : "flex-1"}
+      >
         <h3 className="font-medium">{name}</h3>
         {description && <p className="text-sm text-muted-foreground">{description}</p>}
       </div>
