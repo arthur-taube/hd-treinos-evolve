@@ -60,6 +60,9 @@ export function ExerciseCard({
     setExerciseNote,
     sets,
     setSets,
+    originalSetCount,
+    addSet,
+    removeSet,
     showDifficultyDialog,
     setShowDifficultyDialog,
     showFatigueDialog,
@@ -93,7 +96,8 @@ export function ExerciseCard({
     onWeightUpdate,
     setIsOpen,
     setShowDifficultyDialog,
-    checkIsFirstWeek
+    checkIsFirstWeek,
+    originalSetCount
   );
 
   const allSetsCompleted = sets.every(set => set.completed);
@@ -214,6 +218,9 @@ export function ExerciseCard({
                 allSetsCompleted={allSetsCompleted}
                 exerciseConcluido={exercise.concluido}
                 exercise={exercise}
+                onAddSet={addSet}
+                onRemoveSet={removeSet}
+                originalSetCount={originalSetCount}
               />
             </AccordionContent>
           </AccordionItem>

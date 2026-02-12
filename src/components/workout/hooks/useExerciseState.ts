@@ -44,6 +44,7 @@ export const useExerciseState = (
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [exerciseNote, setExerciseNote] = useState("");
   const [sets, setSets] = useState<SetData[]>([]);
+  const [originalSetCount, setOriginalSetCount] = useState(0);
   const [incrementDialogShown, setIncrementDialogShown] = useState(false);
   
   // Use the feedback hook for managing all feedback dialogs and functions
@@ -111,6 +112,7 @@ export const useExerciseState = (
 
       console.log(`Initialized sets for ${exercise.nome}:`, initialSets);
       setSets(initialSets);
+      setOriginalSetCount(setsCount);
     };
 
     initializeSets();
@@ -164,6 +166,20 @@ export const useExerciseState = (
     setIncrementDialogShown(true); // Mark as shown to prevent reopening
   };
 
+  const addSet = () => {
+    setSets(prev => [
+      ...prev,
+      { number: prev.length + 1, weight: null, reps: null, completed: false }
+    ]);
+  };
+
+  const removeSet = (index: number) => {
+    setSets(prev => {
+      const newSets = prev.filter((_, i) => i !== index);
+      return newSets.map((set, i) => ({ ...set, number: i + 1 }));
+    });
+  };
+
   return {
     isOpen,
     setIsOpen,
@@ -177,6 +193,9 @@ export const useExerciseState = (
     setExerciseNote,
     sets,
     setSets,
+    originalSetCount,
+    addSet,
+    removeSet,
     showDifficultyDialog: feedbackHook.showDifficultyDialog,
     setShowDifficultyDialog: feedbackHook.setShowDifficultyDialog,
     showFatigueDialog: feedbackHook.showFatigueDialog,

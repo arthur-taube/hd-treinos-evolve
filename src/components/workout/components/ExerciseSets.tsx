@@ -1,8 +1,20 @@
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Check, Target } from "lucide-react";
+import { Check, X, Plus } from "lucide-react";
 import { SetData, SeriesData } from "../hooks/useExerciseState";
 import { PreviousSeriesData } from "../hooks/usePreviousSeries";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 interface ExerciseSetsProps {
   sets: SetData[];
   previousSeries: PreviousSeriesData[];
@@ -24,7 +36,11 @@ interface ExerciseSetsProps {
     reps_programadas?: number | null;
     repeticoes?: string | null;
   };
+  onAddSet?: () => void;
+  onRemoveSet?: (index: number) => void;
+  originalSetCount?: number;
 }
+
 export function ExerciseSets({
   sets,
   previousSeries,
@@ -41,8 +57,13 @@ export function ExerciseSets({
   handleExerciseComplete,
   allSetsCompleted,
   exerciseConcluido,
-  exercise
+  exercise,
+  onAddSet,
+  onRemoveSet,
+  originalSetCount = 0,
 }: ExerciseSetsProps) {
+  const [showAddSetDialog, setShowAddSetDialog] = useState(false);
+
   // Get suggested values from progression or exercise data
   const suggestedWeight = exercise?.peso !== undefined && exercise?.peso !== null ? exercise.peso : 0;
 
@@ -71,6 +92,7 @@ export function ExerciseSets({
   // Determine progression type for display
   const isDoubleProgression = exercise?.repeticoes && exercise.repeticoes.includes('-');
   const progressionType = isDoubleProgression ? 'dupla' : 'linear';
+
   return <div className="px-4 py-2">
       {/* Indicador de progressão aplicada */}
       {hasProgressionData}
@@ -109,6 +131,9 @@ export function ExerciseSets({
       const displayReps = set.reps !== null ? set.reps.toString() : '';
       const placeholderWeight = suggestedWeight.toString();
       const placeholderReps = suggestedReps.toString();
+      const isExtraSet = set.number > originalSetCount;
+      const canRemove = isExtraSet && !set.completed && onRemoveSet;
+
       return <div key={index} className={`grid grid-cols-4 gap-2 items-center py-2 ${index !== sets.length - 1 ? "border-b" : ""}`}>
             <div>{set.number}</div>
             <div className="flex items-center">
@@ -118,13 +143,51 @@ export function ExerciseSets({
             <div>
               <Input type="number" value={displayReps} placeholder={placeholderReps} onChange={e => handleRepsChange(index, Number(e.target.value))} min={0} step={1} className="w-20 h-8 text-sm" />
             </div>
-            <div className="flex justify-center">
+            <div className="flex justify-center gap-1">
               <Button variant={set.completed ? "default" : "outline"} size="sm" className="h-8 w-8 p-0" onClick={() => handleSetComplete(index)}>
                 {set.completed ? <Check className="h-4 w-4" /> : null}
               </Button>
+              {canRemove && (
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive" onClick={() => onRemoveSet(index)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </div>;
     })}
+
+      {/* Add set button */}
+      {!exerciseConcluido && onAddSet && (
+        <button
+          type="button"
+          className="mt-2 text-sm text-primary hover:underline flex items-center gap-1"
+          onClick={() => setShowAddSetDialog(true)}
+        >
+          <Plus className="h-3 w-3" />
+          Adicionar mais 1 série
+        </button>
+      )}
+
+      {/* Confirmation dialog */}
+      <AlertDialog open={showAddSetDialog} onOpenChange={setShowAddSetDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Adicionar série extra</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja realizar mais uma série para este exercício?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              onAddSet?.();
+              setShowAddSetDialog(false);
+            }}>
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       
       <div className="mt-4 space-y-4">
         {showNoteInput ? <div className="space-y-2">

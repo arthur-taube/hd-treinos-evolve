@@ -20,7 +20,8 @@ export const useExerciseActions = (
   onWeightUpdate: (exerciseId: string, weight: number) => Promise<void>,
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>,
   setShowDifficultyDialog: React.Dispatch<React.SetStateAction<boolean>>,
-  checkIsFirstWeek: () => Promise<boolean>
+  checkIsFirstWeek: () => Promise<boolean>,
+  originalSetCount?: number
 ) => {
   const handleSetComplete = async (index: number) => {
     const newSets = [...sets];
@@ -108,6 +109,15 @@ export const useExerciseActions = (
     }
 
     try {
+      // Persist updated set count if changed
+      if (originalSetCount !== undefined && sets.length !== originalSetCount) {
+        await supabase
+          .from('exercicios_treino_usuario')
+          .update({ series: sets.length })
+          .eq('id', exercise.id);
+        console.log(`Updated series count from ${originalSetCount} to ${sets.length} for ${exercise.nome}`);
+      }
+
       await onExerciseComplete(exercise.id, true);
 
       // DUPLA CHECAGEM: Check if this is the first week
