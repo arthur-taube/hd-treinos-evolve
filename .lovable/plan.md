@@ -1,73 +1,85 @@
 
 
-## Adicionar/Remover Series Extra Durante o Workout
+## Tornar Dialogs de Feedback Obrigatorios
 
 ### Objetivo
-Permitir que o usuario adicione series extras a um exercicio durante o treino, com opcao de remover series adicionadas, gravando a alteracao no banco somente ao concluir o exercicio.
+Impedir que o usuario feche os dialogs de incremento minimo, dificuldade e fadiga sem fornecer uma resposta, evitando falhas na progressao.
 
-### Arquivos a Modificar
+### Mudancas
 
-#### 1. `src/components/workout/hooks/useExerciseState.ts`
-- Adicionar estado `originalSetCount` (inicializado junto com `sets` no useEffect, valor = numero de series arredondado)
-- Criar funcao `addSet()`: adiciona novo item ao array `sets` com `number` sequencial, `weight: null`, `reps: null`, `completed: false`
-- Criar funcao `removeSet(index)`: remove a serie do array e renumera os `number` das series restantes
-- Exportar `originalSetCount`, `addSet`, `removeSet`
+#### 1. `src/components/workout/FeedbackDialog.tsx`
+- Adicionar nova prop `required?: boolean` (default `false`)
+- Quando `required = true`:
+  - Passar `hideCloseButton={true}` ao `DialogContent` (ja suportado pelo componente)
+  - No `Dialog`, usar `onOpenChange` que ignora tentativas de fechar: `onOpenChange={() => {}}` em vez de `onOpenChange={(open) => !open && onClose()}`
+  - O `DialogContent` do Radix ja bloqueia interacao fora do dialog (overlay), mas o `onInteractOutside` precisa ser interceptado com `e.preventDefault()` para impedir fechamento ao clicar fora
+  - Tambem interceptar `onEscapeKeyDown` com `e.preventDefault()`
+- Quando `required = true` e dialog eh de incremento (`isNumericInput`):
+  - Adicionar botao "Cancelar" no footer ao lado do "Salvar"
+  - Novo prop `onCancel?: () => void` - chamado ao clicar em Cancelar
+  - O botao Cancelar fecha o dialog e impede o usuario de iniciar o exercicio
 
-#### 2. `src/components/workout/components/ExerciseSets.tsx`
-- Receber novas props: `onAddSet`, `onRemoveSet`, `originalSetCount`, `exerciseConcluido`
-- Adicionar botao "+ Adicionar mais 1 serie" (estilo texto/link discreto) entre a ultima linha de serie e a area de notas/concluir
-  - Escondido quando exercicio ja esta concluido
-- Mostrar `AlertDialog` de confirmacao ao clicar: "Tem certeza que deseja realizar mais uma serie para este exercicio?"
-- Para cada serie onde `set.number > originalSetCount` e `set.completed === false`, exibir um botao "X" (icone `X` do lucide-react) ao lado do botao de conclusao (check) na mesma celula da coluna "Concluir"
-  - Ao clicar no "X", remove a serie imediatamente (sem confirmacao)
+#### 2. `src/components/workout/ExerciseCard.tsx`
+- Nos 3 `FeedbackDialog` (dificuldade, fadiga, incremento), passar `required={true}`
+- No dialog de incremento, passar `onCancel` que fecha o accordion (fecha o exercicio):
+  ```
+  onCancel={() => {
+    setShowIncrementDialog(false);
+    setIsOpen(false);
+  }}
+  ```
 
-#### 3. `src/components/workout/hooks/useExerciseActions.ts`
-- Na funcao `handleExerciseComplete`, antes de chamar `onExerciseComplete`:
-  - Comparar `sets.length` com `originalSetCount` (recebido como novo parametro do hook)
-  - Se diferente, fazer `supabase.from('exercicios_treino_usuario').update({ series: sets.length }).eq('id', exercise.id)` para persistir o novo numero de series
-
-#### 4. `src/components/workout/ExerciseCard.tsx`
-- Extrair `addSet`, `removeSet`, `originalSetCount` do `useExerciseState`
-- Passar `originalSetCount` como parametro adicional para `useExerciseActions`
-- Passar `onAddSet={addSet}`, `onRemoveSet={removeSet}`, `originalSetCount` como props para `ExerciseSets`
+#### 3. `src/components/workout/hooks/useExerciseState.ts`
+- Resetar `incrementDialogShown` para `false` quando o dialog de incremento eh cancelado, para que ao reabrir o accordion o dialog apareca novamente
+- Exportar funcao `resetIncrementDialogShown` ou ajustar a logica existente:
+  - A flag `incrementDialogShown` so deve ser marcada como `true` quando o usuario SALVA o incremento (ja funciona assim via `customSaveIncrementSetting`)
+  - Quando o usuario cancela, `incrementDialogShown` deve voltar a `false` para re-exibir ao reabrir
 
 ### Detalhes Tecnicos
 
-**Estrutura do botao "X" na grid de series:**
-
-A coluna "Concluir" (4a coluna) passara a conter dois elementos lado a lado para series extras: o botao de check e o botao "X". Ambos serao pequenos (h-8 w-8) e ficarao em um `flex` com `gap-1`.
-
-**Logica de renumeracao ao remover:**
-
+**Props adicionais no FeedbackDialog:**
 ```typescript
-const removeSet = (index: number) => {
-  setSets(prev => {
-    const newSets = prev.filter((_, i) => i !== index);
-    return newSets.map((set, i) => ({ ...set, number: i + 1 }));
-  });
-};
-```
-
-**Persistencia no banco (somente ao concluir):**
-
-```typescript
-// Em handleExerciseComplete, antes de onExerciseComplete:
-if (sets.length !== originalSetCount) {
-  await supabase
-    .from('exercicios_treino_usuario')
-    .update({ series: sets.length })
-    .eq('id', exercise.id);
+interface FeedbackDialogProps {
+  // ... existentes
+  required?: boolean;    // bloqueia fechamento sem resposta
+  onCancel?: () => void; // so para incremento - botao cancelar
 }
 ```
 
-**AlertDialog de confirmacao:**
+**Bloqueio de fechamento no Dialog (quando required=true):**
+```typescript
+<Dialog open={isOpen} onOpenChange={required ? undefined : (open) => !open && onClose()}>
+  <DialogContent
+    hideCloseButton={required}
+    onInteractOutside={required ? (e) => e.preventDefault() : undefined}
+    onEscapeKeyDown={required ? (e) => e.preventDefault() : undefined}
+  >
+```
 
-Usa o `AlertDialog` do Radix ja existente no projeto (`@/components/ui/alert-dialog`).
+**Botao Cancelar (apenas no dialog de incremento):**
+```typescript
+<DialogFooter>
+  {onCancel && (
+    <Button variant="outline" onClick={onCancel}>
+      Cancelar
+    </Button>
+  )}
+  <Button onClick={handleSubmit} disabled={...}>
+    Salvar
+  </Button>
+</DialogFooter>
+```
 
-### Regras de Negocio
+**Fluxo do Cancelar no incremento:**
+1. Usuario abre exercicio (accordion)
+2. Dialog de incremento aparece (required)
+3. Usuario clica "Cancelar"
+4. `onCancel` eh chamado: fecha dialog + fecha accordion (`setIsOpen(false)`)
+5. `incrementDialogShown` volta a `false`
+6. Ao reabrir o accordion, dialog aparece novamente
 
-1. O botao "+ Adicionar serie" nao aparece se o exercicio ja esta concluido
-2. O botao "X" so aparece em series extras (number > originalSetCount) que nao foram concluidas
-3. Se o usuario concluiu uma serie extra (marcou check), ele precisa desmarcar antes de poder remover
-4. A coluna `series` no banco so e atualizada ao clicar em "Concluir exercicio"
-5. Series extras seguem o mesmo fluxo de preenchimento (peso, reps, check) que as originais
+### Arquivos Modificados
+1. `src/components/workout/FeedbackDialog.tsx` - props `required` e `onCancel`, bloqueio de fechamento
+2. `src/components/workout/ExerciseCard.tsx` - passar `required={true}` e `onCancel` nos dialogs
+3. `src/components/workout/hooks/useExerciseState.ts` - resetar `incrementDialogShown` ao cancelar
+
