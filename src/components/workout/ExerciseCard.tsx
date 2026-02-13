@@ -72,6 +72,7 @@ export function ExerciseCard({
     saveDifficultyFeedback,
     saveFatigueFeedback,
     saveIncrementSetting,
+    resetIncrementDialogShown,
     checkIsFirstWeek
   } = useExerciseState(exercise, onExerciseComplete, onWeightUpdate);
 
@@ -234,7 +235,8 @@ export function ExerciseCard({
         title="Como foi o exercício?" 
         description="Avalie a dificuldade do exercício {exerciseName}" 
         options={DIFFICULTY_OPTIONS} 
-        exerciseName={exercise.nome} 
+        exerciseName={exercise.nome}
+        required={true}
       />
 
       <FeedbackDialog 
@@ -244,7 +246,8 @@ export function ExerciseCard({
         title="Dor Muscular / Fadiga Muscular" 
         description="Como você sentiu seus músculos após completar o exercício {exerciseName}?" 
         options={COMBINED_FATIGUE_OPTIONS} 
-        exerciseName={exercise.nome} 
+        exerciseName={exercise.nome}
+        required={true}
       />
 
       <FeedbackDialog 
@@ -258,7 +261,13 @@ export function ExerciseCard({
         isNumericInput={true} 
         minValue={0.5} 
         maxValue={10} 
-        step={0.5} 
+        step={0.5}
+        required={true}
+        onCancel={() => {
+          setShowIncrementDialog(false);
+          setIsOpen(false);
+          resetIncrementDialogShown();
+        }}
       />
 
       <ExerciseSubstitutionDialog

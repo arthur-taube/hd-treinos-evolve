@@ -39,6 +39,8 @@ interface FeedbackDialogProps {
   minValue?: number;
   maxValue?: number;
   step?: number;
+  required?: boolean;
+  onCancel?: () => void;
 }
 
 export function FeedbackDialog({
@@ -53,7 +55,9 @@ export function FeedbackDialog({
   isNumericInput = false,
   minValue = 0.5,
   maxValue = 10,
-  step = 0.5
+  step = 0.5,
+  required = false,
+  onCancel
 }: FeedbackDialogProps) {
   const [selectedValue, setSelectedValue] = useState<string | number | null>(null);
   const [showDescription, setShowDescription] = useState<string | null>(null);
@@ -118,8 +122,13 @@ export function FeedbackDialog({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={isOpen} onOpenChange={required ? undefined : (open) => !open && onClose()}>
+      <DialogContent
+        className="sm:max-w-md"
+        hideCloseButton={required}
+        onInteractOutside={required ? (e) => e.preventDefault() : undefined}
+        onEscapeKeyDown={required ? (e) => e.preventDefault() : undefined}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
@@ -197,11 +206,16 @@ export function FeedbackDialog({
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2">
+          {onCancel && (
+            <Button variant="outline" onClick={onCancel} className="w-full sm:w-auto">
+              Cancelar
+            </Button>
+          )}
           <Button
             onClick={handleSubmit}
             disabled={isNumericInput ? false : selectedValue === null}
-            className="w-full"
+            className="w-full sm:w-auto"
           >
             Salvar
           </Button>

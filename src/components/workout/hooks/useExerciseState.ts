@@ -166,6 +166,11 @@ export const useExerciseState = (
     setIncrementDialogShown(true); // Mark as shown to prevent reopening
   };
 
+  // Reset increment dialog shown flag (used when user cancels)
+  const resetIncrementDialogShown = () => {
+    setIncrementDialogShown(false);
+  };
+
   const addSet = () => {
     setSets(prev => [
       ...prev,
@@ -205,6 +210,7 @@ export const useExerciseState = (
     saveDifficultyFeedback: feedbackHook.saveDifficultyFeedback,
     saveFatigueFeedback: feedbackHook.saveFatigueFeedback,
     saveIncrementSetting: customSaveIncrementSetting,
+    resetIncrementDialogShown,
     checkIsFirstWeek
   };
 };
