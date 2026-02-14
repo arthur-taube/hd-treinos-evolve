@@ -771,6 +771,7 @@ export type Database = {
           ordem_dia: number
           ordem_semana: number
           programa_usuario_id: string
+          pulado: boolean
           treino_original_id: string
           updated_at: string
         }
@@ -785,6 +786,7 @@ export type Database = {
           ordem_dia: number
           ordem_semana: number
           programa_usuario_id: string
+          pulado?: boolean
           treino_original_id: string
           updated_at?: string
         }
@@ -799,6 +801,7 @@ export type Database = {
           ordem_dia?: number
           ordem_semana?: number
           programa_usuario_id?: string
+          pulado?: boolean
           treino_original_id?: string
           updated_at?: string
         }

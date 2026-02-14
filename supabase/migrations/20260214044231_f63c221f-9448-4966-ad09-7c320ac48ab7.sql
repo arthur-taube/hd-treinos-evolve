@@ -1,0 +1,1 @@
+ALTER TABLE public.treinos_usuario ADD COLUMN pulado boolean NOT NULL DEFAULT false;
