@@ -218,7 +218,6 @@ export default function ActiveProgram() {
             concluido: true,
             avaliacao_dificuldade: 'muito_pesado',
             avaliacao_fadiga: 0,
-            avaliacao_dor: 0,
             data_avaliacao: new Date().toISOString()
           })
           .eq('treino_usuario_id', treinoId)
@@ -282,7 +281,6 @@ export default function ActiveProgram() {
           concluido: false,
           avaliacao_dificuldade: null,
           avaliacao_fadiga: null,
-          avaliacao_dor: null,
           data_avaliacao: null
         })
         .eq('treino_usuario_id', treinoId);
