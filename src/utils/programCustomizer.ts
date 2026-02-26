@@ -254,7 +254,7 @@ export async function saveCustomizedProgram(
             series: exercicio.sets,
             repeticoes: exercicio.reps?.toString() || null,
             oculto: false,
-            ordem: index,
+            ordem: index + 1,
           }));
 
         if (exerciciosUsuario.length > 0) {
@@ -390,7 +390,7 @@ export async function updateUserProgram(
                 grupo_muscular: exercise.muscleGroup,
                 series: exercise.sets,
                 repeticoes: exercise.reps?.toString() || null,
-                ordem: i,
+                ordem: i + 1,
               })
               .eq("id", existingExercise.id);
           }
@@ -406,7 +406,7 @@ export async function updateUserProgram(
               series: exercise.sets,
               repeticoes: exercise.reps?.toString() || null,
               oculto: false,
-              ordem: i,
+              ordem: i + 1,
             });
         }
       }

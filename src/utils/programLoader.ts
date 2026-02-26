@@ -269,6 +269,15 @@ export const loadUserProgramForCustomize = async (programaUsuarioId: string): Pr
 
     console.log('📊 Exercícios do usuário carregados:', exercicios?.length || 0);
 
+    // 3.5. Buscar exercícios do template original para recuperar allow_multiple_groups/available_groups
+    const treinoOriginalIds = [...new Set(treinosUsuario?.map(t => t.treino_original_id) || [])];
+    const { data: exerciciosOriginais } = await supabase
+      .from('exercicios_treino')
+      .select('treino_id, exercicio_original_id, allow_multiple_groups, available_groups')
+      .in('treino_id', treinoOriginalIds);
+
+    console.log('📊 Exercícios originais do template carregados:', exerciciosOriginais?.length || 0);
+
     // 4. Calcular total de semanas e mesociclos
     const { data: allTreinos } = await supabase
       .from('treinos_usuario')
@@ -288,17 +297,25 @@ export const loadUserProgramForCustomize = async (programaUsuarioId: string): Pr
       const dayKey = `day${treino.ordem_dia}`;
       const exerciciosTreino = exercicios?.filter(e => e.treino_usuario_id === treino.id) || [];
       
-      exercisesPerDay['mesocycle-1'][dayKey] = exerciciosTreino.map(exercicio => ({
-        id: exercicio.id,
-        name: exercicio.nome,
-        muscleGroup: exercicio.grupo_muscular,
-        sets: exercicio.series,
-        reps: exercicio.repeticoes,
-        hidden: exercicio.oculto,
-        originalId: exercicio.exercicio_original_id,
-        allowMultipleGroups: false,
-        availableGroups: undefined
-      }));
+      exercisesPerDay['mesocycle-1'][dayKey] = exerciciosTreino.map(exercicio => {
+        // Buscar dados do template original para este exercício
+        const exercicioTemplate = exerciciosOriginais?.find(
+          eo => eo.treino_id === treino.treino_original_id && 
+                eo.exercicio_original_id === exercicio.exercicio_original_id
+        );
+
+        return {
+          id: exercicio.id,
+          name: exercicio.nome,
+          muscleGroup: exercicio.grupo_muscular,
+          sets: exercicio.series,
+          reps: exercicio.repeticoes,
+          hidden: exercicio.oculto,
+          originalId: exercicio.exercicio_original_id,
+          allowMultipleGroups: exercicioTemplate?.allow_multiple_groups || false,
+          availableGroups: exercicioTemplate?.available_groups || undefined
+        };
+      });
     });
 
     // 6. Criar dayTitles
