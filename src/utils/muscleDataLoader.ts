@@ -38,17 +38,28 @@ export const updateMissingMuscleData = async (exerciseId: string, exercicioOrigi
 };
 
 export const propagateIncrementoMinimo = async (
-  exercicioOriginalId: string,
+  exercicioOriginalId: string | null,
   programaUsuarioId: string,
-  incrementoMinimo: number
+  incrementoMinimo: number,
+  customExerciseId?: string | null
 ): Promise<boolean> => {
   try {
-    // Buscar todos os exercícios futuros com o mesmo exercicio_original_id no programa
-    const { data: exerciciosFuturos, error } = await supabase
+    // Build query based on available identifier
+    let query = supabase
       .from('exercicios_treino_usuario')
       .select('id, treino_usuario_id')
-      .eq('exercicio_original_id', exercicioOriginalId)
       .is('incremento_minimo', null);
+
+    if (exercicioOriginalId) {
+      query = query.eq('exercicio_original_id', exercicioOriginalId);
+    } else if (customExerciseId) {
+      query = query.eq('substituto_custom_id', customExerciseId);
+    } else {
+      console.log('No identifier available for propagation, skipping');
+      return true;
+    }
+
+    const { data: exerciciosFuturos, error } = await query;
 
     if (error) {
       console.error('Erro ao buscar exercícios futuros:', error);
@@ -56,7 +67,7 @@ export const propagateIncrementoMinimo = async (
     }
 
     if (!exerciciosFuturos || exerciciosFuturos.length === 0) {
-      return true; // Não há exercícios futuros para atualizar
+      return true;
     }
 
     // Filtrar apenas exercícios que pertencem ao mesmo programa
@@ -74,7 +85,7 @@ export const propagateIncrementoMinimo = async (
     }
 
     if (exerciciosDoPrograma.length === 0) {
-      return true; // Não há exercícios do mesmo programa para atualizar
+      return true;
     }
 
     // Atualizar incremento_minimo e configuracao_inicial para todos os exercícios futuros
