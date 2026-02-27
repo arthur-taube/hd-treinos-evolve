@@ -1,110 +1,117 @@
 
 
-## Correcao: Carregar Grupos Multiplos e Padronizar Ordem no Editor de Programa do Usuario
+## Correcao: Propagacao de Incremento e Configuracao Inicial para Exercicios Custom
 
-### Problema 1: Grupos multiplos nao carregados
-Em `loadUserProgramForCustomize` (programLoader.ts, linhas 299-300), os valores sao hardcoded:
-```typescript
-allowMultipleGroups: false,
-availableGroups: undefined
-```
-A tabela `exercicios_treino_usuario` nao possui colunas `allow_multiple_groups` nem `available_groups`. Essas informacoes existem apenas na tabela template `exercicios_treino`. E necessario recupera-las cruzando os dados.
+### Problema Raiz
+Tres pontos causam o bug:
 
-### Problema 2: Ordem inconsistente (0 vs 1)
-- `exercicios_treino` usa ordem 1-based (1, 2, 3...)
-- `exercicios_treino_usuario` usa ordem 0-based (0, 1, 2...) — definido em `saveCustomizedProgram` (linha 257: `ordem: index`) e `updateUserProgram` (linha 394: `ordem: i`)
+1. **Trigger `propagate_increment_config`** (banco): filtra por `etu.exercicio_original_id = NEW.exercicio_original_id`. Para exercicios custom, `exercicio_original_id` e NULL, e `NULL = NULL` retorna FALSE no Postgres — logo a propagacao nunca ocorre.
 
-Confirmado pelos dados:
-- Template: ordens 1, 2, 3, 4, 5, 6
-- Usuario: ordens 0, 1, 2, 3, 4, 5
+2. **`propagateIncrementoMinimo` em `muscleDataLoader.ts`** (linha 50): busca exercicios futuros por `.eq('exercicio_original_id', exercicioOriginalId)`. Para custom, o ID passado e null, entao nada e encontrado.
 
-### Problema 3: Reordenacao quebra matching
-Se o usuario reordenar exercicios no kanban, a `ordem` muda e nao serve mais para identificar qual card original (`exercicios_treino`) corresponde a cada exercicio do usuario. O `exercicio_original_id` (que aponta para `exercicios_iniciantes`) e compartilhado entre as duas tabelas e pode ser usado para matching, mas nao e 100% robusto se houver dois exercicios identicos no mesmo dia.
+3. **`triggerProgressionPrecomputation` em `use-exercise-feedback.ts`** (linha 159-168): nao seleciona `substituto_custom_id` do exercicio, entao `customExerciseId` nunca e passado para `precomputeNextExerciseProgression`.
 
 ### Solucao
 
-#### 1. `src/utils/programLoader.ts` — `loadUserProgramForCustomize`
-Apos buscar os exercicios do usuario, buscar tambem os `exercicios_treino` do programa original (semana 1) para recuperar `allow_multiple_groups` e `available_groups`:
+#### 1. Migracao SQL — Corrigir trigger `propagate_increment_config`
+Alterar o trigger para tambem propagar via `substituto_custom_id` quando `exercicio_original_id` e NULL:
 
-```typescript
-// Buscar exercicios originais do template para recuperar allow_multiple_groups/available_groups
-const { data: treinosOriginais } = await supabase
-  .from('treinos')
-  .select('id, ordem_dia')
-  .eq('programa_id', programaOriginal.id)
-  .eq('ordem_semana', 1);
-
-const treinoOriginalIds = treinosOriginais?.map(t => t.id) || [];
-
-const { data: exerciciosOriginais } = await supabase
-  .from('exercicios_treino')
-  .select('treino_id, exercicio_original_id, allow_multiple_groups, available_groups')
-  .in('treino_id', treinoOriginalIds);
-```
-
-Para cada exercicio do usuario, fazer matching pelo `exercicio_original_id` dentro do mesmo dia (via `treinos_usuario.treino_original_id` = `treinos.id`):
-
-```typescript
-// Encontrar o exercicio template correspondente
-const treinoOriginalId = treino.treino_original_id;
-const exercicioTemplate = exerciciosOriginais?.find(
-  eo => eo.treino_id === treinoOriginalId && 
-        eo.exercicio_original_id === exercicio.exercicio_original_id
-);
-
-return {
-  // ...demais campos
-  allowMultipleGroups: exercicioTemplate?.allow_multiple_groups || false,
-  availableGroups: exercicioTemplate?.available_groups || undefined
-};
-```
-
-#### 2. `src/utils/programCustomizer.ts` — Padronizar ordem para 1-based
-Em `saveCustomizedProgram` (linha 257), mudar:
-```typescript
-ordem: index,     // antes (0-based)
-ordem: index + 1, // depois (1-based)
-```
-
-Em `updateUserProgram` (linhas 394 e 409), mudar:
-```typescript
-ordem: i,     // antes (0-based)
-ordem: i + 1, // depois (1-based)
-```
-
-#### 3. Migracao: corrigir ordens existentes no banco
-Executar um UPDATE para incrementar em 1 todas as ordens 0-based existentes em `exercicios_treino_usuario`:
 ```sql
-UPDATE exercicios_treino_usuario SET ordem = ordem + 1 WHERE ordem = 0;
-```
-Na verdade, para ser seguro, incrementar TODOS os registros que seguem o padrao 0-based. Como o template usa 1-based e o maximo de exercicios por dia e ~6, podemos detectar pelo fato de existir `ordem = 0`:
-```sql
--- Incrementar ordem de todos exercicios de treinos que contenham ordem 0
-UPDATE exercicios_treino_usuario 
-SET ordem = ordem + 1 
-WHERE treino_usuario_id IN (
-  SELECT DISTINCT treino_usuario_id 
-  FROM exercicios_treino_usuario 
-  WHERE ordem = 0
-);
+CREATE OR REPLACE FUNCTION public.propagate_increment_config()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
+AS $function$
+BEGIN
+    IF (TG_OP = 'UPDATE' AND (
+        OLD.incremento_minimo IS DISTINCT FROM NEW.incremento_minimo OR
+        OLD.configuracao_inicial IS DISTINCT FROM NEW.configuracao_inicial
+    )) OR (TG_OP = 'INSERT' AND (NEW.configuracao_inicial = TRUE OR NEW.incremento_minimo IS NOT NULL)) THEN
+        
+        IF NEW.incremento_minimo IS NOT NULL AND (NEW.configuracao_inicial IS NULL OR NEW.configuracao_inicial = FALSE) THEN
+            NEW.configuracao_inicial = TRUE;
+        END IF;
+        
+        UPDATE exercicios_treino_usuario etu
+        SET 
+            incremento_minimo = COALESCE(NEW.incremento_minimo, etu.incremento_minimo),
+            configuracao_inicial = CASE 
+                WHEN NEW.incremento_minimo IS NOT NULL OR NEW.configuracao_inicial = TRUE THEN TRUE 
+                ELSE etu.configuracao_inicial 
+            END
+        FROM treinos_usuario tu, treinos_usuario tu_source
+        WHERE etu.treino_usuario_id = tu.id
+        AND NEW.treino_usuario_id = tu_source.id
+        AND tu.programa_usuario_id = tu_source.programa_usuario_id
+        AND (
+            -- Match by exercicio_original_id when available
+            (NEW.exercicio_original_id IS NOT NULL AND etu.exercicio_original_id = NEW.exercicio_original_id)
+            OR
+            -- Match by substituto_custom_id for custom exercises
+            (NEW.exercicio_original_id IS NULL AND NEW.substituto_custom_id IS NOT NULL AND etu.substituto_custom_id = NEW.substituto_custom_id)
+        )
+        AND etu.concluido = FALSE
+        AND etu.id != NEW.id;
+    END IF;
+    
+    RETURN NEW;
+END;
+$function$
 ```
 
-#### 4. Sobre `ordem_original` (nao necessaria por enquanto)
-O matching por `exercicio_original_id` + `treino_original_id` (mesmo dia) e suficiente para recuperar os dados do template. A unica situacao onde falharia e se houvesse dois exercicios identicos (mesmo `exercicio_original_id`) no mesmo dia, o que nao ocorre no sistema atual. Se no futuro isso se tornar um risco, podemos adicionar a coluna.
+#### 2. `src/utils/muscleDataLoader.ts` — `propagateIncrementoMinimo`
+Aceitar um parametro opcional `customExerciseId` e usar `substituto_custom_id` para buscar exercicios futuros quando `exercicioOriginalId` e null:
 
-### Detalhes Tecnicos
+```typescript
+export const propagateIncrementoMinimo = async (
+  exercicioOriginalId: string | null,
+  programaUsuarioId: string,
+  incrementoMinimo: number,
+  customExerciseId?: string | null
+): Promise<boolean> => {
+  // ...
+  // Se exercicioOriginalId e null, buscar por substituto_custom_id
+  if (exercicioOriginalId) {
+    query = query.eq('exercicio_original_id', exercicioOriginalId);
+  } else if (customExerciseId) {
+    query = query.eq('substituto_custom_id', customExerciseId);
+  } else {
+    return true; // sem identificador
+  }
+  // ...
+```
 
-**Fluxo do matching para grupos multiplos:**
+#### 3. `src/hooks/use-exercise-feedback.ts` — `triggerProgressionPrecomputation`
+Adicionar `substituto_custom_id` ao select (linha 162) e passa-lo para `precomputeNextExerciseProgression`:
+
+```typescript
+const { data: exercise, error } = await supabase
+  .from('exercicios_treino_usuario')
+  .select(`
+    exercicio_original_id,
+    substituto_custom_id,
+    avaliacao_dificuldade,
+    treino_usuario_id,
+    treinos_usuario!inner(programa_usuario_id)
+  `)
+  .eq('id', exerciseId)
+  .single();
+
+// ...
+await precomputeNextExerciseProgression({
+  currentExerciseId: exerciseId,
+  exercicioOriginalId: exercise.exercicio_original_id,
+  programaUsuarioId: exercise.treinos_usuario.programa_usuario_id,
+  avaliacaoDificuldade: exercise.avaliacao_dificuldade,
+  avaliacaoFadiga: avaliacaoFadiga,
+  customExerciseId: exercise.substituto_custom_id
+});
 ```
-exercicios_treino_usuario.exercicio_original_id (ex: UUID do exercicio em exercicios_iniciantes)
-  ↕ match com
-exercicios_treino.exercicio_original_id (mesmo UUID)
-  + filtro por treinos_usuario.treino_original_id = exercicios_treino.treino_id (mesmo dia)
-  → recupera allow_multiple_groups e available_groups
-```
+
+#### 4. Verificar chamadas de `propagateIncrementoMinimo`
+Localizar onde `propagateIncrementoMinimo` e chamado e garantir que `customExerciseId` seja passado.
 
 ### Arquivos Modificados
-1. `src/utils/programLoader.ts` — `loadUserProgramForCustomize`: buscar e cruzar dados do template
-2. `src/utils/programCustomizer.ts` — `saveCustomizedProgram` e `updateUserProgram`: ordem 1-based
-3. Migracao SQL — corrigir ordens 0-based existentes
+1. Migracao SQL — trigger `propagate_increment_config` corrigido
+2. `src/utils/muscleDataLoader.ts` — suporte a `customExerciseId`
+3. `src/hooks/use-exercise-feedback.ts` — selecionar e passar `substituto_custom_id`
+4. Quaisquer chamadores de `propagateIncrementoMinimo` que precisem passar o novo parametro
 
