@@ -160,6 +160,7 @@ export function useExerciseFeedback(exerciseId: string) {
         .from('exercicios_treino_usuario')
         .select(`
           exercicio_original_id,
+          substituto_custom_id,
           avaliacao_dificuldade,
           treino_usuario_id,
           treinos_usuario!inner(programa_usuario_id)
@@ -182,7 +183,8 @@ export function useExerciseFeedback(exerciseId: string) {
         exercicioOriginalId: exercise.exercicio_original_id,
         programaUsuarioId: exercise.treinos_usuario.programa_usuario_id,
         avaliacaoDificuldade: exercise.avaliacao_dificuldade,
-        avaliacaoFadiga: avaliacaoFadiga
+        avaliacaoFadiga: avaliacaoFadiga,
+        customExerciseId: exercise.substituto_custom_id
       });
 
     } catch (error) {
