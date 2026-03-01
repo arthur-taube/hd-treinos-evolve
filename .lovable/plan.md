@@ -1,117 +1,131 @@
 
 
-## Correcao: Propagacao de Incremento e Configuracao Inicial para Exercicios Custom
+## Adicionar `card_original_id` para Vinculacao Permanente com Template
 
-### Problema Raiz
-Tres pontos causam o bug:
+### Problema
+Exercicios custom que foram reordenados ou substituidos perdem a vinculacao com o card original do template (`exercicios_treino`). Isso impede recuperar `allow_multiple_groups` e `available_groups` na dialog de substituicao, e causa inconsistencias na replicacao de observacoes.
 
-1. **Trigger `propagate_increment_config`** (banco): filtra por `etu.exercicio_original_id = NEW.exercicio_original_id`. Para exercicios custom, `exercicio_original_id` e NULL, e `NULL = NULL` retorna FALSE no Postgres — logo a propagacao nunca ocorre.
-
-2. **`propagateIncrementoMinimo` em `muscleDataLoader.ts`** (linha 50): busca exercicios futuros por `.eq('exercicio_original_id', exercicioOriginalId)`. Para custom, o ID passado e null, entao nada e encontrado.
-
-3. **`triggerProgressionPrecomputation` em `use-exercise-feedback.ts`** (linha 159-168): nao seleciona `substituto_custom_id` do exercicio, entao `customExerciseId` nunca e passado para `precomputeNextExerciseProgression`.
+### Pontos afetados identificados
+1. **`ExerciseSubstitutionDialog.fetchExerciseDetails`** (linha 91-96): busca por `exercicio_original_id` — null para custom
+2. **`replace_exercise_future_instances` RPC**: match por `exercicio_original_id` + `ordem` — ambos podem estar incorretos para custom reordenados
+3. **`useExerciseActions.saveObservation`** (linha 284): replica por `exercicio_original_id` — null para custom, nao replica
+4. **`usePreviousSeries`** (linha 33, 66): busca historico por `exercicio_original_id` — null para custom
+5. **`useExerciseState.checkIsFirstWeek`** (linha 143): busca por `exercicio_original_id` — null para custom
+6. **`loadUserProgramForCustomize`** (linhas 302-305): matching template por `exercicio_original_id` — falha para custom
 
 ### Solucao
 
-#### 1. Migracao SQL — Corrigir trigger `propagate_increment_config`
-Alterar o trigger para tambem propagar via `substituto_custom_id` quando `exercicio_original_id` e NULL:
-
+#### 1. Migracao SQL — coluna `card_original_id`
 ```sql
-CREATE OR REPLACE FUNCTION public.propagate_increment_config()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
-AS $function$
-BEGIN
-    IF (TG_OP = 'UPDATE' AND (
-        OLD.incremento_minimo IS DISTINCT FROM NEW.incremento_minimo OR
-        OLD.configuracao_inicial IS DISTINCT FROM NEW.configuracao_inicial
-    )) OR (TG_OP = 'INSERT' AND (NEW.configuracao_inicial = TRUE OR NEW.incremento_minimo IS NOT NULL)) THEN
-        
-        IF NEW.incremento_minimo IS NOT NULL AND (NEW.configuracao_inicial IS NULL OR NEW.configuracao_inicial = FALSE) THEN
-            NEW.configuracao_inicial = TRUE;
-        END IF;
-        
-        UPDATE exercicios_treino_usuario etu
-        SET 
-            incremento_minimo = COALESCE(NEW.incremento_minimo, etu.incremento_minimo),
-            configuracao_inicial = CASE 
-                WHEN NEW.incremento_minimo IS NOT NULL OR NEW.configuracao_inicial = TRUE THEN TRUE 
-                ELSE etu.configuracao_inicial 
-            END
-        FROM treinos_usuario tu, treinos_usuario tu_source
-        WHERE etu.treino_usuario_id = tu.id
-        AND NEW.treino_usuario_id = tu_source.id
-        AND tu.programa_usuario_id = tu_source.programa_usuario_id
-        AND (
-            -- Match by exercicio_original_id when available
-            (NEW.exercicio_original_id IS NOT NULL AND etu.exercicio_original_id = NEW.exercicio_original_id)
-            OR
-            -- Match by substituto_custom_id for custom exercises
-            (NEW.exercicio_original_id IS NULL AND NEW.substituto_custom_id IS NOT NULL AND etu.substituto_custom_id = NEW.substituto_custom_id)
-        )
-        AND etu.concluido = FALSE
-        AND etu.id != NEW.id;
-    END IF;
-    
-    RETURN NEW;
-END;
-$function$
+ALTER TABLE exercicios_treino_usuario 
+ADD COLUMN card_original_id uuid REFERENCES exercicios_treino(id);
+
+-- Preencher dados existentes: match por exercicio_original_id + treino_original_id
+UPDATE exercicios_treino_usuario etu
+SET card_original_id = et.id
+FROM treinos_usuario tu, exercicios_treino et
+WHERE etu.treino_usuario_id = tu.id
+AND et.treino_id = tu.treino_original_id
+AND et.exercicio_original_id = etu.exercicio_original_id
+AND etu.exercicio_original_id IS NOT NULL
+AND etu.card_original_id IS NULL;
 ```
 
-#### 2. `src/utils/muscleDataLoader.ts` — `propagateIncrementoMinimo`
-Aceitar um parametro opcional `customExerciseId` e usar `substituto_custom_id` para buscar exercicios futuros quando `exercicioOriginalId` e null:
+#### 2. `src/utils/programCustomizer.ts` — `saveCustomizedProgram`
+Ao inserir exercicios (linha 247-258), adicionar `card_original_id`. Precisamos buscar os `exercicios_treino` do treino original para fazer o matching. O exercicio no kanban ja carrega o `id` do `exercicios_treino` quando vem de `loadExistingProgram` — esse `id` E o `card_original_id`.
 
+Na insercao:
 ```typescript
-export const propagateIncrementoMinimo = async (
-  exercicioOriginalId: string | null,
-  programaUsuarioId: string,
-  incrementoMinimo: number,
-  customExerciseId?: string | null
-): Promise<boolean> => {
-  // ...
-  // Se exercicioOriginalId e null, buscar por substituto_custom_id
-  if (exercicioOriginalId) {
-    query = query.eq('exercicio_original_id', exercicioOriginalId);
-  } else if (customExerciseId) {
-    query = query.eq('substituto_custom_id', customExerciseId);
-  } else {
-    return true; // sem identificador
-  }
-  // ...
+card_original_id: exercicio.id.startsWith("exercise-") ? null : exercicio.id,
 ```
 
-#### 3. `src/hooks/use-exercise-feedback.ts` — `triggerProgressionPrecomputation`
-Adicionar `substituto_custom_id` ao select (linha 162) e passa-lo para `precomputeNextExerciseProgression`:
+Nota: em `loadExistingProgram` (linha 139), o `id` do exercicio ja e o `exercicios_treino.id`. Entao quando o usuario customiza um programa pela primeira vez, o `id` do exercicio no kanban corresponde ao `exercicios_treino.id` — que e exatamente o `card_original_id`.
 
+#### 3. `src/utils/programCustomizer.ts` — `updateUserProgram`
+Ao inserir novos exercicios (linha 399-410), propagar `card_original_id` do exercicio existente ou do template.
+
+#### 4. `src/components/workout/ExerciseSubstitutionDialog.tsx` — `fetchExerciseDetails`
+Mudar para buscar diretamente por `card_original_id` em vez do match complexo por `exercicio_original_id + treino_original_id`:
 ```typescript
-const { data: exercise, error } = await supabase
+// Antes: match por exercicio_original_id (falha para custom)
+// Depois: buscar card_original_id do exercicio do usuario, depois buscar exercicios_treino por id
+const { data: exercicioUsuario } = await supabase
   .from('exercicios_treino_usuario')
-  .select(`
-    exercicio_original_id,
-    substituto_custom_id,
-    avaliacao_dificuldade,
-    treino_usuario_id,
-    treinos_usuario!inner(programa_usuario_id)
-  `)
-  .eq('id', exerciseId)
+  .select('card_original_id')
+  .eq('id', currentExercise.id)
   .single();
 
-// ...
-await precomputeNextExerciseProgression({
-  currentExerciseId: exerciseId,
-  exercicioOriginalId: exercise.exercicio_original_id,
-  programaUsuarioId: exercise.treinos_usuario.programa_usuario_id,
-  avaliacaoDificuldade: exercise.avaliacao_dificuldade,
-  avaliacaoFadiga: avaliacaoFadiga,
-  customExerciseId: exercise.substituto_custom_id
-});
+if (exercicioUsuario?.card_original_id) {
+  const { data: exercicioTreino } = await supabase
+    .from('exercicios_treino')
+    .select('available_groups, allow_multiple_groups')
+    .eq('id', exercicioUsuario.card_original_id)
+    .single();
+  // usar dados...
+}
+```
+Isso elimina a dependencia de `exercicio_original_id` e `treino_original_id` para encontrar o card.
+
+#### 5. RPC `replace_exercise_future_instances` — usar `card_original_id`
+Alterar o match para usar `card_original_id` em vez de `exercicio_original_id + ordem`:
+```sql
+-- Match atualizado (WHERE clause do UPDATE)
+WHERE etu.card_original_id = v_current_exercise.card_original_id
+  AND tu.programa_usuario_id = v_current_program_user_id
+  AND tu.ordem_dia = v_current_workout.ordem_dia
+  AND etu.concluido = false
+  AND tu.ordem_semana >= v_current_workout.ordem_semana
+```
+Remover o match por `ordem` ja que `card_original_id` e suficiente para individualizar.
+
+#### 6. `useExerciseActions.saveObservation` — usar `card_original_id`
+Alterar a replicacao de observacoes para usar `card_original_id`:
+```typescript
+// Buscar card_original_id alem de exercicio_original_id
+.select('exercicio_original_id, card_original_id, treino_usuario_id, ...')
+
+// Replicar usando card_original_id (funciona para custom E originais)
+if (currentExercise.card_original_id) {
+  .eq('card_original_id', currentExercise.card_original_id)
+} else if (currentExercise.exercicio_original_id) {
+  .eq('exercicio_original_id', currentExercise.exercicio_original_id)
+}
 ```
 
-#### 4. Verificar chamadas de `propagateIncrementoMinimo`
-Localizar onde `propagateIncrementoMinimo` e chamado e garantir que `customExerciseId` seja passado.
+#### 7. `usePreviousSeries` — usar `card_original_id`
+Adicionar parametro `cardOriginalId` e usar para buscar historico quando `exercicioOriginalId` e null.
+
+#### 8. `useExerciseState.checkIsFirstWeek` — usar `card_original_id`
+Adicionar fallback por `card_original_id` quando `exercicio_original_id` e null.
+
+#### 9. `loadUserProgramForCustomize` — retornar `card_original_id`
+Incluir `card_original_id` nos dados carregados para o kanban, permitindo que ao salvar alteracoes o valor seja preservado.
+
+#### 10. Workout page — passar `card_original_id` no exercise object
+Garantir que a pagina `Workout.tsx` busca e passa `card_original_id` para os componentes.
+
+### Detalhes Tecnicos
+
+**Por que `card_original_id` e melhor que `exercicio_original_id + ordem`:**
+- `exercicio_original_id` aponta para `exercicios_iniciantes` (o exercicio generico) — pode ser null para custom e pode ser duplicado se dois cards usam o mesmo exercicio
+- `card_original_id` aponta para `exercicios_treino` (o card especifico do programa) — e unico por definicao e nunca muda, mesmo que o usuario troque o exercicio
+
+**Fluxo:**
+```
+exercicios_treino.id (card original do dev)
+  → salvo em exercicios_treino_usuario.card_original_id
+  → usado para recuperar allow_multiple_groups, available_groups
+  → usado para individualizar exercicios na substituicao/observacao/historico
+```
 
 ### Arquivos Modificados
-1. Migracao SQL — trigger `propagate_increment_config` corrigido
-2. `src/utils/muscleDataLoader.ts` — suporte a `customExerciseId`
-3. `src/hooks/use-exercise-feedback.ts` — selecionar e passar `substituto_custom_id`
-4. Quaisquer chamadores de `propagateIncrementoMinimo` que precisem passar o novo parametro
+1. Migracao SQL — coluna `card_original_id` + backfill + RPC atualizado
+2. `src/utils/programCustomizer.ts` — salvar `card_original_id` na insercao
+3. `src/utils/programLoader.ts` — carregar `card_original_id` para o kanban
+4. `src/components/workout/ExerciseSubstitutionDialog.tsx` — buscar por `card_original_id`
+5. `src/components/workout/hooks/useExerciseActions.ts` — replicar observacao por `card_original_id`
+6. `src/components/workout/hooks/usePreviousSeries.ts` — buscar historico por `card_original_id`
+7. `src/components/workout/hooks/useExerciseState.ts` — checkIsFirstWeek por `card_original_id`
+8. `src/pages/Workout.tsx` — passar `card_original_id` no exercise object
+9. `src/components/workout/ExerciseCard.tsx` — interface atualizada
 
