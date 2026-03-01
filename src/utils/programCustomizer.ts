@@ -255,6 +255,7 @@ export async function saveCustomizedProgram(
             repeticoes: exercicio.reps?.toString() || null,
             oculto: false,
             ordem: index + 1,
+            card_original_id: exercicio.id.startsWith("exercise-") ? null : exercicio.id,
           }));
 
         if (exerciciosUsuario.length > 0) {
@@ -407,6 +408,7 @@ export async function updateUserProgram(
               repeticoes: exercise.reps?.toString() || null,
               oculto: false,
               ordem: i + 1,
+              card_original_id: (exercise as any).cardOriginalId || null,
             });
         }
       }

@@ -217,6 +217,7 @@ export type Database = {
           avaliacao_dificuldade: string | null
           avaliacao_dor: number | null
           avaliacao_fadiga: number | null
+          card_original_id: string | null
           concluido: boolean
           configuracao_inicial: boolean | null
           created_at: string
@@ -247,6 +248,7 @@ export type Database = {
           avaliacao_dificuldade?: string | null
           avaliacao_dor?: number | null
           avaliacao_fadiga?: number | null
+          card_original_id?: string | null
           concluido?: boolean
           configuracao_inicial?: boolean | null
           created_at?: string
@@ -277,6 +279,7 @@ export type Database = {
           avaliacao_dificuldade?: string | null
           avaliacao_dor?: number | null
           avaliacao_fadiga?: number | null
+          card_original_id?: string | null
           concluido?: boolean
           configuracao_inicial?: boolean | null
           created_at?: string
@@ -316,6 +319,13 @@ export type Database = {
             columns: ["substituto_oficial_id"]
             isOneToOne: false
             referencedRelation: "exercicios_iniciantes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercicios_treino_usuario_card_original_id_fkey"
+            columns: ["card_original_id"]
+            isOneToOne: false
+            referencedRelation: "exercicios_treino"
             referencedColumns: ["id"]
           },
           {

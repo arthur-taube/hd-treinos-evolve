@@ -29,6 +29,7 @@ interface Exercise {
   reps_programadas?: number | null;
   incremento_minimo?: number | null;
   exercicio_original_id: string;
+  card_original_id?: string | null;
   repeticoes?: string | null;
   treino_usuario_id: string;
 }
@@ -133,18 +134,29 @@ export const useExerciseState = (
       }
 
       // Check for previous completed exercises in the same program
-      const { data, error } = await supabase
+      // Use card_original_id (preferred) or exercicio_original_id (fallback)
+      let query = supabase
         .from('exercicios_treino_usuario')
         .select(`
           id,
           treino_usuario_id,
           treinos_usuario!inner(programa_usuario_id)
         `)
-        .eq('exercicio_original_id', exercise.exercicio_original_id)
         .eq('concluido', true)
         .eq('treinos_usuario.programa_usuario_id', currentWorkout.programa_usuario_id)
         .neq('id', exercise.id)
         .limit(1);
+
+      if ((exercise as any).card_original_id) {
+        query = query.eq('card_original_id', (exercise as any).card_original_id);
+      } else if (exercise.exercicio_original_id) {
+        query = query.eq('exercicio_original_id', exercise.exercicio_original_id);
+      } else {
+        // No identifier, assume first week
+        return true;
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('Error checking first week:', error);

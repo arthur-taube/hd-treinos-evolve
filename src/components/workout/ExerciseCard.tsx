@@ -21,6 +21,7 @@ interface ExerciseCardProps {
     primary_muscle: string;
     secondary_muscle?: string;
     exercicio_original_id: string;
+    card_original_id?: string | null;
     series: number;
     repeticoes: string | null;
     peso: number | null;
@@ -76,7 +77,7 @@ export function ExerciseCard({
     checkIsFirstWeek
   } = useExerciseState(exercise, onExerciseComplete, onWeightUpdate);
 
-  const { isLoadingSeries, previousSeries } = usePreviousSeries(isOpen, exercise.exercicio_original_id);
+  const { isLoadingSeries, previousSeries } = usePreviousSeries(isOpen, exercise.exercicio_original_id, exercise.card_original_id);
 
   const {
     handleSetComplete,
