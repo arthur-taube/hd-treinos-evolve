@@ -25,6 +25,7 @@ interface ExercicioUsuario {
   grupo_muscular: string;
   primary_muscle: string;
   exercicio_original_id: string;
+  card_original_id?: string | null;
   series: number;
   repeticoes: string | null;
   oculto: boolean;
@@ -79,6 +80,7 @@ export default function Workout() {
             grupo_muscular, 
             primary_muscle,
             exercicio_original_id,
+            card_original_id,
             series, 
             repeticoes, 
             oculto, 

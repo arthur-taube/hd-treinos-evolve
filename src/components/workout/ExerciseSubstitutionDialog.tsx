@@ -78,26 +78,46 @@ export function ExerciseSubstitutionDialog({
 
   const fetchExerciseDetails = async () => {
     try {
-      // Get treino details first
-      const { data: treinoData, error: treinoError } = await supabase
-        .from('treinos_usuario')
-        .select('treino_original_id')
-        .eq('id', currentExercise.treino_usuario_id)
+      // First try to get card_original_id from the user's exercise
+      const { data: exercicioUsuario, error: userExError } = await supabase
+        .from('exercicios_treino_usuario')
+        .select('card_original_id')
+        .eq('id', currentExercise.id)
         .single();
 
-      if (treinoError) throw treinoError;
+      if (userExError) throw userExError;
 
-      // Get original exercise details from exercicios_treino
-      const { data: exercicioTreino, error: exercicioError } = await supabase
-        .from('exercicios_treino')
-        .select('available_groups, allow_multiple_groups')
-        .eq('treino_id', treinoData.treino_original_id)
-        .eq('exercicio_original_id', currentExercise.exercicio_original_id)
-        .single();
+      let exercicioTreino = null;
 
-      if (exercicioError) {
-        console.error("Error fetching exercise details:", exercicioError);
-        return;
+      if (exercicioUsuario?.card_original_id) {
+        // Primary path: fetch by card_original_id (works for custom and reordered exercises)
+        const { data, error } = await supabase
+          .from('exercicios_treino')
+          .select('available_groups, allow_multiple_groups')
+          .eq('id', exercicioUsuario.card_original_id)
+          .single();
+        
+        if (!error) exercicioTreino = data;
+      }
+      
+      // Fallback: legacy path via treino_original_id + exercicio_original_id
+      if (!exercicioTreino && currentExercise.exercicio_original_id) {
+        const { data: treinoData } = await supabase
+          .from('treinos_usuario')
+          .select('treino_original_id')
+          .eq('id', currentExercise.treino_usuario_id)
+          .single();
+
+        if (treinoData) {
+          const { data } = await supabase
+            .from('exercicios_treino')
+            .select('available_groups, allow_multiple_groups')
+            .eq('treino_id', treinoData.treino_original_id)
+            .eq('exercicio_original_id', currentExercise.exercicio_original_id)
+            .single();
+          
+          if (data) exercicioTreino = data;
+        }
       }
 
       if (exercicioTreino) {

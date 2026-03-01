@@ -13,24 +13,31 @@ export interface PreviousSeriesData {
   nota?: string;
 }
 
-export function usePreviousSeries(isOpen: boolean, exercicioOriginalId: string) {
+export function usePreviousSeries(isOpen: boolean, exercicioOriginalId: string, cardOriginalId?: string | null) {
   const [isLoadingSeries, setIsLoadingSeries] = useState(false);
   const [previousSeries, setPreviousSeries] = useState<PreviousSeriesData[]>([]);
 
   useEffect(() => {
-    if (isOpen && exercicioOriginalId) {
+    if (isOpen && (exercicioOriginalId || cardOriginalId)) {
       fetchPreviousSeries();
     }
-  }, [isOpen, exercicioOriginalId]);
+  }, [isOpen, exercicioOriginalId, cardOriginalId]);
 
   const fetchPreviousSeries = async () => {
     setIsLoadingSeries(true);
     try {
       // First get current exercise to determine its program
-      const { data: currentExercise, error: currentError } = await supabase
+      let currentQuery = supabase
         .from('exercicios_treino_usuario')
-        .select('treino_usuario_id')
-        .eq('exercicio_original_id', exercicioOriginalId)
+        .select('treino_usuario_id');
+      
+      if (cardOriginalId) {
+        currentQuery = currentQuery.eq('card_original_id', cardOriginalId);
+      } else {
+        currentQuery = currentQuery.eq('exercicio_original_id', exercicioOriginalId);
+      }
+      
+      const { data: currentExercise, error: currentError } = await currentQuery
         .order('updated_at', { ascending: false })
         .limit(1)
         .single();
@@ -55,7 +62,7 @@ export function usePreviousSeries(isOpen: boolean, exercicioOriginalId: string) 
       }
 
       // Get previous exercises from same program
-      const { data: previousExercises, error: exercisesError } = await supabase
+      let prevQuery = supabase
         .from('exercicios_treino_usuario')
         .select(`
           id, 
@@ -63,12 +70,19 @@ export function usePreviousSeries(isOpen: boolean, exercicioOriginalId: string) 
           updated_at,
           treinos_usuario!inner(programa_usuario_id)
         `)
-        .eq('exercicio_original_id', exercicioOriginalId)
         .eq('concluido', true)
         .eq('treinos_usuario.programa_usuario_id', currentWorkout.programa_usuario_id)
         .neq('treino_usuario_id', currentExercise.treino_usuario_id)
         .order('updated_at', { ascending: false })
         .limit(3);
+
+      if (cardOriginalId) {
+        prevQuery = prevQuery.eq('card_original_id', cardOriginalId);
+      } else {
+        prevQuery = prevQuery.eq('exercicio_original_id', exercicioOriginalId);
+      }
+
+      const { data: previousExercises, error: exercisesError } = await prevQuery;
 
       if (exercisesError) throw exercisesError;
       if (!previousExercises || previousExercises.length === 0) {

@@ -257,7 +257,7 @@ export const loadUserProgramForCustomize = async (programaUsuarioId: string): Pr
     const treinoIds = treinosUsuario?.map(t => t.id) || [];
     const { data: exercicios, error: exerciciosError } = await supabase
       .from('exercicios_treino_usuario')
-      .select('*')
+      .select('*, card_original_id')
       .in('treino_usuario_id', treinoIds)
       .eq('oculto', false)
       .order('ordem');
@@ -273,7 +273,7 @@ export const loadUserProgramForCustomize = async (programaUsuarioId: string): Pr
     const treinoOriginalIds = [...new Set(treinosUsuario?.map(t => t.treino_original_id) || [])];
     const { data: exerciciosOriginais } = await supabase
       .from('exercicios_treino')
-      .select('treino_id, exercicio_original_id, allow_multiple_groups, available_groups')
+      .select('id, treino_id, exercicio_original_id, allow_multiple_groups, available_groups')
       .in('treino_id', treinoOriginalIds);
 
     console.log('📊 Exercícios originais do template carregados:', exerciciosOriginais?.length || 0);
@@ -298,11 +298,13 @@ export const loadUserProgramForCustomize = async (programaUsuarioId: string): Pr
       const exerciciosTreino = exercicios?.filter(e => e.treino_usuario_id === treino.id) || [];
       
       exercisesPerDay['mesocycle-1'][dayKey] = exerciciosTreino.map(exercicio => {
-        // Buscar dados do template original para este exercício
-        const exercicioTemplate = exerciciosOriginais?.find(
-          eo => eo.treino_id === treino.treino_original_id && 
-                eo.exercicio_original_id === exercicio.exercicio_original_id
-        );
+        // Buscar dados do template original: primeiro por card_original_id, depois fallback por exercicio_original_id
+        let exercicioTemplate = (exercicio as any).card_original_id
+          ? exerciciosOriginais?.find(eo => eo.id === (exercicio as any).card_original_id)
+          : exerciciosOriginais?.find(
+              eo => eo.treino_id === treino.treino_original_id && 
+                    eo.exercicio_original_id === exercicio.exercicio_original_id
+            );
 
         return {
           id: exercicio.id,
@@ -313,7 +315,8 @@ export const loadUserProgramForCustomize = async (programaUsuarioId: string): Pr
           hidden: exercicio.oculto,
           originalId: exercicio.exercicio_original_id,
           allowMultipleGroups: exercicioTemplate?.allow_multiple_groups || false,
-          availableGroups: exercicioTemplate?.available_groups || undefined
+          availableGroups: exercicioTemplate?.available_groups || undefined,
+          cardOriginalId: (exercicio as any).card_original_id || null
         };
       });
     });

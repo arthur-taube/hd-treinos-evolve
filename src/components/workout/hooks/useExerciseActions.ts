@@ -245,6 +245,7 @@ export const useExerciseActions = (
         .from('exercicios_treino_usuario')
         .select(`
           exercicio_original_id,
+          card_original_id,
           treino_usuario_id,
           treinos_usuario!inner(programa_usuario_id)
         `)
@@ -262,7 +263,8 @@ export const useExerciseActions = (
       }
 
       // Replicate observation to all future exercises of the same type in the same program
-      if (currentExercise.exercicio_original_id) {
+      const hasIdentifier = currentExercise.card_original_id || currentExercise.exercicio_original_id;
+      if (hasIdentifier) {
         // Get all workout IDs for the same program
         const { data: workoutIds, error: workoutError } = await supabase
           .from('treinos_usuario')
@@ -278,12 +280,20 @@ export const useExerciseActions = (
         } else {
           const workoutIdList = workoutIds.map(w => w.id);
           
-          const { error: replicationError } = await supabase
+          // Build replication query: prefer card_original_id, fallback to exercicio_original_id
+          let replicationQuery = supabase
             .from('exercicios_treino_usuario')
             .update({ observacao: observation })
-            .eq('exercicio_original_id', currentExercise.exercicio_original_id)
             .eq('concluido', false)
             .in('treino_usuario_id', workoutIdList);
+
+          if (currentExercise.card_original_id) {
+            replicationQuery = replicationQuery.eq('card_original_id', currentExercise.card_original_id);
+          } else {
+            replicationQuery = replicationQuery.eq('exercicio_original_id', currentExercise.exercicio_original_id);
+          }
+
+          const { error: replicationError } = await replicationQuery;
 
           if (replicationError) {
             console.error('Erro ao replicar observação:', replicationError);
