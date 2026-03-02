@@ -1,9 +1,11 @@
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Youtube, MoreHorizontal, Check, Play, TrendingUp } from "lucide-react";
 import { roundSetsForDisplay } from "@/utils/progressionCalculator";
 import { useProgressionIndicator } from "@/hooks/useProgressionIndicator";
+import { supabase } from "@/integrations/supabase/client";
 interface ExerciseHeaderProps {
   exercise: {
     id: string;
@@ -14,10 +16,11 @@ interface ExerciseHeaderProps {
     peso: number | null;
     concluido: boolean;
     observacao?: string | null;
-    video_url?: string | null;
     reps_programadas?: number | null;
     substituto_nome?: string | null;
     exercicio_original_id?: string | null;
+    substituto_oficial_id?: string | null;
+    substituto_custom_id?: string | null;
   };
   observation: string;
   isOpen: boolean;
@@ -38,6 +41,31 @@ export function ExerciseHeader({
   onSubstitutionRequest
 }: ExerciseHeaderProps) {
   const progressionMessage = useProgressionIndicator(exercise.id, exercise.exercicio_original_id || '');
+  
+  // Fetch video_url dynamically from exercicios_iniciantes
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  useEffect(() => {
+    const fetchVideoUrl = async () => {
+      // If custom substitute is active (no oficial), no video
+      if (exercise.substituto_custom_id && !exercise.substituto_oficial_id) {
+        setVideoUrl(null);
+        return;
+      }
+      const activeId = exercise.substituto_oficial_id || exercise.exercicio_original_id;
+      if (!activeId) {
+        setVideoUrl(null);
+        return;
+      }
+      const { data } = await supabase
+        .from('exercicios_iniciantes')
+        .select('video_url')
+        .eq('id', activeId)
+        .single();
+      setVideoUrl(data?.video_url || null);
+    };
+    fetchVideoUrl();
+  }, [exercise.substituto_oficial_id, exercise.substituto_custom_id, exercise.exercicio_original_id]);
+
   // Função para formatar a exibição das séries/reps/peso
   const formatExerciseDisplay = () => {
     // Arredondar séries para exibição (valores decimais arredondados)
@@ -71,7 +99,7 @@ export function ExerciseHeader({
         </Badge>
         
         <div className="flex items-center gap-2">
-          {exercise.video_url && <a href={exercise.video_url} target="_blank" rel="noopener noreferrer" className="text-red-500 hover:text-red-700">
+          {videoUrl && <a href={videoUrl} target="_blank" rel="noopener noreferrer" className="text-red-500 hover:text-red-700">
               <Youtube className="h-5 w-5" />
             </a>}
           
