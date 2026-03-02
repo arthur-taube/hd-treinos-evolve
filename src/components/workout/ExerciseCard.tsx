@@ -32,6 +32,9 @@ interface ExerciseCardProps {
     reps_programadas?: number | null;
     incremento_minimo?: number | null;
     treino_usuario_id: string;
+    substituto_oficial_id?: string | null;
+    substituto_custom_id?: string | null;
+    substituto_nome?: string | null;
   };
   onExerciseComplete: (exerciseId: string, isCompleted: boolean) => Promise<void>;
   onWeightUpdate: (exerciseId: string, weight: number) => Promise<void>;
