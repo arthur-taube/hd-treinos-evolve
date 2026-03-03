@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,9 +19,15 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
-import { CheckIcon, Save } from "lucide-react";
+import { CheckIcon, Save, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const ProfileForm = () => {
+  const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
   // Personal profile data
   const [phoneNumber, setPhoneNumber] = useState("");
   const [trainingLevel, setTrainingLevel] = useState("");
@@ -29,31 +35,101 @@ const ProfileForm = () => {
   const [goal, setGoal] = useState("");
   
   // Account data (read-only)
-  const [fullName] = useState("Nome do Usuário");
-  const [email] = useState("usuario@exemplo.com");
-  const [birthDate] = useState("1990-01-01");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [birthDate, setBirthDate] = useState("");
   
   // Security section
-  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchProfile = async () => {
+      setIsLoading(true);
+      try {
+        // Get email from auth user
+        setEmail(user.email || "");
+
+        // Get profile data
+        const { data: profile, error } = await supabase
+          .from("profiles")
+          .select("full_name, phone_number, training_level, training_goal, weight, birth_date")
+          .eq("id", user.id)
+          .single();
+
+        if (error) throw error;
+
+        if (profile) {
+          setFullName(profile.full_name || "");
+          setPhoneNumber(profile.phone_number || "");
+          setTrainingLevel(profile.training_level || "");
+          setGoal(profile.training_goal || "");
+          setWeight(profile.weight?.toString() || "");
+          setBirthDate(profile.birth_date || "");
+        }
+      } catch (error: any) {
+        console.error("Error fetching profile:", error);
+        toast.error("Erro ao carregar perfil");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [user]);
   
-  const handleProfileSubmit = (e: React.FormEvent) => {
+  const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Perfil atualizado com sucesso!");
+    if (!user) return;
+    setIsSaving(true);
+
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          phone_number: phoneNumber || null,
+          training_level: trainingLevel || null,
+          training_goal: goal || null,
+          weight: weight ? parseFloat(weight) : null,
+        })
+        .eq("id", user.id);
+
+      if (error) throw error;
+      toast.success("Perfil atualizado com sucesso!");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao atualizar perfil");
+    } finally {
+      setIsSaving(false);
+    }
   };
   
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
       toast.error("As senhas não coincidem!");
       return;
     }
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    toast.success("Senha alterada com sucesso!");
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setNewPassword("");
+      setConfirmPassword("");
+      toast.success("Senha alterada com sucesso!");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao alterar senha");
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -157,8 +233,8 @@ const ProfileForm = () => {
             </div>
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="btn-primary ml-auto">
-              Salvar <Save size={18} className="ml-2" />
+            <Button type="submit" className="btn-primary ml-auto" disabled={isSaving}>
+              {isSaving ? "Salvando..." : "Salvar"} <Save size={18} className="ml-2" />
             </Button>
           </CardFooter>
         </form>
@@ -174,19 +250,6 @@ const ProfileForm = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="currentPassword" className="text-sm font-medium">
-                  Senha Atual
-                </label>
-                <Input
-                  id="currentPassword"
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="input-field"
-                />
-              </div>
-              
               <div className="space-y-2">
                 <label htmlFor="newPassword" className="text-sm font-medium">
                   Nova Senha
@@ -233,7 +296,7 @@ const ProfileForm = () => {
             <Button 
               type="submit" 
               className="btn-primary ml-auto"
-              disabled={!currentPassword || !newPassword || !confirmPassword}
+              disabled={!newPassword || !confirmPassword}
             >
               Alterar Senha <CheckIcon size={18} className="ml-2" />
             </Button>
