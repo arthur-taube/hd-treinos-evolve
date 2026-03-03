@@ -32,7 +32,8 @@ const Dashboard = () => {
           {activeProgram ? (
             <ProgramCard
               title={activeProgram.nome_personalizado || activeProgram.nome}
-              subtitle={`Programa base: ${activeProgram.nome} — Progresso: ${activeProgram.progresso}%`}
+              subtitle={`Programa base: ${activeProgram.nome}`}
+              progress={activeProgram.progresso}
               showPlayButton
               onClick={() => navigate('/active-program')}
             />
