@@ -1,45 +1,37 @@
+## Correções de UI: Dashboard e ActiveProgram
 
+### Alterações
 
-## Buscar video_url dinamicamente de exercicios_iniciantes
+#### 1. `src/hooks/useDashboardData.ts`
 
-### Problema
-A coluna `video_url` em `exercicios_treino_usuario` armazena o URL do exercicio original do card. Quando o usuario substitui por um exercicio custom, o `video_url` antigo permanece, mostrando o botao de video incorretamente.
+- Adicionar `nome_personalizado` ao select de `programas_usuario`
+- Incluir `nome_personalizado` na interface `ActiveProgram` e no state
+- Calcular progresso real (completados/total) em vez de usar `programas_usuario.progresso` (que parece estar zerado)
+- Remover fetch de `lastWorkout` (seção será removida)
 
-### Solucao
-Em vez de usar o `video_url` salvo na tabela do usuario, buscar dinamicamente da `exercicios_iniciantes` pelo `exercicio_original_id` do exercicio atualmente em uso (considerando substituicoes). Para custom, nao ha `exercicio_original_id`, logo nao ha video — botao fica invisivel.
+#### 2. `src/pages/Dashboard.tsx`
 
-### Implementacao
+- **Card Meus Programas**: mostrar `nome_personalizado` como título principal, e `Programa base: programaOriginal.nome` como subtítulo em cinza. Progresso real calculado.
+- **Card Próximo Treino**: usar `nome_personalizado` em vez do nome genérico
+- **Remover** seção Histórico inteira
 
-#### 1. `src/components/workout/components/ExerciseHeader.tsx`
-- Adicionar um `useState` + `useEffect` que busca o `video_url` de `exercicios_iniciantes` com base no exercicio atualmente ativo:
-  - Se tem `substituto_oficial_id` → buscar video desse exercicio em `exercicios_iniciantes`
-  - Se tem `substituto_custom_id` → sem video (custom)
-  - Senao → buscar pelo `exercicio_original_id`
-- Remover `video_url` da interface de props (nao mais necessario vindo do parent)
-- O botao Youtube so aparece se o fetch retornar um URL valido
+#### 3. `src/pages/ActiveProgram.tsx` (linhas 365-398)
 
-#### 2. `src/pages/Workout.tsx`
-- Passar `substituto_oficial_id` e `substituto_custom_id` na interface do exercicio (ja passa) para que o ExerciseHeader saiba qual exercicio esta ativo
-- Remover `video_url` do select da query (opcional, nao quebra nada manter)
+- Trocar `programaOriginal.nome` pelo `nome_personalizado` do `programas_usuario` (precisa adicionar ao select/interface)
+- Substituir descrição por `Programa base: programaOriginal.nome`
+- Adicionar tooltip na descrição com `programaOriginal.descricao`
 
-#### 3. Interface do ExerciseHeader
-Adicionar `substituto_oficial_id` e `substituto_custom_id` as props do exercise para determinar qual ID buscar.
+### Detalhes técnicos
 
-### Logica do fetch
+**useDashboardData**: o select muda para incluir `nome_personalizado` e calcular progresso via contagem de treinos:
+
 ```typescript
-// Determinar qual ID buscar
-const activeExerciseId = exercise.substituto_oficial_id || exercise.exercicio_original_id;
-// Se custom (substituto_custom_id presente e sem oficial), nao buscar
-if (!activeExerciseId) return; // sem video
-
-const { data } = await supabase
-  .from('exercicios_iniciantes')
-  .select('video_url')
-  .eq('id', activeExerciseId)
-  .single();
+.select('id, progresso, data_inicio, nome_personalizado, programas!inner(nome)')
 ```
 
-### Arquivos modificados
-1. `src/components/workout/components/ExerciseHeader.tsx` — fetch dinamico + interface atualizada
-2. `src/components/workout/ExerciseCard.tsx` — interface atualizada (passar novos campos)
+Depois buscar treinos para calcular progresso real (completados/total).
 
+**ActiveProgram**: adicionar `nome_personalizado` à interface `ProgramaUsuario` e ao select (`programas_usuario` já retorna `*`, então já vem). Usar no header:
+
+- Título: `programaUsuario.nome_personalizado || programaOriginal.nome`
+- Subtítulo: `Programa base: programaOriginal.nome` (com tooltip da descrição)
