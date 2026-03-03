@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
-import { Calendar, CheckCircle, XCircle, Trophy, MoreVertical, SkipForward, RotateCcw } from "lucide-react";
+import { Calendar, CheckCircle, XCircle, Trophy, MoreVertical, SkipForward, RotateCcw, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast as sonnerToast } from "sonner";
 import {
   DropdownMenu,
@@ -32,6 +33,7 @@ interface ProgramaUsuario {
   programa_original_id: string;
   data_inicio: string;
   progresso: number;
+  nome_personalizado: string | null;
 }
 
 interface ProgramaOriginal {
@@ -365,10 +367,24 @@ export default function ActiveProgram() {
           <div className="bg-muted/30 p-4 rounded-lg">
             <div className="flex flex-col md:flex-row md:justify-between md:items-center">
               <div>
-                <h2 className="font-semibold text-xl">{programaOriginal.nome}</h2>
-                <p className="text-sm text-muted-foreground">
-                  {programaOriginal.descricao || `Programa de treino ${programaOriginal.nivel}`}
-                </p>
+                <h2 className="font-semibold text-xl">
+                  {programaUsuario.nome_personalizado || programaOriginal.nome}
+                </h2>
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <span>Programa base: {programaOriginal.nome}</span>
+                  {programaOriginal.descricao && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3.5 w-3.5 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="max-w-xs">{programaOriginal.descricao}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge variant="outline" className="text-xs">
                     {programaOriginal.nivel === 'iniciante' ? 'Iniciante' : 

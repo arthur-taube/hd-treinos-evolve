@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface ActiveProgram {
   id: string;
   nome: string;
+  nome_personalizado: string | null;
   progresso: number;
   data_inicio: string;
 }
@@ -20,17 +21,10 @@ interface Stats {
   workoutsThisMonth: number;
 }
 
-interface LastWorkout {
-  programa_nome: string;
-  treino_nome: string;
-  data: string;
-}
-
 export function useDashboardData() {
   const [activeProgram, setActiveProgram] = useState<ActiveProgram | null>(null);
   const [nextWorkout, setNextWorkout] = useState<NextWorkout | null>(null);
   const [stats, setStats] = useState<Stats>({ totalWorkouts: 0, workoutsThisMonth: 0 });
-  const [lastWorkout, setLastWorkout] = useState<LastWorkout | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,6 +43,7 @@ export function useDashboardData() {
           id,
           progresso,
           data_inicio,
+          nome_personalizado,
           programas!inner(nome)
         `)
         .eq('usuario_id', userId)
@@ -56,10 +51,21 @@ export function useDashboardData() {
         .single();
 
       if (activeProgramData) {
+        // Calculate real progress from workouts
+        const { data: workouts } = await supabase
+          .from('treinos_usuario')
+          .select('concluido')
+          .eq('programa_usuario_id', activeProgramData.id);
+
+        const total = workouts?.length || 0;
+        const completed = workouts?.filter(w => w.concluido).length || 0;
+        const realProgress = total > 0 ? Math.round((completed / total) * 100) : 0;
+
         setActiveProgram({
           id: activeProgramData.id,
           nome: activeProgramData.programas.nome,
-          progresso: activeProgramData.progresso,
+          nome_personalizado: activeProgramData.nome_personalizado,
+          progresso: realProgress,
           data_inicio: activeProgramData.data_inicio
         });
 
@@ -104,30 +110,6 @@ export function useDashboardData() {
 
       setStats({ totalWorkouts, workoutsThisMonth });
 
-      // Get last completed workout
-      const { data: lastWorkoutData } = await supabase
-        .from('treinos_usuario')
-        .select(`
-          nome,
-          data_concluido,
-          programas_usuario!inner(
-            programas!inner(nome)
-          )
-        `)
-        .eq('concluido', true)
-        .not('data_concluido', 'is', null)
-        .order('data_concluido', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (lastWorkoutData) {
-        setLastWorkout({
-          programa_nome: lastWorkoutData.programas_usuario.programas.nome,
-          treino_nome: lastWorkoutData.nome,
-          data: new Date(lastWorkoutData.data_concluido).toLocaleDateString('pt-BR')
-        });
-      }
-
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -139,7 +121,6 @@ export function useDashboardData() {
     activeProgram,
     nextWorkout,
     stats,
-    lastWorkout,
     loading
   };
 }
