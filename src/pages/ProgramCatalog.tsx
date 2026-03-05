@@ -20,6 +20,7 @@ interface Program {
   duracao_semanas: number;
   objetivo: string[];
   split: string;
+  privado?: boolean;
 }
 
 // Developer user ID and email constants
@@ -300,7 +301,14 @@ export default function ProgramCatalog() {
           {programs.map((program) => (
             <Card key={program.id} className="p-4 flex flex-col">
               <div className="flex justify-between items-start mb-3">
-                <h3 className="font-medium text-lg">{program.nome}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-medium text-lg">{program.nome}</h3>
+                  {isDeveloper && program.privado && (
+                    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
+                      Privado
+                    </Badge>
+                  )}
+                </div>
                 {getLevelBadge(program.nivel)}
               </div>
               <p className="text-sm text-muted-foreground mb-4">
