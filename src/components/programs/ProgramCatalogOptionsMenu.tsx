@@ -16,9 +16,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { MoreVertical, Pencil, Copy, Trash2 } from "lucide-react";
+import { MoreVertical, Pencil, Copy, Trash2, Shield } from "lucide-react";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
+import PermissionsDialog from "./PermissionsDialog";
 
 interface ProgramCatalogOptionsMenuProps {
   programId: string;
@@ -36,6 +37,7 @@ const ProgramCatalogOptionsMenu = ({
   onDelete,
 }: ProgramCatalogOptionsMenuProps) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showPermissionsDialog, setShowPermissionsDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
 
@@ -115,6 +117,10 @@ const ProgramCatalogOptionsMenu = ({
             <Trash2 className="h-4 w-4 mr-2" />
             Excluir programa
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setShowPermissionsDialog(true)}>
+            <Shield className="h-4 w-4 mr-2" />
+            Gerenciar permissões
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -140,6 +146,12 @@ const ProgramCatalogOptionsMenu = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PermissionsDialog
+        programId={programId}
+        open={showPermissionsDialog}
+        onOpenChange={setShowPermissionsDialog}
+      />
     </>
   );
 };

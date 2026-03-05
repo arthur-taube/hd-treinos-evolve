@@ -522,6 +522,35 @@ export type Database = {
         }
         Relationships: []
       }
+      programa_permissoes: {
+        Row: {
+          created_at: string
+          id: string
+          programa_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          programa_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          programa_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "programa_permissoes_programa_id_fkey"
+            columns: ["programa_id"]
+            isOneToOne: false
+            referencedRelation: "programas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       programas: {
         Row: {
           created_at: string
@@ -533,6 +562,7 @@ export type Database = {
           nivel: string
           nome: string
           objetivo: string[]
+          privado: boolean
           split: string
           updated_at: string
         }
@@ -546,6 +576,7 @@ export type Database = {
           nivel: string
           nome: string
           objetivo: string[]
+          privado?: boolean
           split: string
           updated_at?: string
         }
@@ -559,6 +590,7 @@ export type Database = {
           nivel?: string
           nome?: string
           objetivo?: string[]
+          privado?: boolean
           split?: string
           updated_at?: string
         }
@@ -983,6 +1015,14 @@ export type Database = {
           p_repeticoes: number
         }
         Returns: undefined
+      }
+      search_users_by_email_or_name: {
+        Args: { search_term: string }
+        Returns: {
+          email: string
+          full_name: string
+          id: string
+        }[]
       }
     }
     Enums: {
