@@ -13,7 +13,7 @@ export interface PreviousSeriesData {
   nota?: string;
 }
 
-export function usePreviousSeries(isOpen: boolean, exercicioOriginalId: string, cardOriginalId?: string | null) {
+export function usePreviousSeries(isOpen: boolean, exercicioOriginalId: string, cardOriginalId?: string | null, substitutoCustomId?: string | null) {
   const [isLoadingSeries, setIsLoadingSeries] = useState(false);
   const [previousSeries, setPreviousSeries] = useState<PreviousSeriesData[]>([]);
 
