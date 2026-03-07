@@ -10,6 +10,7 @@ interface Exercise {
   concluido: boolean;
   treino_usuario_id: string;
   repeticoes?: string | null;
+  substituto_custom_id?: string | null;
 }
 
 export const useExerciseActions = (
@@ -263,7 +264,8 @@ export const useExerciseActions = (
       }
 
       // Replicate observation to all future exercises of the same type in the same program
-      const hasIdentifier = currentExercise.card_original_id || currentExercise.exercicio_original_id;
+      // Also check substituto_custom_id for custom exercises without card_original_id or exercicio_original_id
+      const hasIdentifier = currentExercise.card_original_id || currentExercise.exercicio_original_id || (exercise as any).substituto_custom_id;
       if (hasIdentifier) {
         // Get all workout IDs for the same program
         const { data: workoutIds, error: workoutError } = await supabase
@@ -289,8 +291,10 @@ export const useExerciseActions = (
 
           if (currentExercise.card_original_id) {
             replicationQuery = replicationQuery.eq('card_original_id', currentExercise.card_original_id);
-          } else {
+          } else if (currentExercise.exercicio_original_id) {
             replicationQuery = replicationQuery.eq('exercicio_original_id', currentExercise.exercicio_original_id);
+          } else if ((exercise as any).substituto_custom_id) {
+            replicationQuery = replicationQuery.eq('substituto_custom_id', (exercise as any).substituto_custom_id);
           }
 
           const { error: replicationError } = await replicationQuery;

@@ -151,6 +151,8 @@ export const useExerciseState = (
         query = query.eq('card_original_id', (exercise as any).card_original_id);
       } else if (exercise.exercicio_original_id) {
         query = query.eq('exercicio_original_id', exercise.exercicio_original_id);
+      } else if ((exercise as any).substituto_custom_id) {
+        query = query.eq('substituto_custom_id', (exercise as any).substituto_custom_id);
       } else {
         // No identifier, assume first week
         return true;

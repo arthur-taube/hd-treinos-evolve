@@ -13,15 +13,15 @@ export interface PreviousSeriesData {
   nota?: string;
 }
 
-export function usePreviousSeries(isOpen: boolean, exercicioOriginalId: string, cardOriginalId?: string | null) {
+export function usePreviousSeries(isOpen: boolean, exercicioOriginalId: string, cardOriginalId?: string | null, substitutoCustomId?: string | null) {
   const [isLoadingSeries, setIsLoadingSeries] = useState(false);
   const [previousSeries, setPreviousSeries] = useState<PreviousSeriesData[]>([]);
 
   useEffect(() => {
-    if (isOpen && (exercicioOriginalId || cardOriginalId)) {
+    if (isOpen && (exercicioOriginalId || cardOriginalId || substitutoCustomId)) {
       fetchPreviousSeries();
     }
-  }, [isOpen, exercicioOriginalId, cardOriginalId]);
+  }, [isOpen, exercicioOriginalId, cardOriginalId, substitutoCustomId]);
 
   const fetchPreviousSeries = async () => {
     setIsLoadingSeries(true);
@@ -33,8 +33,10 @@ export function usePreviousSeries(isOpen: boolean, exercicioOriginalId: string, 
       
       if (cardOriginalId) {
         currentQuery = currentQuery.eq('card_original_id', cardOriginalId);
-      } else {
+      } else if (exercicioOriginalId) {
         currentQuery = currentQuery.eq('exercicio_original_id', exercicioOriginalId);
+      } else if (substitutoCustomId) {
+        currentQuery = currentQuery.eq('substituto_custom_id', substitutoCustomId);
       }
       
       const { data: currentExercise, error: currentError } = await currentQuery
@@ -78,8 +80,10 @@ export function usePreviousSeries(isOpen: boolean, exercicioOriginalId: string, 
 
       if (cardOriginalId) {
         prevQuery = prevQuery.eq('card_original_id', cardOriginalId);
-      } else {
+      } else if (exercicioOriginalId) {
         prevQuery = prevQuery.eq('exercicio_original_id', exercicioOriginalId);
+      } else if (substitutoCustomId) {
+        prevQuery = prevQuery.eq('substituto_custom_id', substitutoCustomId);
       }
 
       const { data: previousExercises, error: exercisesError } = await prevQuery;

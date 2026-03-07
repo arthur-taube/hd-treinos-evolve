@@ -80,7 +80,7 @@ export function ExerciseCard({
     checkIsFirstWeek
   } = useExerciseState(exercise, onExerciseComplete, onWeightUpdate);
 
-  const { isLoadingSeries, previousSeries } = usePreviousSeries(isOpen, exercise.exercicio_original_id, exercise.card_original_id);
+  const { isLoadingSeries, previousSeries } = usePreviousSeries(isOpen, exercise.exercicio_original_id, exercise.card_original_id, exercise.substituto_custom_id);
 
   const {
     handleSetComplete,
