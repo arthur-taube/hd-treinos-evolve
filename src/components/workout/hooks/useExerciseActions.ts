@@ -263,7 +263,8 @@ export const useExerciseActions = (
       }
 
       // Replicate observation to all future exercises of the same type in the same program
-      const hasIdentifier = currentExercise.card_original_id || currentExercise.exercicio_original_id;
+      // Also check substituto_custom_id for custom exercises without card_original_id or exercicio_original_id
+      const hasIdentifier = currentExercise.card_original_id || currentExercise.exercicio_original_id || (exercise as any).substituto_custom_id;
       if (hasIdentifier) {
         // Get all workout IDs for the same program
         const { data: workoutIds, error: workoutError } = await supabase
