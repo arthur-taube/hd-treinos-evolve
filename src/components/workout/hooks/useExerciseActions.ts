@@ -10,6 +10,7 @@ interface Exercise {
   concluido: boolean;
   treino_usuario_id: string;
   repeticoes?: string | null;
+  substituto_custom_id?: string | null;
 }
 
 export const useExerciseActions = (

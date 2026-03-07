@@ -80,8 +80,10 @@ export function usePreviousSeries(isOpen: boolean, exercicioOriginalId: string, 
 
       if (cardOriginalId) {
         prevQuery = prevQuery.eq('card_original_id', cardOriginalId);
-      } else {
+      } else if (exercicioOriginalId) {
         prevQuery = prevQuery.eq('exercicio_original_id', exercicioOriginalId);
+      } else if (substitutoCustomId) {
+        prevQuery = prevQuery.eq('substituto_custom_id', substitutoCustomId);
       }
 
       const { data: previousExercises, error: exercisesError } = await prevQuery;
