@@ -18,10 +18,10 @@ export function usePreviousSeries(isOpen: boolean, exercicioOriginalId: string, 
   const [previousSeries, setPreviousSeries] = useState<PreviousSeriesData[]>([]);
 
   useEffect(() => {
-    if (isOpen && (exercicioOriginalId || cardOriginalId)) {
+    if (isOpen && (exercicioOriginalId || cardOriginalId || substitutoCustomId)) {
       fetchPreviousSeries();
     }
-  }, [isOpen, exercicioOriginalId, cardOriginalId]);
+  }, [isOpen, exercicioOriginalId, cardOriginalId, substitutoCustomId]);
 
   const fetchPreviousSeries = async () => {
     setIsLoadingSeries(true);
