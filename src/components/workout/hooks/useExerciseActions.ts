@@ -290,8 +290,10 @@ export const useExerciseActions = (
 
           if (currentExercise.card_original_id) {
             replicationQuery = replicationQuery.eq('card_original_id', currentExercise.card_original_id);
-          } else {
+          } else if (currentExercise.exercicio_original_id) {
             replicationQuery = replicationQuery.eq('exercicio_original_id', currentExercise.exercicio_original_id);
+          } else if ((exercise as any).substituto_custom_id) {
+            replicationQuery = replicationQuery.eq('substituto_custom_id', (exercise as any).substituto_custom_id);
           }
 
           const { error: replicationError } = await replicationQuery;
