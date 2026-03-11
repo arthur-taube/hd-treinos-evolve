@@ -18,30 +18,45 @@ export type Database = {
         Row: {
           created_at: string
           descricao: string | null
+          grande_grupo: string | null
           grupo_muscular: string
           id: string
           image_url: string | null
           nome: string
+          primary_muscle: string | null
+          quaternary_muscle: string | null
+          secondary_muscle: string | null
+          tertiary_muscle: string | null
           updated_at: string
           video_url: string | null
         }
         Insert: {
           created_at?: string
           descricao?: string | null
+          grande_grupo?: string | null
           grupo_muscular: string
           id?: string
           image_url?: string | null
           nome: string
+          primary_muscle?: string | null
+          quaternary_muscle?: string | null
+          secondary_muscle?: string | null
+          tertiary_muscle?: string | null
           updated_at?: string
           video_url?: string | null
         }
         Update: {
           created_at?: string
           descricao?: string | null
+          grande_grupo?: string | null
           grupo_muscular?: string
           id?: string
           image_url?: string | null
           nome?: string
+          primary_muscle?: string | null
+          quaternary_muscle?: string | null
+          secondary_muscle?: string | null
+          tertiary_muscle?: string | null
           updated_at?: string
           video_url?: string | null
         }
@@ -365,6 +380,27 @@ export type Database = {
           max_reps?: number
           min_reps?: number
           tipo?: string
+        }
+        Relationships: []
+      }
+      faixas_repeticoes_avancado: {
+        Row: {
+          created_at: string
+          id: string
+          max_reps: number
+          min_reps: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          max_reps: number
+          min_reps: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          max_reps?: number
+          min_reps?: number
         }
         Relationships: []
       }
@@ -961,6 +997,12 @@ export type Database = {
         }[]
       }
       get_distinct_muscle_groups: {
+        Args: never
+        Returns: {
+          grupo_muscular: string
+        }[]
+      }
+      get_distinct_muscle_groups_avancado: {
         Args: never
         Returns: {
           grupo_muscular: string
