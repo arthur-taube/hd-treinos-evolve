@@ -21,6 +21,7 @@ import {
 
 import WeeklyScheduleForm from "./WeeklyScheduleForm";
 import ExerciseKanban from "./ExerciseKanban";
+import ExerciseKanbanAdvanced from "./ExerciseKanbanAdvanced";
 import { Exercise } from "./types";
 
 interface ProgramExercisesFormProps {
