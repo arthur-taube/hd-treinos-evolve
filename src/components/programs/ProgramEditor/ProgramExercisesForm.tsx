@@ -486,18 +486,33 @@ export default function ProgramExercisesForm({
         </div>
       )}
       
-      <ExerciseKanban 
-        weeklyFrequency={weeklyFrequency} 
-        daysSchedule={scheduleOptions}
-        currentMesocycle={currentMesocycle}
-        totalMesocycles={mesocycles}
-        mesocycleDuration={mesocycleDurations[currentMesocycle - 1]}
-        onDurationChange={handleMesocycleDurationChange}
-        onExercisesUpdate={handleExercisesUpdate}
-        onDayTitlesUpdate={handleDayTitlesUpdate}
-        initialExercises={exercisesPerDay[`mesocycle-${currentMesocycle}`]}
-        initialDayTitles={initialDayTitles}
-      />
+      {programLevel === 'iniciante' ? (
+        <ExerciseKanban 
+          weeklyFrequency={weeklyFrequency} 
+          daysSchedule={scheduleOptions}
+          currentMesocycle={currentMesocycle}
+          totalMesocycles={mesocycles}
+          mesocycleDuration={mesocycleDurations[currentMesocycle - 1]}
+          onDurationChange={handleMesocycleDurationChange}
+          onExercisesUpdate={handleExercisesUpdate}
+          onDayTitlesUpdate={handleDayTitlesUpdate}
+          initialExercises={exercisesPerDay[`mesocycle-${currentMesocycle}`]}
+          initialDayTitles={initialDayTitles}
+        />
+      ) : (
+        <ExerciseKanbanAdvanced 
+          weeklyFrequency={weeklyFrequency} 
+          daysSchedule={scheduleOptions}
+          currentMesocycle={currentMesocycle}
+          totalMesocycles={mesocycles}
+          mesocycleDuration={mesocycleDurations[currentMesocycle - 1]}
+          onDurationChange={handleMesocycleDurationChange}
+          onExercisesUpdate={handleExercisesUpdate}
+          onDayTitlesUpdate={handleDayTitlesUpdate}
+          initialExercises={exercisesPerDay[`mesocycle-${currentMesocycle}`]}
+          initialDayTitles={initialDayTitles}
+        />
+      )}
 
       <div className="flex justify-between pt-6">
         <div>
