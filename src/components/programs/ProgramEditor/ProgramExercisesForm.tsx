@@ -333,8 +333,11 @@ export default function ProgramExercisesForm({
                   let exercicioOriginalId = null;
                   
                   if (ex.name && ex.name !== "Novo Exercício") {
+                    const exerciseTable = programLevel === 'iniciante' 
+                      ? 'exercicios_iniciantes' 
+                      : 'exercicios_avancados';
                     const { data: exercicioOriginal } = await supabase
-                      .from('exercicios_iniciantes')
+                      .from(exerciseTable)
                       .select('id')
                       .eq('nome', ex.name)
                       .single();
