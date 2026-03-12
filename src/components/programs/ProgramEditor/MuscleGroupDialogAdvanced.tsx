@@ -50,10 +50,12 @@ const MuscleGroupDialogAdvanced = ({ open, onClose, onSelect }: MuscleGroupDialo
         }
 
         if (data) {
-          const groups = data.map((item: { grupo_muscular: string }) => item.grupo_muscular);
-          const sortedGroups = groups.sort();
-          console.log('Fetched advanced muscle groups:', sortedGroups);
-          setMuscleGroups(sortedGroups);
+          const groups = data
+            .map((item: { grupo_muscular: string }) => item.grupo_muscular?.trim())
+            .filter((g: string) => g && g.length > 0);
+          const uniqueGroups = [...new Set(groups)].sort();
+          console.log('Fetched advanced muscle groups:', uniqueGroups);
+          setMuscleGroups(uniqueGroups);
         } else {
           setMuscleGroups([]);
         }
