@@ -93,7 +93,7 @@ export function ExerciseCardAdvanced({
         const { data, error } = await supabase
           .from('exercicios_avancados')
           .select('nome')
-          .eq('grupo_muscular', exercise.muscleGroup)
+          .overlaps('grupo_muscular', [exercise.muscleGroup])
           .order('nome');
         
         if (error) {
