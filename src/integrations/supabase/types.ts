@@ -19,7 +19,7 @@ export type Database = {
           created_at: string
           descricao: string | null
           grande_grupo: string | null
-          grupo_muscular: string
+          grupo_muscular: string[]
           id: string
           image_url: string | null
           nome: string
@@ -34,7 +34,7 @@ export type Database = {
           created_at?: string
           descricao?: string | null
           grande_grupo?: string | null
-          grupo_muscular: string
+          grupo_muscular: string[]
           id?: string
           image_url?: string | null
           nome: string
@@ -49,7 +49,7 @@ export type Database = {
           created_at?: string
           descricao?: string | null
           grande_grupo?: string | null
-          grupo_muscular?: string
+          grupo_muscular?: string[]
           id?: string
           image_url?: string | null
           nome?: string
