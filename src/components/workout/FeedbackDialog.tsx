@@ -71,6 +71,7 @@ export function FeedbackDialog({
       setShowDescription(null);
       setNumericValue(minValue);
       setInputValue('');
+      setConfirmationMessage(null);
     }
   }, [isOpen, minValue]);
 
