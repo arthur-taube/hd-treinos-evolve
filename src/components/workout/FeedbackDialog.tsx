@@ -63,6 +63,7 @@ export function FeedbackDialog({
   const [showDescription, setShowDescription] = useState<string | null>(null);
   const [numericValue, setNumericValue] = useState<number>(minValue);
   const [inputValue, setInputValue] = useState<string>('');
+  const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null);
   
   useEffect(() => {
     if (!isOpen) {
@@ -70,6 +71,7 @@ export function FeedbackDialog({
       setShowDescription(null);
       setNumericValue(minValue);
       setInputValue('');
+      setConfirmationMessage(null);
     }
   }, [isOpen, minValue]);
 
@@ -100,10 +102,28 @@ export function FeedbackDialog({
 
   const handleSubmit = () => {
     if (isNumericInput) {
+      // Check if confirmation is needed for high increment values
+      if (!confirmationMessage && numericValue > 5) {
+        if (numericValue > 10) {
+          setConfirmationMessage("Uou, isso é muito, bro! Tem certeza que o mínimo de carga que você pode aumentar por vez nesse exercício é tudo isso?");
+        } else {
+          setConfirmationMessage("Isso é bastante coisa! Esse é realmente o MÍNIMO de carga que você consegue aumentar por vez nesse exercício?");
+        }
+        return;
+      }
       onSubmit(numericValue);
     } else if (selectedValue !== null) {
       onSubmit(selectedValue);
     }
+  };
+
+  const handleConfirmYes = () => {
+    setConfirmationMessage(null);
+    onSubmit(numericValue);
+  };
+
+  const handleConfirmNo = () => {
+    setConfirmationMessage(null);
   };
 
   // Função para formatar o texto da descrição substituindo os placeholders
@@ -157,7 +177,21 @@ export function FeedbackDialog({
         </DialogHeader>
         
         <div className="grid gap-4 py-4">
-          {isNumericInput ? (
+          {confirmationMessage ? (
+            <div className="space-y-4">
+              <div className="text-sm p-3 bg-amber-50 text-amber-800 rounded-md">
+                {confirmationMessage}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleConfirmNo} className="flex-1">
+                  Não, corrigir
+                </Button>
+                <Button onClick={handleConfirmYes} className="flex-1">
+                  Sim, usar esse valor
+                </Button>
+              </div>
+            </div>
+          ) : isNumericInput ? (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <span>Digite:</span>
@@ -199,27 +233,29 @@ export function FeedbackDialog({
             </div>
           )}
           
-          {showDescription && !isNumericInput && (
+          {showDescription && !isNumericInput && !confirmationMessage && (
             <div className="text-sm p-3 bg-blue-50 text-blue-800 rounded-md">
               {showDescription}
             </div>
           )}
         </div>
 
-        <DialogFooter className="gap-2">
-          {onCancel && (
-            <Button variant="outline" onClick={onCancel} className="w-full sm:w-auto">
-              Cancelar
+        {!confirmationMessage && (
+          <DialogFooter className="gap-2">
+            {onCancel && (
+              <Button variant="outline" onClick={onCancel} className="w-full sm:w-auto">
+                Cancelar
+              </Button>
+            )}
+            <Button
+              onClick={handleSubmit}
+              disabled={isNumericInput ? false : selectedValue === null}
+              className="w-full sm:w-auto"
+            >
+              Salvar
             </Button>
-          )}
-          <Button
-            onClick={handleSubmit}
-            disabled={isNumericInput ? false : selectedValue === null}
-            className="w-full sm:w-auto"
-          >
-            Salvar
-          </Button>
-        </DialogFooter>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );
