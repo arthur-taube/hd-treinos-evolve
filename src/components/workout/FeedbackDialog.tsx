@@ -177,7 +177,21 @@ export function FeedbackDialog({
         </DialogHeader>
         
         <div className="grid gap-4 py-4">
-          {isNumericInput ? (
+          {confirmationMessage ? (
+            <div className="space-y-4">
+              <div className="text-sm p-3 bg-amber-50 text-amber-800 rounded-md">
+                {confirmationMessage}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleConfirmNo} className="flex-1">
+                  Não, corrigir
+                </Button>
+                <Button onClick={handleConfirmYes} className="flex-1">
+                  Sim, usar esse valor
+                </Button>
+              </div>
+            </div>
+          ) : isNumericInput ? (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <span>Digite:</span>
@@ -219,7 +233,7 @@ export function FeedbackDialog({
             </div>
           )}
           
-          {showDescription && !isNumericInput && (
+          {showDescription && !isNumericInput && !confirmationMessage && (
             <div className="text-sm p-3 bg-blue-50 text-blue-800 rounded-md">
               {showDescription}
             </div>
