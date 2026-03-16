@@ -197,7 +197,7 @@ export function useExerciseFeedback(exerciseId: string) {
       // First, fetch current weight to adjust it
       const { data: currentExercise, error: fetchError } = await supabase
         .from('exercicios_treino_usuario')
-        .select('peso')
+        .select('peso, incremento_minimo')
         .eq('id', exerciseId)
         .single();
 
@@ -212,7 +212,9 @@ export function useExerciseFeedback(exerciseId: string) {
 
       // Adjust current weight to nearest valid multiple of new increment
       if (currentExercise?.peso != null && currentExercise.peso > 0) {
-        const adjustedWeight = Math.round(currentExercise.peso / increment) * increment;
+        const oldIncrement = currentExercise.incremento_minimo;
+        const roundFn = (oldIncrement != null && increment > oldIncrement) ? Math.ceil : Math.round;
+        const adjustedWeight = roundFn(currentExercise.peso / increment) * increment;
         const roundedWeight = Math.round(adjustedWeight * 100) / 100;
         if (roundedWeight !== currentExercise.peso) {
           updateData.peso = roundedWeight;
