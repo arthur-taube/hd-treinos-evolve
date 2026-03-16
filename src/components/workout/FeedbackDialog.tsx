@@ -102,10 +102,28 @@ export function FeedbackDialog({
 
   const handleSubmit = () => {
     if (isNumericInput) {
+      // Check if confirmation is needed for high increment values
+      if (!confirmationMessage && numericValue > 5) {
+        if (numericValue > 10) {
+          setConfirmationMessage("Uou, isso é muito, bro! Tem certeza que o mínimo de carga que você pode aumentar por vez nesse exercício é tudo isso?");
+        } else {
+          setConfirmationMessage("Isso é bastante coisa! Esse é realmente o MÍNIMO de carga que você consegue aumentar por vez nesse exercício?");
+        }
+        return;
+      }
       onSubmit(numericValue);
     } else if (selectedValue !== null) {
       onSubmit(selectedValue);
     }
+  };
+
+  const handleConfirmYes = () => {
+    setConfirmationMessage(null);
+    onSubmit(numericValue);
+  };
+
+  const handleConfirmNo = () => {
+    setConfirmationMessage(null);
   };
 
   // Função para formatar o texto da descrição substituindo os placeholders
