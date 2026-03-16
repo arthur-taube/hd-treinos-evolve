@@ -63,6 +63,7 @@ export function FeedbackDialog({
   const [showDescription, setShowDescription] = useState<string | null>(null);
   const [numericValue, setNumericValue] = useState<number>(minValue);
   const [inputValue, setInputValue] = useState<string>('');
+  const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null);
   
   useEffect(() => {
     if (!isOpen) {
