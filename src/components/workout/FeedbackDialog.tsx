@@ -240,20 +240,22 @@ export function FeedbackDialog({
           )}
         </div>
 
-        <DialogFooter className="gap-2">
-          {onCancel && (
-            <Button variant="outline" onClick={onCancel} className="w-full sm:w-auto">
-              Cancelar
+        {!confirmationMessage && (
+          <DialogFooter className="gap-2">
+            {onCancel && (
+              <Button variant="outline" onClick={onCancel} className="w-full sm:w-auto">
+                Cancelar
+              </Button>
+            )}
+            <Button
+              onClick={handleSubmit}
+              disabled={isNumericInput ? false : selectedValue === null}
+              className="w-full sm:w-auto"
+            >
+              Salvar
             </Button>
-          )}
-          <Button
-            onClick={handleSubmit}
-            disabled={isNumericInput ? false : selectedValue === null}
-            className="w-full sm:w-auto"
-          >
-            Salvar
-          </Button>
-        </DialogFooter>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );
