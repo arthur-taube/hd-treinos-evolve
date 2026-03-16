@@ -197,7 +197,7 @@ export function useExerciseFeedback(exerciseId: string) {
       // First, fetch current weight to adjust it
       const { data: currentExercise, error: fetchError } = await supabase
         .from('exercicios_treino_usuario')
-        .select('peso')
+        .select('peso, incremento_minimo')
         .eq('id', exerciseId)
         .single();
 
