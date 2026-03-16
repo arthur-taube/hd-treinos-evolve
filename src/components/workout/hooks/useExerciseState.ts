@@ -175,9 +175,10 @@ export const useExerciseState = (
   };
 
   // Custom save increment function that prevents reopening
-  const customSaveIncrementSetting = async (value: number) => {
-    await feedbackHook.saveIncrementSetting(value);
+  const customSaveIncrementSetting = async (value: number): Promise<number | null> => {
+    const result = await feedbackHook.saveIncrementSetting(value);
     setIncrementDialogShown(true); // Mark as shown to prevent reopening
+    return result;
   };
 
   // Reset increment dialog shown flag (used when user cancels)

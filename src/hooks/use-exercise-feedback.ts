@@ -192,7 +192,7 @@ export function useExerciseFeedback(exerciseId: string) {
     }
   };
 
-  const saveIncrementSetting = async (increment: number) => {
+  const saveIncrementSetting = async (increment: number): Promise<number | null> => {
     try {
       // First, fetch current weight to adjust it
       const { data: currentExercise, error: fetchError } = await supabase
@@ -208,12 +208,15 @@ export function useExerciseFeedback(exerciseId: string) {
         configuracao_inicial: true
       };
 
+      let adjustedWeightResult: number | null = null;
+
       // Adjust current weight to nearest valid multiple of new increment
       if (currentExercise?.peso != null && currentExercise.peso > 0) {
         const adjustedWeight = Math.round(currentExercise.peso / increment) * increment;
         const roundedWeight = Math.round(adjustedWeight * 100) / 100;
         if (roundedWeight !== currentExercise.peso) {
           updateData.peso = roundedWeight;
+          adjustedWeightResult = roundedWeight;
           console.log(`Adjusted weight from ${currentExercise.peso} to ${roundedWeight} (increment: ${increment})`);
         }
       }
@@ -231,6 +234,8 @@ export function useExerciseFeedback(exerciseId: string) {
         title: "Configuração salva",
         description: "Incremento mínimo configurado com sucesso!"
       });
+
+      return adjustedWeightResult;
       
     } catch (error: any) {
       toast({
@@ -238,6 +243,7 @@ export function useExerciseFeedback(exerciseId: string) {
         description: error.message,
         variant: "destructive"
       });
+      return null;
     }
   };
 
