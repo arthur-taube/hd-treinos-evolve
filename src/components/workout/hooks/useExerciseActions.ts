@@ -207,10 +207,13 @@ export const useExerciseActions = (
 
   const handleSaveIncrementSetting = async (
     value: number,
-    saveIncrementSetting: (value: number) => Promise<void>
+    saveIncrementSetting: (value: number) => Promise<number | null>
   ) => {
     try {
-      await saveIncrementSetting(value);
+      const adjustedWeight = await saveIncrementSetting(value);
+      if (adjustedWeight !== null) {
+        await onWeightUpdate(exercise.id, adjustedWeight);
+      }
     } catch (error: any) {
       toast({
         title: "Erro ao salvar configuração",
