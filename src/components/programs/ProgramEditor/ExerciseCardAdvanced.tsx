@@ -13,9 +13,18 @@ interface RepsRangeAdvanced {
   max_reps: number;
 }
 
+interface SpecialMethod {
+  id: string;
+  nome: string;
+}
+
 // Module-level cache for advanced reps ranges
 let advancedRepsRangesCache: RepsRangeAdvanced[] | null = null;
 let advancedRepsRangesFetchPromise: Promise<RepsRangeAdvanced[]> | null = null;
+
+// Module-level cache for special methods
+let specialMethodsCache: SpecialMethod[] | null = null;
+let specialMethodsFetchPromise: Promise<SpecialMethod[]> | null = null;
 
 interface ExerciseCardAdvancedProps {
   exercise: Exercise;
@@ -34,6 +43,7 @@ export function ExerciseCardAdvanced({
 }: ExerciseCardAdvancedProps) {
   const [exercises, setExercises] = useState<Array<{ nome: string }>>([]);
   const [repsRanges, setRepsRanges] = useState<RepsRangeAdvanced[]>([]);
+  const [specialMethods, setSpecialMethods] = useState<SpecialMethod[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -48,15 +58,25 @@ export function ExerciseCardAdvanced({
         return [];
       }
 
-      if (data) {
-        return data.map(range => ({
-          id: range.id,
-          min_reps: range.min_reps,
-          max_reps: range.max_reps,
-        }));
-      }
+      return (data || []).map(range => ({
+        id: range.id,
+        min_reps: range.min_reps,
+        max_reps: range.max_reps,
+      }));
+    };
+
+    const fetchSpecialMethods = async (): Promise<SpecialMethod[]> => {
+      const { data, error } = await supabase
+        .from('metodos_especiais')
+        .select('id, nome')
+        .order('nome');
       
-      return [];
+      if (error) {
+        console.error('Error fetching special methods:', error);
+        return [];
+      }
+
+      return (data || []).map(m => ({ id: m.id, nome: m.nome }));
     };
 
     const loadRepsRanges = async () => {
@@ -64,13 +84,11 @@ export function ExerciseCardAdvanced({
         setRepsRanges(advancedRepsRangesCache);
         return;
       }
-
       if (advancedRepsRangesFetchPromise) {
         const ranges = await advancedRepsRangesFetchPromise;
         setRepsRanges(ranges);
         return;
       }
-
       advancedRepsRangesFetchPromise = fetchRepsRanges();
       const ranges = await advancedRepsRangesFetchPromise;
       advancedRepsRangesCache = ranges;
@@ -78,7 +96,25 @@ export function ExerciseCardAdvanced({
       setRepsRanges(ranges);
     };
 
+    const loadSpecialMethods = async () => {
+      if (specialMethodsCache) {
+        setSpecialMethods(specialMethodsCache);
+        return;
+      }
+      if (specialMethodsFetchPromise) {
+        const methods = await specialMethodsFetchPromise;
+        setSpecialMethods(methods);
+        return;
+      }
+      specialMethodsFetchPromise = fetchSpecialMethods();
+      const methods = await specialMethodsFetchPromise;
+      specialMethodsCache = methods;
+      specialMethodsFetchPromise = null;
+      setSpecialMethods(methods);
+    };
+
     loadRepsRanges();
+    loadSpecialMethods();
   }, []);
 
   useEffect(() => {
@@ -86,10 +122,8 @@ export function ExerciseCardAdvanced({
       if (!exercise.muscleGroup) return;
       
       setIsLoading(true);
-      console.log(`Fetching advanced exercises for muscle group: ${exercise.muscleGroup}`);
       
       try {
-        // exercicios_avancados uses text field (not array), so use .eq()
         const { data, error } = await supabase
           .from('exercicios_avancados')
           .select('nome')
@@ -102,9 +136,7 @@ export function ExerciseCardAdvanced({
         }
         
         if (data) {
-          console.log(`Found ${data.length} advanced exercises for ${exercise.muscleGroup}`);
-          const typedExercises: Array<{ nome: string }> = data.map(ex => ({ nome: ex.nome }));
-          setExercises(typedExercises);
+          setExercises(data.map(ex => ({ nome: ex.nome })));
         }
       } catch (error) {
         console.error('Exception while fetching advanced exercises:', error);
@@ -137,6 +169,7 @@ export function ExerciseCardAdvanced({
         <ExerciseDetailsAdvanced
           exercise={exercise}
           repsRanges={repsRanges}
+          specialMethods={specialMethods}
           onExerciseUpdate={onExerciseUpdate}
         />
       </CardContent>

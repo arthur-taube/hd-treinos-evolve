@@ -67,6 +67,7 @@ export default function ProgramExercisesForm({
   const [isSaving, setIsSaving] = useState(false);
   const [exercisesPerDay, setExercisesPerDay] = useState<Record<string, Record<string, Exercise[]>>>(initialExercisesPerDay);
   const [dayTitles, setDayTitles] = useState<Record<string, string>>({});
+  const [rerPerWeekPerMesocycle, setRerPerWeekPerMesocycle] = useState<Record<number, Record<number, string>>>({});
   
   // Estados para edição de nome e descrição
   const [editableProgramName, setEditableProgramName] = useState(programName);
@@ -146,6 +147,13 @@ export default function ProgramExercisesForm({
     console.log('handleDayTitlesUpdate:', titles);
     setDayTitles(titles);
   }, []);
+
+  const handleRerPerWeekUpdate = useCallback((rerPerWeek: Record<number, string>) => {
+    setRerPerWeekPerMesocycle(prev => ({
+      ...prev,
+      [currentMesocycle]: rerPerWeek,
+    }));
+  }, [currentMesocycle]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -248,8 +256,13 @@ export default function ProgramExercisesForm({
 
     if (treinos && treinos.length > 0) {
       const treinoIds = treinos.map(t => t.id);
+      // Delete from both exercise tables
       await supabase
         .from('exercicios_treino')
+        .delete()
+        .in('treino_id', treinoIds);
+      await supabase
+        .from('exercicios_treino_avancado' as any)
         .delete()
         .in('treino_id', treinoIds);
     }
@@ -273,13 +286,21 @@ export default function ProgramExercisesForm({
     // 2. Criar os mesociclos com cronogramas recomendados
     for (let i = 0; i < mesocycles; i++) {
       const mesocicloNumero = i + 1;
+      
+      // Build rer_por_semana for this mesocycle
+      const mesocycleRer = rerPerWeekPerMesocycle[mesocicloNumero];
+      const rerPorSemana = mesocycleRer && Object.keys(mesocycleRer).length > 0
+        ? Object.fromEntries(Object.entries(mesocycleRer).map(([k, v]) => [String(k), v]))
+        : null;
+      
       const { data: mesociclo, error: mesocicloError } = await supabase
         .from('mesociclos')
         .insert({
           programa_id: programaId,
           numero: mesocicloNumero,
           duracao_semanas: mesocycleDurations[i],
-          cronogramas_recomendados: scheduleOptions // Salvar as opções de cronograma
+          cronogramas_recomendados: scheduleOptions,
+          rer_por_semana: rerPorSemana,
         } as any)
         .select()
         .single();
@@ -328,14 +349,15 @@ export default function ProgramExercisesForm({
           // Inserir exercícios do treino (aplicar exercícios do kanban)
           const exerciciosDia = mesocicloExercises[dayKey] || [];
             if (exerciciosDia.length > 0) {
+              const isAdvanced = programLevel !== 'iniciante';
+              const exerciseTable = isAdvanced ? 'exercicios_avancados' : 'exercicios_iniciantes';
+              const targetTable = isAdvanced ? 'exercicios_treino_avancado' : 'exercicios_treino';
+
               const exerciciosToInsert = await Promise.all(
                 exerciciosDia.map(async (ex, index) => {
                   let exercicioOriginalId = null;
                   
                   if (ex.name && ex.name !== "Novo Exercício") {
-                    const exerciseTable = programLevel === 'iniciante' 
-                      ? 'exercicios_iniciantes' 
-                      : 'exercicios_avancados';
                     const { data: exercicioOriginal } = await supabase
                       .from(exerciseTable)
                       .select('id')
@@ -347,7 +369,7 @@ export default function ProgramExercisesForm({
                     }
                   }
 
-                  return {
+                  const baseFields = {
                     treino_id: treino.id,
                     nome: ex.name,
                     grupo_muscular: ex.muscleGroup,
@@ -357,13 +379,24 @@ export default function ProgramExercisesForm({
                     ordem: index + 1,
                     exercicio_original_id: exercicioOriginalId,
                     allow_multiple_groups: ex.allowMultipleGroups || false,
-                    available_groups: ex.allowMultipleGroups ? ex.availableGroups : null
+                    available_groups: ex.allowMultipleGroups ? ex.availableGroups : null,
                   };
+
+                  if (isAdvanced) {
+                    return {
+                      ...baseFields,
+                      rer: ex.rer || 'do_microciclo',
+                      metodo_especial: ex.specialMethod || null,
+                      modelo_feedback: ex.feedbackModel || 'ARA/ART',
+                    };
+                  }
+
+                  return baseFields;
                 })
               );
 
               const { error: exerciciosError } = await supabase
-                .from('exercicios_treino')
+                .from(targetTable)
                 .insert(exerciciosToInsert as any[]);
 
               if (exerciciosError) {
@@ -512,8 +545,10 @@ export default function ProgramExercisesForm({
           onDurationChange={handleMesocycleDurationChange}
           onExercisesUpdate={handleExercisesUpdate}
           onDayTitlesUpdate={handleDayTitlesUpdate}
+          onRerPerWeekUpdate={handleRerPerWeekUpdate}
           initialExercises={exercisesPerDay[`mesocycle-${currentMesocycle}`]}
           initialDayTitles={initialDayTitles}
+          initialRerPerWeek={rerPerWeekPerMesocycle[currentMesocycle] || {}}
         />
       )}
 
