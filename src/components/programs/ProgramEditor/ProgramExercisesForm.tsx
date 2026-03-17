@@ -344,14 +344,15 @@ export default function ProgramExercisesForm({
           // Inserir exercícios do treino (aplicar exercícios do kanban)
           const exerciciosDia = mesocicloExercises[dayKey] || [];
             if (exerciciosDia.length > 0) {
+              const isAdvanced = programLevel !== 'iniciante';
+              const exerciseTable = isAdvanced ? 'exercicios_avancados' : 'exercicios_iniciantes';
+              const targetTable = isAdvanced ? 'exercicios_treino_avancado' : 'exercicios_treino';
+
               const exerciciosToInsert = await Promise.all(
                 exerciciosDia.map(async (ex, index) => {
                   let exercicioOriginalId = null;
                   
                   if (ex.name && ex.name !== "Novo Exercício") {
-                    const exerciseTable = programLevel === 'iniciante' 
-                      ? 'exercicios_iniciantes' 
-                      : 'exercicios_avancados';
                     const { data: exercicioOriginal } = await supabase
                       .from(exerciseTable)
                       .select('id')
@@ -363,7 +364,7 @@ export default function ProgramExercisesForm({
                     }
                   }
 
-                  return {
+                  const baseFields = {
                     treino_id: treino.id,
                     nome: ex.name,
                     grupo_muscular: ex.muscleGroup,
@@ -373,13 +374,24 @@ export default function ProgramExercisesForm({
                     ordem: index + 1,
                     exercicio_original_id: exercicioOriginalId,
                     allow_multiple_groups: ex.allowMultipleGroups || false,
-                    available_groups: ex.allowMultipleGroups ? ex.availableGroups : null
+                    available_groups: ex.allowMultipleGroups ? ex.availableGroups : null,
                   };
+
+                  if (isAdvanced) {
+                    return {
+                      ...baseFields,
+                      rer: ex.rer || 'do_microciclo',
+                      metodo_especial: ex.specialMethod || null,
+                      modelo_feedback: ex.feedbackModel || 'ARA/ART',
+                    };
+                  }
+
+                  return baseFields;
                 })
               );
 
               const { error: exerciciosError } = await supabase
-                .from('exercicios_treino')
+                .from(targetTable)
                 .insert(exerciciosToInsert as any[]);
 
               if (exerciciosError) {
