@@ -67,6 +67,7 @@ export default function ProgramExercisesForm({
   const [isSaving, setIsSaving] = useState(false);
   const [exercisesPerDay, setExercisesPerDay] = useState<Record<string, Record<string, Exercise[]>>>(initialExercisesPerDay);
   const [dayTitles, setDayTitles] = useState<Record<string, string>>({});
+  const [rerPerWeekPerMesocycle, setRerPerWeekPerMesocycle] = useState<Record<number, Record<number, string>>>({});
   
   // Estados para edição de nome e descrição
   const [editableProgramName, setEditableProgramName] = useState(programName);
