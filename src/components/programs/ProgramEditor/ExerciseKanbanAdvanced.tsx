@@ -2,12 +2,17 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { DragDropContext } from "react-beautiful-dnd";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DayColumnAdvanced } from "./DayColumnAdvanced";
 import MuscleGroupDialogAdvanced from "./MuscleGroupDialogAdvanced";
 import type { Exercise, ExerciseKanbanProps } from "./types";
 import { useExerciseState } from "./hooks/useExerciseState";
 import { useExerciseDrag } from "./hooks/useExerciseDrag";
 import { getDayRows } from "./hooks/useScheduleHelpers";
+
+const RER_PER_WEEK_OPTIONS = [
+  "5", "4-5", "4", "3-4", "3", "2-3", "2", "1-2", "1", "0-1", "0", "0-Falha", "Falha"
+];
 
 interface ExtendedExerciseKanbanAdvancedProps extends ExerciseKanbanProps {
   initialExercises?: Record<string, Exercise[]>;
@@ -19,6 +24,8 @@ interface ExtendedExerciseKanbanAdvancedProps extends ExerciseKanbanProps {
   maxSets?: number;
   onMoveExerciseBetweenDays?: (sourceDay: string, destDay: string, exercise: Exercise) => void;
   onReorderDays?: () => void;
+  onRerPerWeekUpdate?: (rerPerWeek: Record<number, string>) => void;
+  initialRerPerWeek?: Record<number, string>;
 }
 
 export default function ExerciseKanbanAdvanced({
@@ -38,6 +45,8 @@ export default function ExerciseKanbanAdvanced({
   maxSets,
   onMoveExerciseBetweenDays,
   onReorderDays,
+  onRerPerWeekUpdate,
+  initialRerPerWeek = {},
 }: ExtendedExerciseKanbanAdvancedProps) {
   const schedule = Array(weeklyFrequency)
     .fill("")
@@ -58,6 +67,7 @@ export default function ExerciseKanbanAdvanced({
 
   const [muscleGroupDialogOpen, setMuscleGroupDialogOpen] = useState(false);
   const [currentDay, setCurrentDay] = useState<string>("");
+  const [rerPerWeek, setRerPerWeek] = useState<Record<number, string>>(initialRerPerWeek);
   
   const lastReceivedHashRef = useRef<string>("");
   const lastSentHashRef = useRef<string>("");
@@ -66,6 +76,24 @@ export default function ExerciseKanbanAdvanced({
   const createExercisesHash = useCallback((exercisesData: Record<string, Exercise[]>) => {
     return JSON.stringify(exercisesData);
   }, []);
+
+  // Sync rerPerWeek with parent
+  useEffect(() => {
+    if (onRerPerWeekUpdate && Object.keys(rerPerWeek).length > 0) {
+      onRerPerWeekUpdate(rerPerWeek);
+    }
+  }, [rerPerWeek, onRerPerWeekUpdate]);
+
+  // Initialize rerPerWeek from props
+  useEffect(() => {
+    if (Object.keys(initialRerPerWeek).length > 0) {
+      setRerPerWeek(initialRerPerWeek);
+    }
+  }, [initialRerPerWeek]);
+
+  const handleRerWeekChange = (week: number, value: string) => {
+    setRerPerWeek(prev => ({ ...prev, [week]: value }));
+  };
 
   useEffect(() => {
     if (onDayTitlesUpdate && Object.keys(dayTitles).length > 0) {
@@ -120,6 +148,8 @@ export default function ExerciseKanbanAdvanced({
       muscleGroup: groups[0],
       allowMultipleGroups: isMultiple,
       availableGroups: isMultiple ? groups : undefined,
+      rer: "do_microciclo",
+      feedbackModel: "ARA/ART",
     };
     addExercise(currentDay, newExercise);
   };
@@ -143,6 +173,33 @@ export default function ExerciseKanbanAdvanced({
             value={mesocycleDuration}
             onChange={(e) => onDurationChange?.(Number(e.target.value))}
           />
+        </div>
+      </div>
+
+      {/* RER per week selectors */}
+      <div className="bg-muted/30 p-4 rounded-lg space-y-2">
+        <p className="text-sm font-medium">RER alvo por semana</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+          {Array.from({ length: mesocycleDuration }, (_, i) => i + 1).map((week) => (
+            <div key={week} className="space-y-1">
+              <p className="text-xs text-muted-foreground">Sem. {week}</p>
+              <Select
+                value={rerPerWeek[week] || ""}
+                onValueChange={(value) => handleRerWeekChange(week, value)}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="—" />
+                </SelectTrigger>
+                <SelectContent>
+                  {RER_PER_WEEK_OPTIONS.map((opt) => (
+                    <SelectItem key={opt} value={opt}>
+                      {opt}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ))}
         </div>
       </div>
 
