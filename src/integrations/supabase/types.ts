@@ -227,6 +227,75 @@ export type Database = {
           },
         ]
       }
+      exercicios_treino_avancado: {
+        Row: {
+          allow_multiple_groups: boolean | null
+          available_groups: string[] | null
+          created_at: string
+          exercicio_original_id: string | null
+          grupo_muscular: string
+          id: string
+          metodo_especial: string | null
+          modelo_feedback: string | null
+          nome: string
+          oculto: boolean
+          ordem: number
+          repeticoes: string | null
+          rer: string | null
+          series: number
+          treino_id: string
+        }
+        Insert: {
+          allow_multiple_groups?: boolean | null
+          available_groups?: string[] | null
+          created_at?: string
+          exercicio_original_id?: string | null
+          grupo_muscular: string
+          id?: string
+          metodo_especial?: string | null
+          modelo_feedback?: string | null
+          nome: string
+          oculto?: boolean
+          ordem: number
+          repeticoes?: string | null
+          rer?: string | null
+          series: number
+          treino_id: string
+        }
+        Update: {
+          allow_multiple_groups?: boolean | null
+          available_groups?: string[] | null
+          created_at?: string
+          exercicio_original_id?: string | null
+          grupo_muscular?: string
+          id?: string
+          metodo_especial?: string | null
+          modelo_feedback?: string | null
+          nome?: string
+          oculto?: boolean
+          ordem?: number
+          repeticoes?: string | null
+          rer?: string | null
+          series?: number
+          treino_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercicios_treino_avancado_exercicio_original_id_fkey"
+            columns: ["exercicio_original_id"]
+            isOneToOne: false
+            referencedRelation: "exercicios_avancados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercicios_treino_avancado_treino_id_fkey"
+            columns: ["treino_id"]
+            isOneToOne: false
+            referencedRelation: "treinos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercicios_treino_usuario: {
         Row: {
           avaliacao_dificuldade: string | null
@@ -495,6 +564,7 @@ export type Database = {
           id: string
           numero: number
           programa_id: string
+          rer_por_semana: Json | null
         }
         Insert: {
           created_at?: string
@@ -503,6 +573,7 @@ export type Database = {
           id?: string
           numero: number
           programa_id: string
+          rer_por_semana?: Json | null
         }
         Update: {
           created_at?: string
@@ -511,6 +582,7 @@ export type Database = {
           id?: string
           numero?: number
           programa_id?: string
+          rer_por_semana?: Json | null
         }
         Relationships: [
           {
@@ -521,6 +593,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      metodos_especiais: {
+        Row: {
+          created_at: string
+          descricao: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          created_at?: string
+          descricao: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
