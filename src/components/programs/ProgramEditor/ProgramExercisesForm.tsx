@@ -281,13 +281,21 @@ export default function ProgramExercisesForm({
     // 2. Criar os mesociclos com cronogramas recomendados
     for (let i = 0; i < mesocycles; i++) {
       const mesocicloNumero = i + 1;
+      
+      // Build rer_por_semana for this mesocycle
+      const mesocycleRer = rerPerWeekPerMesocycle[mesocicloNumero];
+      const rerPorSemana = mesocycleRer && Object.keys(mesocycleRer).length > 0
+        ? Object.fromEntries(Object.entries(mesocycleRer).map(([k, v]) => [String(k), v]))
+        : null;
+      
       const { data: mesociclo, error: mesocicloError } = await supabase
         .from('mesociclos')
         .insert({
           programa_id: programaId,
           numero: mesocicloNumero,
           duracao_semanas: mesocycleDurations[i],
-          cronogramas_recomendados: scheduleOptions // Salvar as opções de cronograma
+          cronogramas_recomendados: scheduleOptions,
+          rer_por_semana: rerPorSemana,
         } as any)
         .select()
         .single();
