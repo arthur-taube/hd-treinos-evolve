@@ -148,6 +148,13 @@ export default function ProgramExercisesForm({
     setDayTitles(titles);
   }, []);
 
+  const handleRerPerWeekUpdate = useCallback((rerPerWeek: Record<number, string>) => {
+    setRerPerWeekPerMesocycle(prev => ({
+      ...prev,
+      [currentMesocycle]: rerPerWeek,
+    }));
+  }, [currentMesocycle]);
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
