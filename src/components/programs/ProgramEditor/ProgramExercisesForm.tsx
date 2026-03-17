@@ -256,8 +256,13 @@ export default function ProgramExercisesForm({
 
     if (treinos && treinos.length > 0) {
       const treinoIds = treinos.map(t => t.id);
+      // Delete from both exercise tables
       await supabase
         .from('exercicios_treino')
+        .delete()
+        .in('treino_id', treinoIds);
+      await supabase
+        .from('exercicios_treino_avancado' as any)
         .delete()
         .in('treino_id', treinoIds);
     }
