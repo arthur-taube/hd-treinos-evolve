@@ -9,6 +9,9 @@ export interface Exercise {
   availableGroups?: string[];
   hidden?: boolean; // Propriedade para controlar visibilidade
   originalId?: string | null; // Referência para exercicios_iniciantes
+  rer?: string; // "do_microciclo" | "Falha" | "0" | "1" | "2" | "3" | "4" | "5"
+  specialMethod?: string; // ID ou nome do método especial
+  feedbackModel?: string; // "ARA/ART" | "AMP"
 }
 
 export interface ExerciseKanbanProps {
