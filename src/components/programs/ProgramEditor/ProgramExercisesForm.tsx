@@ -545,8 +545,10 @@ export default function ProgramExercisesForm({
           onDurationChange={handleMesocycleDurationChange}
           onExercisesUpdate={handleExercisesUpdate}
           onDayTitlesUpdate={handleDayTitlesUpdate}
+          onRerPerWeekUpdate={handleRerPerWeekUpdate}
           initialExercises={exercisesPerDay[`mesocycle-${currentMesocycle}`]}
           initialDayTitles={initialDayTitles}
+          initialRerPerWeek={rerPerWeekPerMesocycle[currentMesocycle] || {}}
         />
       )}
 
