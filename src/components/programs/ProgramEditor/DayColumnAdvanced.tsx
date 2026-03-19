@@ -37,6 +37,7 @@ export function DayColumnAdvanced({
   maxSets = 5,
   mode = 'edit',
   hiddenExercisesCount = 0,
+  customizerMode = false,
 }: DayColumnAdvancedProps) {
   const safeTitle = title || `Treino ${dayId.replace('day', '')}`;
   
