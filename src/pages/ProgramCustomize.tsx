@@ -20,6 +20,7 @@ import { ProgramScheduleSelector } from "@/components/programs/customizer/Progra
 import { HiddenExercisesDialog } from "@/components/programs/customizer/HiddenExercisesDialog";
 import { CustomizerWarnings } from "@/components/programs/customizer/CustomizerWarnings";
 import ExerciseKanban from "@/components/programs/ProgramEditor/ExerciseKanban";
+import ExerciseKanbanAdvanced from "@/components/programs/ProgramEditor/ExerciseKanbanAdvanced";
 import type { Exercise } from "@/components/programs/ProgramEditor/types";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
