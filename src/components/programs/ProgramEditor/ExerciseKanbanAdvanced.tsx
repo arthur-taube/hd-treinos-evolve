@@ -26,6 +26,7 @@ interface ExtendedExerciseKanbanAdvancedProps extends ExerciseKanbanProps {
   onReorderDays?: () => void;
   onRerPerWeekUpdate?: (rerPerWeek: Record<number, string>) => void;
   initialRerPerWeek?: Record<number, string>;
+  customizerMode?: boolean;
 }
 
 export default function ExerciseKanbanAdvanced({
