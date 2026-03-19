@@ -18,6 +18,7 @@ interface ExerciseDetailsAdvancedProps {
   repsRanges: RepsRangeAdvanced[];
   specialMethods: SpecialMethod[];
   onExerciseUpdate: (field: keyof Exercise, value: string | number | boolean) => void;
+  customizerMode?: boolean;
 }
 
 const RER_OPTIONS = [
@@ -41,6 +42,7 @@ export function ExerciseDetailsAdvanced({
   repsRanges,
   specialMethods,
   onExerciseUpdate,
+  customizerMode = false,
 }: ExerciseDetailsAdvancedProps) {
   const formatRepsRange = (range: RepsRangeAdvanced) => {
     if (range.min_reps === range.max_reps) {
@@ -97,27 +99,69 @@ export function ExerciseDetailsAdvanced({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
-        <div>
-          <p className="text-xs text-muted-foreground mb-1">RER</p>
-          <Select
-            value={exercise.rer || "do_microciclo"}
-            onValueChange={(value) => onExerciseUpdate('rer', value)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {RER_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {!customizerMode && (
+        <div className="grid grid-cols-3 gap-2">
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">RER</p>
+            <Select
+              value={exercise.rer || "do_microciclo"}
+              onValueChange={(value) => onExerciseUpdate('rer', value)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {RER_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Método</p>
+            <Select
+              value={exercise.specialMethod || "nenhum"}
+              onValueChange={(value) => onExerciseUpdate('specialMethod', value === "nenhum" ? "" : value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Nenhum" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="nenhum">Nenhum</SelectItem>
+                {specialMethods.map((method) => (
+                  <SelectItem key={method.id} value={method.nome}>
+                    {method.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Feedback</p>
+            <Select
+              value={exercise.feedbackModel || "ARA/ART"}
+              onValueChange={(value) => onExerciseUpdate('feedbackModel', value)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FEEDBACK_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
+      )}
+
+      {customizerMode && (
         <div>
-          <p className="text-xs text-muted-foreground mb-1">Método</p>
+          <p className="text-xs text-muted-foreground mb-1">Método Especial</p>
           <Select
             value={exercise.specialMethod || "nenhum"}
             onValueChange={(value) => onExerciseUpdate('specialMethod', value === "nenhum" ? "" : value)}
@@ -135,25 +179,7 @@ export function ExerciseDetailsAdvanced({
             </SelectContent>
           </Select>
         </div>
-        <div>
-          <p className="text-xs text-muted-foreground mb-1">Feedback</p>
-          <Select
-            value={exercise.feedbackModel || "ARA/ART"}
-            onValueChange={(value) => onExerciseUpdate('feedbackModel', value)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {FEEDBACK_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

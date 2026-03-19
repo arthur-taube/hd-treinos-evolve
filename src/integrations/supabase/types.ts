@@ -428,6 +428,120 @@ export type Database = {
           },
         ]
       }
+      exercicios_treino_usuario_avancado: {
+        Row: {
+          avaliacao_dor: number | null
+          avaliacao_fadiga: number | null
+          avaliacao_performance: number | null
+          avaliacao_pump: number | null
+          avaliacao_recuperacao: number | null
+          card_original_id: string | null
+          concluido: boolean
+          configuracao_inicial: boolean | null
+          created_at: string
+          data_avaliacao: string | null
+          exercicio_original_id: string | null
+          grupo_muscular: string
+          id: string
+          incremento_minimo: number | null
+          metodo_especial: string | null
+          modelo_feedback: string | null
+          nome: string
+          observacao: string | null
+          oculto: boolean
+          ordem: number
+          peso: number | null
+          repeticoes: string | null
+          rer: string | null
+          series: number
+          substituicao_neste_treino: boolean
+          substituto_custom_id: string | null
+          substituto_nome: string | null
+          substituto_oficial_id: string | null
+          treino_usuario_id: string
+          updated_at: string
+        }
+        Insert: {
+          avaliacao_dor?: number | null
+          avaliacao_fadiga?: number | null
+          avaliacao_performance?: number | null
+          avaliacao_pump?: number | null
+          avaliacao_recuperacao?: number | null
+          card_original_id?: string | null
+          concluido?: boolean
+          configuracao_inicial?: boolean | null
+          created_at?: string
+          data_avaliacao?: string | null
+          exercicio_original_id?: string | null
+          grupo_muscular: string
+          id?: string
+          incremento_minimo?: number | null
+          metodo_especial?: string | null
+          modelo_feedback?: string | null
+          nome: string
+          observacao?: string | null
+          oculto?: boolean
+          ordem: number
+          peso?: number | null
+          repeticoes?: string | null
+          rer?: string | null
+          series: number
+          substituicao_neste_treino?: boolean
+          substituto_custom_id?: string | null
+          substituto_nome?: string | null
+          substituto_oficial_id?: string | null
+          treino_usuario_id: string
+          updated_at?: string
+        }
+        Update: {
+          avaliacao_dor?: number | null
+          avaliacao_fadiga?: number | null
+          avaliacao_performance?: number | null
+          avaliacao_pump?: number | null
+          avaliacao_recuperacao?: number | null
+          card_original_id?: string | null
+          concluido?: boolean
+          configuracao_inicial?: boolean | null
+          created_at?: string
+          data_avaliacao?: string | null
+          exercicio_original_id?: string | null
+          grupo_muscular?: string
+          id?: string
+          incremento_minimo?: number | null
+          metodo_especial?: string | null
+          modelo_feedback?: string | null
+          nome?: string
+          observacao?: string | null
+          oculto?: boolean
+          ordem?: number
+          peso?: number | null
+          repeticoes?: string | null
+          rer?: string | null
+          series?: number
+          substituicao_neste_treino?: boolean
+          substituto_custom_id?: string | null
+          substituto_nome?: string | null
+          substituto_oficial_id?: string | null
+          treino_usuario_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercicios_treino_usuario_avancado_exercicio_original_id_fkey"
+            columns: ["exercicio_original_id"]
+            isOneToOne: false
+            referencedRelation: "exercicios_avancados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercicios_treino_usuario_avancado_treino_usuario_id_fkey"
+            columns: ["treino_usuario_id"]
+            isOneToOne: false
+            referencedRelation: "treinos_usuario"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       faixas_repeticoes: {
         Row: {
           created_at: string

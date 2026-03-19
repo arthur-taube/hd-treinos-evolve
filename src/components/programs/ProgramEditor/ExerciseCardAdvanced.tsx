@@ -32,6 +32,7 @@ interface ExerciseCardAdvancedProps {
   onDelete: () => void;
   onExerciseUpdate: (field: keyof Exercise, value: string | number | boolean) => void;
   mode?: 'edit' | 'customize';
+  customizerMode?: boolean;
 }
 
 export function ExerciseCardAdvanced({
@@ -40,6 +41,7 @@ export function ExerciseCardAdvanced({
   onDelete,
   onExerciseUpdate,
   mode = 'edit',
+  customizerMode = false,
 }: ExerciseCardAdvancedProps) {
   const [exercises, setExercises] = useState<Array<{ nome: string }>>([]);
   const [repsRanges, setRepsRanges] = useState<RepsRangeAdvanced[]>([]);
@@ -171,6 +173,7 @@ export function ExerciseCardAdvanced({
           repsRanges={repsRanges}
           specialMethods={specialMethods}
           onExerciseUpdate={onExerciseUpdate}
+          customizerMode={customizerMode}
         />
       </CardContent>
     </Card>

@@ -18,6 +18,7 @@ interface CronogramaConfig {
 
 interface LoadedProgramData {
   programData: any;
+  programLevel?: string;
   mesocycleDurations: number[];
   weeklySchedules: string[][];
 }
@@ -240,30 +241,62 @@ export async function saveCustomizedProgram(
 
       // 6. Copiar exercícios customizados da semana 1 para todas as semanas
       const exerciciosDia = customExercises[dayKey] || [];
+      const isAdvanced = programData.programLevel && programData.programLevel !== 'iniciante';
 
       if (exerciciosDia.length > 0) {
-        const exerciciosUsuario = exerciciosDia
-          .filter((exercicio) => !exercicio.hidden)
-          .map((exercicio, index) => ({
-            treino_usuario_id: treinoUsuario.id,
-            exercicio_original_id: exercicio.id.startsWith("exercise-")
-              ? null
-              : (exercicio.originalId || null),
-            nome: exercicio.name,
-            grupo_muscular: exercicio.muscleGroup,
-            series: exercicio.sets,
-            repeticoes: exercicio.reps?.toString() || null,
-            oculto: false,
-            ordem: index + 1,
-            card_original_id: exercicio.id.startsWith("exercise-") ? null : exercicio.id,
-          }));
+        if (isAdvanced) {
+          // Insert into exercicios_treino_usuario_avancado for advanced programs
+          const exerciciosAvancados = exerciciosDia
+            .filter((exercicio) => !exercicio.hidden)
+            .map((exercicio, index) => ({
+              treino_usuario_id: treinoUsuario.id,
+              exercicio_original_id: exercicio.id.startsWith("exercise-")
+                ? null
+                : (exercicio.originalId || null),
+              nome: exercicio.name,
+              grupo_muscular: exercicio.muscleGroup,
+              series: exercicio.sets,
+              repeticoes: exercicio.reps?.toString() || null,
+              oculto: false,
+              ordem: index + 1,
+              card_original_id: exercicio.id.startsWith("exercise-") ? null : exercicio.id,
+              rer: exercicio.rer || 'do_microciclo',
+              metodo_especial: exercicio.specialMethod || null,
+              modelo_feedback: exercicio.feedbackModel || 'ARA/ART',
+            }));
 
-        if (exerciciosUsuario.length > 0) {
-          const { error: exerciciosError } = await supabase
-            .from("exercicios_treino_usuario")
-            .insert(exerciciosUsuario);
+          if (exerciciosAvancados.length > 0) {
+            const { error: exerciciosError } = await supabase
+              .from("exercicios_treino_usuario_avancado" as any)
+              .insert(exerciciosAvancados);
 
-          if (exerciciosError) throw exerciciosError;
+            if (exerciciosError) throw exerciciosError;
+          }
+        } else {
+          // Insert into exercicios_treino_usuario for beginner programs
+          const exerciciosUsuario = exerciciosDia
+            .filter((exercicio) => !exercicio.hidden)
+            .map((exercicio, index) => ({
+              treino_usuario_id: treinoUsuario.id,
+              exercicio_original_id: exercicio.id.startsWith("exercise-")
+                ? null
+                : (exercicio.originalId || null),
+              nome: exercicio.name,
+              grupo_muscular: exercicio.muscleGroup,
+              series: exercicio.sets,
+              repeticoes: exercicio.reps?.toString() || null,
+              oculto: false,
+              ordem: index + 1,
+              card_original_id: exercicio.id.startsWith("exercise-") ? null : exercicio.id,
+            }));
+
+          if (exerciciosUsuario.length > 0) {
+            const { error: exerciciosError } = await supabase
+              .from("exercicios_treino_usuario")
+              .insert(exerciciosUsuario);
+
+            if (exerciciosError) throw exerciciosError;
+          }
         }
       }
     }

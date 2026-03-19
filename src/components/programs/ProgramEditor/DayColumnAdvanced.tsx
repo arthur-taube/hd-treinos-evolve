@@ -23,6 +23,7 @@ interface DayColumnAdvancedProps {
   maxSets?: number;
   mode?: 'edit' | 'customize';
   hiddenExercisesCount?: number;
+  customizerMode?: boolean;
 }
 
 export function DayColumnAdvanced({
@@ -36,6 +37,7 @@ export function DayColumnAdvanced({
   maxSets = 5,
   mode = 'edit',
   hiddenExercisesCount = 0,
+  customizerMode = false,
 }: DayColumnAdvancedProps) {
   const safeTitle = title || `Treino ${dayId.replace('day', '')}`;
   
@@ -102,6 +104,7 @@ export function DayColumnAdvanced({
                           onExerciseUpdate(exercise.id, field, value)
                         }
                         mode={mode}
+                        customizerMode={customizerMode}
                       />
                     </div>
                   )}

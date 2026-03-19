@@ -20,6 +20,7 @@ import { ProgramScheduleSelector } from "@/components/programs/customizer/Progra
 import { HiddenExercisesDialog } from "@/components/programs/customizer/HiddenExercisesDialog";
 import { CustomizerWarnings } from "@/components/programs/customizer/CustomizerWarnings";
 import ExerciseKanban from "@/components/programs/ProgramEditor/ExerciseKanban";
+import ExerciseKanbanAdvanced from "@/components/programs/ProgramEditor/ExerciseKanbanAdvanced";
 import type { Exercise } from "@/components/programs/ProgramEditor/types";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -443,35 +444,68 @@ export default function ProgramCustomize() {
         {/* Exercise Kanban */}
         <div>
           <h3 className="text-lg font-semibold mb-4">Exercícios - Semana 1</h3>
-          <ExerciseKanban
-            weeklyFrequency={programData.weeklyFrequency}
-            daysSchedule={[]}
-            currentMesocycle={1}
-            totalMesocycles={programData.mesocycles}
-            mesocycleDuration={programData.mesocycleDurations?.[0] || 4}
-            initialExercises={customExercises}
-            initialDayTitles={customDayTitles}
-            mode="customize"
-            onExercisesUpdate={(dayId, exercises) =>
-              setCustomExercises((prev) => ({ ...prev, [dayId]: exercises }))
-            }
-            onDayTitlesUpdate={setCustomDayTitles}
-            onShowDayHiddenExercises={(dayId) => {
-              setSelectedDayForHidden(dayId);
-              setShowHiddenExercisesDialog(true);
-            }}
-            onDeleteExercise={handleDeleteExercise}
-            maxSets={3}
-            onMoveExerciseBetweenDays={(sourceDay, destDay, exercise) => {
-              setPendingExerciseMove({ sourceDay, destDay, exercise });
-              setShowMoveExerciseWarning(true);
-            }}
-            onReorderDays={() => {
-              if (!hasShownDayOrderWarning) {
-                setShowDayOrderWarning(true);
+          {programData.programLevel !== 'iniciante' ? (
+            <ExerciseKanbanAdvanced
+              weeklyFrequency={programData.weeklyFrequency}
+              daysSchedule={[]}
+              currentMesocycle={1}
+              totalMesocycles={programData.mesocycles}
+              mesocycleDuration={programData.mesocycleDurations?.[0] || 4}
+              initialExercises={customExercises}
+              initialDayTitles={customDayTitles}
+              mode="customize"
+              customizerMode={true}
+              onExercisesUpdate={(dayId, exercises) =>
+                setCustomExercises((prev) => ({ ...prev, [dayId]: exercises }))
               }
-            }}
-          />
+              onDayTitlesUpdate={setCustomDayTitles}
+              onShowDayHiddenExercises={(dayId) => {
+                setSelectedDayForHidden(dayId);
+                setShowHiddenExercisesDialog(true);
+              }}
+              onDeleteExercise={handleDeleteExercise}
+              maxSets={5}
+              onMoveExerciseBetweenDays={(sourceDay, destDay, exercise) => {
+                setPendingExerciseMove({ sourceDay, destDay, exercise });
+                setShowMoveExerciseWarning(true);
+              }}
+              onReorderDays={() => {
+                if (!hasShownDayOrderWarning) {
+                  setShowDayOrderWarning(true);
+                }
+              }}
+            />
+          ) : (
+            <ExerciseKanban
+              weeklyFrequency={programData.weeklyFrequency}
+              daysSchedule={[]}
+              currentMesocycle={1}
+              totalMesocycles={programData.mesocycles}
+              mesocycleDuration={programData.mesocycleDurations?.[0] || 4}
+              initialExercises={customExercises}
+              initialDayTitles={customDayTitles}
+              mode="customize"
+              onExercisesUpdate={(dayId, exercises) =>
+                setCustomExercises((prev) => ({ ...prev, [dayId]: exercises }))
+              }
+              onDayTitlesUpdate={setCustomDayTitles}
+              onShowDayHiddenExercises={(dayId) => {
+                setSelectedDayForHidden(dayId);
+                setShowHiddenExercisesDialog(true);
+              }}
+              onDeleteExercise={handleDeleteExercise}
+              maxSets={3}
+              onMoveExerciseBetweenDays={(sourceDay, destDay, exercise) => {
+                setPendingExerciseMove({ sourceDay, destDay, exercise });
+                setShowMoveExerciseWarning(true);
+              }}
+              onReorderDays={() => {
+                if (!hasShownDayOrderWarning) {
+                  setShowDayOrderWarning(true);
+                }
+              }}
+            />
+          )}
         </div>
       </div>
 
