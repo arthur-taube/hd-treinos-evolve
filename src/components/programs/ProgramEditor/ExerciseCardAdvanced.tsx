@@ -32,6 +32,7 @@ interface ExerciseCardAdvancedProps {
   onDelete: () => void;
   onExerciseUpdate: (field: keyof Exercise, value: string | number | boolean) => void;
   mode?: 'edit' | 'customize';
+  customizerMode?: boolean;
 }
 
 export function ExerciseCardAdvanced({
