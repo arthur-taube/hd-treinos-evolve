@@ -104,6 +104,7 @@ export function DayColumnAdvanced({
                           onExerciseUpdate(exercise.id, field, value)
                         }
                         mode={mode}
+                        customizerMode={customizerMode}
                       />
                     </div>
                   )}
