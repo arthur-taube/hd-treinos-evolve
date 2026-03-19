@@ -42,6 +42,7 @@ export function ExerciseDetailsAdvanced({
   repsRanges,
   specialMethods,
   onExerciseUpdate,
+  customizerMode = false,
 }: ExerciseDetailsAdvancedProps) {
   const formatRepsRange = (range: RepsRangeAdvanced) => {
     if (range.min_reps === range.max_reps) {
