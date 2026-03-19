@@ -173,6 +173,7 @@ export function ExerciseCardAdvanced({
           repsRanges={repsRanges}
           specialMethods={specialMethods}
           onExerciseUpdate={onExerciseUpdate}
+          customizerMode={customizerMode}
         />
       </CardContent>
     </Card>
