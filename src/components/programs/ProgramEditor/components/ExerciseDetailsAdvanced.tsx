@@ -18,6 +18,7 @@ interface ExerciseDetailsAdvancedProps {
   repsRanges: RepsRangeAdvanced[];
   specialMethods: SpecialMethod[];
   onExerciseUpdate: (field: keyof Exercise, value: string | number | boolean) => void;
+  customizerMode?: boolean;
 }
 
 const RER_OPTIONS = [
