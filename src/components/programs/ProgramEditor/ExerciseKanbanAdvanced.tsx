@@ -48,6 +48,7 @@ export default function ExerciseKanbanAdvanced({
   onReorderDays,
   onRerPerWeekUpdate,
   initialRerPerWeek = {},
+  customizerMode = false,
 }: ExtendedExerciseKanbanAdvancedProps) {
   const schedule = Array(weeklyFrequency)
     .fill("")
