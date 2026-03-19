@@ -23,6 +23,7 @@ interface DayColumnAdvancedProps {
   maxSets?: number;
   mode?: 'edit' | 'customize';
   hiddenExercisesCount?: number;
+  customizerMode?: boolean;
 }
 
 export function DayColumnAdvanced({
