@@ -178,32 +178,34 @@ export default function ExerciseKanbanAdvanced({
         </div>
       </div>
 
-      {/* RER per week selectors */}
-      <div className="bg-muted/30 p-4 rounded-lg space-y-2">
-        <p className="text-sm font-medium">RER alvo por semana</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-          {Array.from({ length: mesocycleDuration }, (_, i) => i + 1).map((week) => (
-            <div key={week} className="space-y-1">
-              <p className="text-xs text-muted-foreground">Sem. {week}</p>
-              <Select
-                value={rerPerWeek[week] || ""}
-                onValueChange={(value) => handleRerWeekChange(week, value)}
-              >
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="—" />
-                </SelectTrigger>
-                <SelectContent>
-                  {RER_PER_WEEK_OPTIONS.map((opt) => (
-                    <SelectItem key={opt} value={opt}>
-                      {opt}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ))}
+      {/* RER per week selectors - hidden in customizerMode */}
+      {!customizerMode && (
+        <div className="bg-muted/30 p-4 rounded-lg space-y-2">
+          <p className="text-sm font-medium">RER alvo por semana</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+            {Array.from({ length: mesocycleDuration }, (_, i) => i + 1).map((week) => (
+              <div key={week} className="space-y-1">
+                <p className="text-xs text-muted-foreground">Sem. {week}</p>
+                <Select
+                  value={rerPerWeek[week] || ""}
+                  onValueChange={(value) => handleRerWeekChange(week, value)}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="—" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RER_PER_WEEK_OPTIONS.map((opt) => (
+                      <SelectItem key={opt} value={opt}>
+                        {opt}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <DragDropContext onDragEnd={onDragEnd}>
         {getDayRows(schedule).map((row, rowIndex) => (
