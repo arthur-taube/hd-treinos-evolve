@@ -41,6 +41,7 @@ export function ExerciseCardAdvanced({
   onDelete,
   onExerciseUpdate,
   mode = 'edit',
+  customizerMode = false,
 }: ExerciseCardAdvancedProps) {
   const [exercises, setExercises] = useState<Array<{ nome: string }>>([]);
   const [repsRanges, setRepsRanges] = useState<RepsRangeAdvanced[]>([]);
