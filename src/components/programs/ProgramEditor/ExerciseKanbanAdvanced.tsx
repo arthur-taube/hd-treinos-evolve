@@ -234,6 +234,7 @@ export default function ExerciseKanbanAdvanced({
                 maxSets={maxSets}
                 mode={mode}
                 hiddenExercisesCount={getHiddenExercisesCount(day)}
+                customizerMode={customizerMode}
               />
             ))}
           </div>
