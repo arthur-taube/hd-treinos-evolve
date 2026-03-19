@@ -18,6 +18,7 @@ interface CronogramaConfig {
 
 interface LoadedProgramData {
   programData: any;
+  programLevel?: string;
   mesocycleDurations: number[];
   weeklySchedules: string[][];
 }
