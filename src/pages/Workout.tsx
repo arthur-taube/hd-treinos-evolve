@@ -7,9 +7,11 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronLeft, CheckCircle, ChevronRight } from "lucide-react";
 import { ExerciseCard } from "@/components/workout/ExerciseCard";
+import { ExerciseCardAdvanced, ExerciseAdvancedData } from "@/components/workout/ExerciseCardAdvanced";
 import { FeedbackDialog } from "@/components/workout/FeedbackDialog";
 import { useExerciseFeedback } from "@/hooks/use-exercise-feedback";
 import { applyWorkoutProgression } from "@/utils/workoutProgressionLoader";
+import { resolveExerciseRer } from "@/utils/rerResolver";
 
 interface TreinoUsuario {
   id: string;
@@ -49,6 +51,9 @@ export default function Workout() {
   const navigate = useNavigate();
   const [treino, setTreino] = useState<TreinoUsuario | null>(null);
   const [exercicios, setExercicios] = useState<ExercicioUsuario[]>([]);
+  const [exerciciosAdvanced, setExerciciosAdvanced] = useState<ExerciseAdvancedData[]>([]);
+  const [isAdvanced, setIsAdvanced] = useState(false);
+  const [rerPerWeek, setRerPerWeek] = useState<Record<string, string> | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
@@ -57,9 +62,6 @@ export default function Workout() {
       if (!treinoId) return;
 
       try {
-        // Aplicar progressão automática primeiro
-        await applyWorkoutProgression(treinoId);
-
         // Buscar dados do treino
         const { data: treinoData, error: treinoError } = await supabase
           .from('treinos_usuario')
@@ -68,65 +70,35 @@ export default function Workout() {
           .single();
 
         if (treinoError) throw treinoError;
-
         setTreino(treinoData);
 
-        // Buscar exercícios do treino com primary_muscle dos exercícios originais
-        const { data: exerciciosData, error: exerciciosError } = await supabase
-          .from('exercicios_treino_usuario')
-          .select(`
-            id, 
-            nome, 
-            grupo_muscular, 
-            primary_muscle,
-            exercicio_original_id,
-            card_original_id,
-            series, 
-            repeticoes, 
-            oculto, 
-            ordem, 
-            concluido, 
-            peso, 
-            observacao, 
-            video_url,
-            configuracao_inicial,
-            reps_programadas,
-            incremento_minimo,
-            treino_usuario_id,
-            substituicao_neste_treino,
-            substituto_oficial_id,
-            substituto_custom_id,
-            substituto_nome
-          `)
-          .eq('treino_usuario_id', treinoId)
-          .order('ordem', { ascending: true });
+        // Detect program level
+        const { data: programaUsuario } = await supabase
+          .from('programas_usuario')
+          .select('programa_original_id')
+          .eq('id', treinoData.programa_usuario_id)
+          .single();
 
-        if (exerciciosError) throw exerciciosError;
-        
-        const exerciciosProcessados = await Promise.all(
-          exerciciosData.map(async (exercicio) => {
-            if (!exercicio.primary_muscle && exercicio.exercicio_original_id) {
-              const { data, error } = await supabase
-                .from('exercicios_iniciantes')
-                .select('primary_muscle')
-                .eq('id', exercicio.exercicio_original_id)
-                .single();
-                
-              if (!error && data) {
-                exercicio.primary_muscle = data.primary_muscle || exercicio.grupo_muscular;
-                
-                await supabase
-                  .from('exercicios_treino_usuario')
-                  .update({ primary_muscle: data.primary_muscle })
-                  .eq('id', exercicio.id);
-              }
-            }
-            
-            return exercicio;
-          })
-        );
+        let programLevel = 'iniciante';
+        if (programaUsuario) {
+          const { data: programa } = await supabase
+            .from('programas')
+            .select('nivel')
+            .eq('id', programaUsuario.programa_original_id)
+            .single();
+          if (programa) programLevel = programa.nivel;
+        }
 
-        setExercicios(exerciciosProcessados);
+        const advanced = programLevel !== 'iniciante';
+        setIsAdvanced(advanced);
+
+        if (advanced) {
+          await fetchAdvancedExercises(treinoId, treinoData);
+        } else {
+          // Aplicar progressão automática (only for beginner)
+          await applyWorkoutProgression(treinoId);
+          await fetchBeginnerExercises(treinoId);
+        }
       } catch (error: any) {
         toast({
           title: "Erro ao carregar treino",
@@ -141,63 +113,154 @@ export default function Workout() {
     fetchWorkoutData();
   }, [treinoId]);
 
+  const fetchAdvancedExercises = async (treinoId: string, treinoData: any) => {
+    // Fetch exercises from advanced table
+    const { data: exerciciosData, error } = await supabase
+      .from('exercicios_treino_usuario_avancado')
+      .select(`
+        id, nome, grupo_muscular, exercicio_original_id, card_original_id,
+        series, repeticoes, oculto, ordem, concluido, peso, observacao,
+        configuracao_inicial, incremento_minimo, treino_usuario_id,
+        rer, metodo_especial, modelo_feedback,
+        substituicao_neste_treino, substituto_oficial_id, substituto_custom_id, substituto_nome
+      `)
+      .eq('treino_usuario_id', treinoId)
+      .order('ordem', { ascending: true });
+
+    if (error) throw error;
+
+    // Fetch RER per week from mesociclo
+    const { data: treinoOriginal } = await supabase
+      .from('treinos')
+      .select('mesociclo_id')
+      .eq('id', treinoData.treino_original_id)
+      .single();
+
+    if (treinoOriginal) {
+      const { data: mesociclo } = await supabase
+        .from('mesociclos')
+        .select('rer_por_semana')
+        .eq('id', treinoOriginal.mesociclo_id)
+        .single();
+
+      if (mesociclo?.rer_por_semana) {
+        setRerPerWeek(mesociclo.rer_por_semana as Record<string, string>);
+      }
+    }
+
+    setExerciciosAdvanced((exerciciosData || []) as ExerciseAdvancedData[]);
+  };
+
+  const fetchBeginnerExercises = async (treinoId: string) => {
+    const { data: exerciciosData, error: exerciciosError } = await supabase
+      .from('exercicios_treino_usuario')
+      .select(`
+        id, nome, grupo_muscular, primary_muscle, exercicio_original_id, card_original_id,
+        series, repeticoes, oculto, ordem, concluido, peso, observacao, video_url,
+        configuracao_inicial, reps_programadas, incremento_minimo, treino_usuario_id,
+        substituicao_neste_treino, substituto_oficial_id, substituto_custom_id, substituto_nome
+      `)
+      .eq('treino_usuario_id', treinoId)
+      .order('ordem', { ascending: true });
+
+    if (exerciciosError) throw exerciciosError;
+
+    const exerciciosProcessados = await Promise.all(
+      (exerciciosData || []).map(async (exercicio) => {
+        if (!exercicio.primary_muscle && exercicio.exercicio_original_id) {
+          const { data, error } = await supabase
+            .from('exercicios_iniciantes')
+            .select('primary_muscle')
+            .eq('id', exercicio.exercicio_original_id)
+            .single();
+          if (!error && data) {
+            exercicio.primary_muscle = data.primary_muscle || exercicio.grupo_muscular;
+            await supabase
+              .from('exercicios_treino_usuario')
+              .update({ primary_muscle: data.primary_muscle })
+              .eq('id', exercicio.id);
+          }
+        }
+        return exercicio;
+      })
+    );
+
+    setExercicios(exerciciosProcessados);
+  };
+
   useEffect(() => {
     async function ensureSeriesTable() {
       try {
         await supabase.rpc('ensure_series_table').then(({ error }) => {
-          if (error) {
-            console.error("Erro ao verificar/criar tabela de séries:", error);
-          }
+          if (error) console.error("Erro ao verificar/criar tabela de séries:", error);
         });
       } catch (error) {
         console.error("Erro ao verificar tabela de séries:", error);
       }
     }
-    
     ensureSeriesTable();
   }, []);
 
+  // --- Shared workout actions (table-conditional) ---
+  const tableName = isAdvanced ? 'exercicios_treino_usuario_avancado' : 'exercicios_treino_usuario';
+
   const toggleExerciseCompletion = async (exerciseId: string, isCompleted: boolean) => {
-    setExercicios(prev => 
-      prev.map(ex => ex.id === exerciseId ? { ...ex, concluido: isCompleted } : ex)
-    );
+    if (isAdvanced) {
+      setExerciciosAdvanced(prev =>
+        prev.map(ex => ex.id === exerciseId ? { ...ex, concluido: isCompleted } : ex)
+      );
+    } else {
+      setExercicios(prev =>
+        prev.map(ex => ex.id === exerciseId ? { ...ex, concluido: isCompleted } : ex)
+      );
+    }
 
     try {
       const { error } = await supabase
-        .from('exercicios_treino_usuario')
+        .from(tableName)
         .update({ concluido: isCompleted })
         .eq('id', exerciseId);
-
       if (error) throw error;
     } catch (error: any) {
       toast({
         title: "Erro ao atualizar exercício",
-        description: error.message || "Não foi possível atualizar o status do exercício.",
+        description: error.message,
         variant: "destructive"
       });
-      
-      setExercicios(prev => 
-        prev.map(ex => ex.id === exerciseId ? { ...ex, concluido: !isCompleted } : ex)
-      );
+      // Rollback
+      if (isAdvanced) {
+        setExerciciosAdvanced(prev =>
+          prev.map(ex => ex.id === exerciseId ? { ...ex, concluido: !isCompleted } : ex)
+        );
+      } else {
+        setExercicios(prev =>
+          prev.map(ex => ex.id === exerciseId ? { ...ex, concluido: !isCompleted } : ex)
+        );
+      }
     }
   };
 
   const updateExerciseWeight = async (exerciseId: string, weight: number) => {
-    setExercicios(prev => 
-      prev.map(ex => ex.id === exerciseId ? { ...ex, peso: weight } : ex)
-    );
-    
+    if (isAdvanced) {
+      setExerciciosAdvanced(prev =>
+        prev.map(ex => ex.id === exerciseId ? { ...ex, peso: weight } : ex)
+      );
+    } else {
+      setExercicios(prev =>
+        prev.map(ex => ex.id === exerciseId ? { ...ex, peso: weight } : ex)
+      );
+    }
+
     try {
       const { error } = await supabase
-        .from('exercicios_treino_usuario')
+        .from(tableName)
         .update({ peso: weight })
         .eq('id', exerciseId);
-      
       if (error) throw error;
     } catch (error: any) {
       toast({
         title: "Erro ao atualizar peso",
-        description: error.message || "Não foi possível salvar o peso do exercício.",
+        description: error.message,
         variant: "destructive"
       });
     }
@@ -205,42 +268,35 @@ export default function Workout() {
 
   const completeWorkout = async () => {
     if (!treino) return;
-    
     setSaving(true);
     try {
-      const visibleExercises = exercicios.filter(ex => !ex.oculto);
+      const visibleExercises = isAdvanced
+        ? exerciciosAdvanced.filter(ex => !ex.oculto)
+        : exercicios.filter(ex => !ex.oculto);
+
       const { error: exerciciosError } = await supabase
-        .from('exercicios_treino_usuario')
+        .from(tableName)
         .update({ concluido: true })
         .in('id', visibleExercises.map(ex => ex.id));
-        
       if (exerciciosError) throw exerciciosError;
-      
+
       const { error: treinoError } = await supabase
         .from('treinos_usuario')
-        .update({ 
-          concluido: true,
-          data_concluido: new Date().toISOString()
-        })
+        .update({ concluido: true, data_concluido: new Date().toISOString() })
         .eq('id', treino.id);
-        
       if (treinoError) throw treinoError;
-      
-      setExercicios(prev => prev.map(ex => ex.oculto ? ex : { ...ex, concluido: true }));
+
+      if (isAdvanced) {
+        setExerciciosAdvanced(prev => prev.map(ex => ex.oculto ? ex : { ...ex, concluido: true }));
+      } else {
+        setExercicios(prev => prev.map(ex => ex.oculto ? ex : { ...ex, concluido: true }));
+      }
       setTreino(prev => prev ? { ...prev, concluido: true } : null);
-      
-      toast({
-        title: "Treino concluído!",
-        description: "Parabéns! Seu treino foi registrado como concluído."
-      });
-      
+
+      toast({ title: "Treino concluído!", description: "Parabéns! Seu treino foi registrado como concluído." });
       navigate('/active-program');
     } catch (error: any) {
-      toast({
-        title: "Erro ao concluir treino",
-        description: error.message || "Não foi possível registrar o treino como concluído.",
-        variant: "destructive"
-      });
+      toast({ title: "Erro ao concluir treino", description: error.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -248,25 +304,17 @@ export default function Workout() {
 
   const findAdjacentWorkout = async (direction: 'next' | 'previous') => {
     if (!treino) return null;
-    
     try {
       const { data: treinos } = await supabase
         .from('treinos_usuario')
         .select('*')
         .eq('programa_usuario_id', treino.programa_usuario_id)
         .order('ordem_semana', { ascending: true });
-        
       if (!treinos || treinos.length === 0) return null;
-      
       const currentIndex = treinos.findIndex(t => t.id === treino.id);
       if (currentIndex === -1) return null;
-      
-      const targetIndex = direction === 'next' 
-        ? currentIndex + 1 
-        : currentIndex - 1;
-        
+      const targetIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
       if (targetIndex < 0 || targetIndex >= treinos.length) return null;
-      
       return treinos[targetIndex].id;
     } catch (error) {
       console.error('Erro ao buscar treino adjacente:', error);
@@ -287,38 +335,25 @@ export default function Workout() {
   };
 
   const isAllExercisesCompleted = () => {
-    const visibleExercises = exercicios.filter(ex => !ex.oculto);
-    return visibleExercises.length > 0 && visibleExercises.every(ex => ex.concluido);
+    const visible = isAdvanced
+      ? exerciciosAdvanced.filter(ex => !ex.oculto)
+      : exercicios.filter(ex => !ex.oculto);
+    return visible.length > 0 && visible.every(ex => ex.concluido);
   };
 
-  const isWorkoutAlreadyCompleted = () => {
-    return treino?.concluido === true;
-  };
+  const isWorkoutAlreadyCompleted = () => treino?.concluido === true;
 
   return (
     <div className="pb-20">
       <PageHeader title={treino?.nome || "Carregando..."}>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => navigateToAdjacentWorkout('previous')}
-          >
+          <Button variant="outline" size="sm" onClick={() => navigateToAdjacentWorkout('previous')}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          
-          <Button 
-            variant="outline" 
-            onClick={() => navigate("/active-program")}
-          >
+          <Button variant="outline" onClick={() => navigate("/active-program")}>
             Voltar ao Programa
           </Button>
-          
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => navigateToAdjacentWorkout('next')}
-          >
+          <Button variant="outline" size="sm" onClick={() => navigateToAdjacentWorkout('next')}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -331,26 +366,43 @@ export default function Workout() {
       ) : (
         <div className="space-y-6">
           <div className="space-y-4">
-            {exercicios
-              .filter(ex => !ex.oculto)
-              .map((exercicio) => (
-                <ExerciseCard 
-                  key={exercicio.id}
-                  exercise={exercicio}
-                  onExerciseComplete={toggleExerciseCompletion}
-                  onWeightUpdate={updateExerciseWeight}
-                />
-              ))}
+            {isAdvanced
+              ? exerciciosAdvanced
+                  .filter(ex => !ex.oculto)
+                  .map((exercicio) => (
+                    <ExerciseCardAdvanced
+                      key={exercicio.id}
+                      exercise={exercicio}
+                      resolvedRer={resolveExerciseRer(
+                        exercicio.rer || null,
+                        rerPerWeek,
+                        treino?.ordem_semana || 1
+                      )}
+                      onExerciseComplete={toggleExerciseCompletion}
+                      onWeightUpdate={updateExerciseWeight}
+                    />
+                  ))
+              : exercicios
+                  .filter(ex => !ex.oculto)
+                  .map((exercicio) => (
+                    <ExerciseCard
+                      key={exercicio.id}
+                      exercise={exercicio}
+                      onExerciseComplete={toggleExerciseCompletion}
+                      onWeightUpdate={updateExerciseWeight}
+                    />
+                  ))
+            }
           </div>
-          
+
           <div className="pt-4">
-            <Button 
-              className="w-full" 
-              onClick={completeWorkout} 
+            <Button
+              className="w-full"
+              onClick={completeWorkout}
               disabled={saving || isWorkoutAlreadyCompleted() || !isAllExercisesCompleted()}
             >
-              {saving ? "Salvando..." : 
-               isWorkoutAlreadyCompleted() ? "Treino Já Concluído!" : 
+              {saving ? "Salvando..." :
+               isWorkoutAlreadyCompleted() ? "Treino Já Concluído!" :
                isAllExercisesCompleted() ? "Concluir Treino" : "Complete todos os exercícios"}
               {(isAllExercisesCompleted() || isWorkoutAlreadyCompleted()) && <CheckCircle className="ml-2 h-4 w-4" />}
             </Button>

@@ -932,15 +932,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_exercicio_usuario"
-            columns: ["exercicio_usuario_id"]
-            isOneToOne: false
-            referencedRelation: "exercicios_treino_usuario"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       treinos: {
         Row: {
