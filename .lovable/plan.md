@@ -1,125 +1,37 @@
 
 
-## Plano: Workout Card Avançado + Carregamento de Exercícios Avançados
+## Plano: Corrigir configuração de incremento mínimo no workout avançado
 
-Este plano cobre duas necessidades: (1) fazer a página Workout carregar exercícios da tabela correta para programas avançados, e (2) criar o card de exercício avançado com o novo layout.
+### Diagnóstico
 
-### Pré-requisito: Workout.tsx precisa detectar o nível do programa
+O problema está no fluxo de fechamento do diálogo. No `ExerciseCardAdvanced.tsx`, o `handleSaveIncrement` chama `saveIncrementSetting` mas **não fecha o diálogo** após o salvamento. A função `saveIncrementSetting` em `useExerciseStateAdvanced.ts` salva corretamente na tabela `exercicios_treino_usuario_avancado`, mas não chama `setShowIncrementDialog(false)`.
 
-Atualmente, `Workout.tsx` busca exercícios hardcoded de `exercicios_treino_usuario`. Para programas avançados, precisa buscar de `exercicios_treino_usuario_avancado`. Também precisa resolver o RER do microciclo (buscar `rer_por_semana` do mesociclo e `ordem_semana` do treino).
+No sistema iniciante, o `useExerciseFeedback` gerencia o estado do diálogo internamente e fecha após salvar. No avançado, essa responsabilidade ficou sem dono.
 
----
+### Correção
 
-### 1. Atualizar `Workout.tsx` — detecção de nível e fetch condicional
-
-- Após buscar `treinos_usuario`, buscar `programas_usuario.programa_original_id` → `programas.nivel`
-- Se avançado, buscar exercícios de `exercicios_treino_usuario_avancado`
-- Buscar `rer_por_semana` do mesociclo correspondente (via `treinos.mesociclo_id` → `mesociclos`)
-- Resolver RER de cada exercício: se `rer === 'do_microciclo'`, usar `rer_por_semana[ordem_semana]`
-- Renderizar `ExerciseCardAdvanced` em vez de `ExerciseCard` para programas avançados
-- Todas as operações de update (`toggleExerciseCompletion`, `updateExerciseWeight`, `completeWorkout`) usam a tabela correta condicionalmente
-
-### 2. Criar `ExerciseCardAdvanced.tsx` (novo componente em `src/components/workout/`)
-
-Componente isolado, sem afetar o `ExerciseCard` existente. Estrutura:
-
-```text
-ExerciseCardAdvanced
-├── ExerciseHeaderAdvanced (novo)
-│   ├── Badge grupo muscular + YouTube
-│   ├── Nome do exercício
-│   ├── Método especial (destaque, se houver)
-│   ├── "S x Rmin-Rmax @X RER" (sempre faixa de reps)
-│   ├── Progressão sugerida (Epley) em azul
-│   ├── Observação (se existente)
-│   ├── Menu de opções (+ "Implementar/Alterar Método Especial")
-│   └── Botão Play/Check
-├── ExerciseObservation (reutiliza existente)
-└── Accordion
-    ├── Histórico recente (com notas por série)
-    ├── Grid 5 colunas: Série | Carga | Reps | Nota | Concluir
-    │   └── Nota: ícone clicável que abre input inline
-    ├── "+ Adicionar mais 1 série"
-    └── Botão "Concluir exercício"
-```
-
-### 3. Criar `ExerciseHeaderAdvanced.tsx` (em `src/components/workout/components/`)
-
-Diferenças do header iniciante:
-- Linha de variáveis: `"S x Rmin-Rmax @X RER"` (nunca mostra reps fixo)
-- Linha de método especial em destaque abaixo do nome (se houver)
-- Progressão sugerida via Epley (placeholder por enquanto, lógica completa no próximo passo)
-- Menu com opção extra "Implementar Método Especial" / "Alterar Método Especial"
-- Busca `video_url` de `exercicios_avancados` (não `exercicios_iniciantes`)
-
-### 4. Criar `ExerciseSetsAdvanced.tsx` (em `src/components/workout/components/`)
-
-Diferenças do sets iniciante:
-- 5 colunas: Série, Carga, Reps, Nota, Concluir
-- Coluna Nota: ícone de nota (ex: `StickyNote`) que ao clicar abre um pequeno input/popover para escrever nota daquela série específica
-- Notas salvas na coluna `nota` de `series_exercicio_usuario` (já existe)
-- Histórico recente: mostra nota por série (não global)
-- Remove botão global "Adicionar nota" da área inferior
-- Carga e Reps: placeholders/pré-preenchimento conforme progressão sugerida
-
-### 5. Criar hooks avançados
-
-**`useExerciseStateAdvanced.ts`**: Similar ao `useExerciseState`, mas:
-- Queries em `exercicios_treino_usuario_avancado`
-- Sem `reps_programadas` (não existe na tabela avançada)
-- Inicializa sets usando faixa de reps (min da faixa como sugestão)
-
-**`useExerciseActionsAdvanced.ts`**: Similar ao `useExerciseActions`, mas:
-- Todas as queries em `exercicios_treino_usuario_avancado`
-- Nota por série (salva via `save_series` que já suporta)
-- Sem feedback de dificuldade/fadiga do sistema iniciante (será substituído por ARA/ART no próximo passo)
-
-**`usePreviousSeriesAdvanced.ts`**: Similar ao `usePreviousSeries`, mas busca de `exercicios_treino_usuario_avancado` e retorna notas individuais por série.
-
-### 6. Resolver RER do microciclo
-
-Nova utility function `resolveExerciseRer`:
+**1. `ExerciseCardAdvanced.tsx`** — Fechar o diálogo após salvar:
 ```typescript
-function resolveExerciseRer(
-  exerciseRer: string, 
-  rerPerWeek: Record<string, string>, 
-  weekNumber: number
-): string {
-  if (exerciseRer === 'do_microciclo') {
-    return rerPerWeek[weekNumber.toString()] || '';
-  }
-  return exerciseRer;
-}
+const handleSaveIncrement = async (value: number) => {
+    await saveIncrementSetting(value);
+    setShowIncrementDialog(false);
+};
 ```
 
-Chamada em `Workout.tsx` ao carregar exercícios avançados, passando o RER resolvido para cada card.
+**2. `useExerciseStateAdvanced.ts`** — Adicionar toast de confirmação e lógica de rounding de peso (consistente com o sistema iniciante):
+- Após salvar o incremento, se o exercício já tem peso, arredondar o peso para o múltiplo mais próximo do incremento
+- Exibir toast "Incremento salvo com sucesso"
 
-### 7. Progressão Epley (versão simplificada neste passo)
+Nota: O `FeedbackDialog` existente funciona perfeitamente para ambos os níveis — o problema era apenas no wiring do estado. Não há necessidade de criar um diálogo separado.
 
-Hook `useEpleyProgression.ts` que:
-- Busca a última série concluída do exercício (série 1 do treino anterior)
-- Calcula 1RM estimado via Epley: `1RM = peso × (1 + reps/30)`
-- Sugere: manter carga e +1 rep OU +incremento e manter reps (método "maior ou igual")
-- Retorna mensagem para o header (ex: "Sugestão: 40kg x 9 reps")
-- Pré-preenche placeholders de carga/reps na primeira série
+### Sobre "avançado = intermediário + avançado"
 
-### Arquivos criados/alterados
+Entendido. Ajustarei a detecção em `Workout.tsx` para tratar `nivel !== 'iniciante'` (que é como já está implementado na linha 92: `const advanced = programLevel !== 'iniciante'`). Portanto, intermediário já segue o fluxo avançado corretamente.
 
-| Arquivo | Tipo |
+### Arquivos alterados
+
+| Arquivo | Mudança |
 |---|---|
-| `src/components/workout/ExerciseCardAdvanced.tsx` | Novo |
-| `src/components/workout/components/ExerciseHeaderAdvanced.tsx` | Novo |
-| `src/components/workout/components/ExerciseSetsAdvanced.tsx` | Novo |
-| `src/components/workout/hooks/useExerciseStateAdvanced.ts` | Novo |
-| `src/components/workout/hooks/useExerciseActionsAdvanced.ts` | Novo |
-| `src/components/workout/hooks/usePreviousSeriesAdvanced.ts` | Novo |
-| `src/hooks/useEpleyProgression.ts` | Novo |
-| `src/utils/rerResolver.ts` | Novo |
-| `src/pages/Workout.tsx` | Alterado (detecção nível + fetch condicional + render condicional) |
-
-### Garantia de não-interferência
-
-- Nenhum arquivo existente do sistema iniciante é modificado (exceto `Workout.tsx` que ganha um branch condicional)
-- Todos os novos componentes e hooks são arquivos separados
-- A lógica de detecção de nível em `Workout.tsx` usa early-branch: se avançado, entra no fluxo avançado; caso contrário, fluxo iniciante permanece 100% inalterado
+| `src/components/workout/ExerciseCardAdvanced.tsx` | Fechar diálogo após salvar incremento |
+| `src/components/workout/hooks/useExerciseStateAdvanced.ts` | Adicionar toast + rounding de peso consistente |
 
