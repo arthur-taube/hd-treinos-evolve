@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { roundSetsForDisplay } from "@/utils/progressionCalculator";
+import { toast } from "sonner";
 
 export interface SetDataAdvanced {
   number: number;
@@ -108,6 +109,23 @@ export const useExerciseStateAdvanced = (
 
       if (error) throw error;
 
+      // Round current weight to nearest valid multiple if weight exists
+      if (exercise.peso && exercise.peso > 0) {
+        const previousIncrement = exercise.incremento_minimo || 0;
+        let roundedWeight: number;
+        if (previousIncrement && value > previousIncrement) {
+          roundedWeight = Math.ceil(exercise.peso / value) * value;
+        } else {
+          roundedWeight = Math.round(exercise.peso / value) * value;
+        }
+        if (roundedWeight !== exercise.peso) {
+          await supabase
+            .from('exercicios_treino_usuario_avancado')
+            .update({ peso: roundedWeight })
+            .eq('id', exercise.id);
+        }
+      }
+
       // Propagate to future exercises in same program
       const { data: currentWorkout } = await supabase
         .from('treinos_usuario')
@@ -141,9 +159,11 @@ export const useExerciseStateAdvanced = (
       }
 
       setIncrementDialogShown(true);
+      toast.success("Incremento salvo com sucesso");
       return value;
     } catch (error) {
       console.error('Error saving increment:', error);
+      toast.error("Erro ao salvar incremento");
       return null;
     }
   };
