@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { roundSetsForDisplay } from "@/utils/progressionCalculator";
+import { toast } from "sonner";
 
 export interface SetDataAdvanced {
   number: number;

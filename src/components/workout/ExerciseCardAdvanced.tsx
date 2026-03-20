@@ -102,6 +102,7 @@ export function ExerciseCardAdvanced({
 
   const handleSaveIncrement = async (value: number) => {
     await saveIncrementSetting(value);
+    setShowIncrementDialog(false);
   };
 
   // Placeholder for method change (will be implemented later)
