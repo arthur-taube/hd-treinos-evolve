@@ -1,37 +1,65 @@
 
 
-## Plano: Corrigir configuração de incremento mínimo no workout avançado
+## Plano: Progressão Epley matricial com múltiplas sugestões (revisado)
 
-### Diagnóstico
+### Lógica do cálculo (`useEpleyProgression.ts`)
 
-O problema está no fluxo de fechamento do diálogo. No `ExerciseCardAdvanced.tsx`, o `handleSaveIncrement` chama `saveIncrementSetting` mas **não fecha o diálogo** após o salvamento. A função `saveIncrementSetting` em `useExerciseStateAdvanced.ts` salva corretamente na tabela `exercicios_treino_usuario_avancado`, mas não chama `setShowIncrementDialog(false)`.
+1. Buscar carga e reps da 1ª série do treino anterior
+2. Calcular 1RMe base: `prevWeight × (1 + prevReps/30)`
+3. Gerar matriz de candidatos: cargas (`prevWeight`, `prevWeight + increment`) × reps (`minReps` a `maxReps`), excluindo combinação idêntica à base
+4. Para cada par, calcular 1RMe e % de aumento vs base
 
-No sistema iniciante, o `useExerciseFeedback` gerencia o estado do diálogo internamente e fecha após salvar. No avançado, essa responsabilidade ficou sem dono.
+**Filtro (revisado):**
+- Buscar candidatos na **faixa ideal (2-5%)**
+- Se **0 candidatos ideais** → ampliar para **faixa estendida (1-6.5%)**
+- Nunca misturar: ou usa ideal, ou usa estendida
 
-### Correção
+**Seleção e rotulação (revisado):**
+- Antes de rotular, remover candidatos redundantes: se 2+ candidatos têm menos de 1 p.p. de diferença entre si, manter apenas o mais próximo da faixa ideal (centro = 3.5%)
+- Após filtragem de redundância:
+  - 1 opção → `"ideal"`
+  - 2 opções → `"mais fácil"` + `"mais difícil"`
+  - 3+ opções → pegar extremos + mediana → `"mais fácil"` + `"intermediário"` + `"mais difícil"`
 
-**1. `ExerciseCardAdvanced.tsx`** — Fechar o diálogo após salvar:
+**Placeholder da 1ª série (revisado):**
+- Se existe opção rotulada `"ideal"` → usa ela
+- Senão → usa a opção mais próxima do centro da faixa ideal (3.5%)
+- Se empate de distância → usa a "mais fácil"
+
+### Interface de retorno
+
 ```typescript
-const handleSaveIncrement = async (value: number) => {
-    await saveIncrementSetting(value);
-    setShowIncrementDialog(false);
-};
+interface EpleyOption {
+  weight: number;
+  reps: number;
+  estimated1RM: number;
+  percentIncrease: number;
+  label: 'mais fácil' | 'intermediário' | 'ideal' | 'mais difícil';
+}
+
+interface EpleyResult {
+  base: { weight: number; reps: number; estimated1RM: number };
+  options: EpleyOption[];
+  suggestedWeight: number;
+  suggestedReps: number;
+}
 ```
 
-**2. `useExerciseStateAdvanced.ts`** — Adicionar toast de confirmação e lógica de rounding de peso (consistente com o sistema iniciante):
-- Após salvar o incremento, se o exercício já tem peso, arredondar o peso para o múltiplo mais próximo do incremento
-- Exibir toast "Incremento salvo com sucesso"
+### UI no header (`ExerciseHeaderAdvanced.tsx`)
 
-Nota: O `FeedbackDialog` existente funciona perfeitamente para ambos os níveis — o problema era apenas no wiring do estado. Não há necessidade de criar um diálogo separado.
+```text
+Progressão sugerida: (base: 40kg x 9 reps – 1RMe = 52kg)
+  40kg x 10 reps – 1RMe = 53,33kg (mais fácil – 2,56%)
+  42kg x 9 reps – 1RMe = 54,6kg (mais difícil – 5,0%)
+```
 
-### Sobre "avançado = intermediário + avançado"
-
-Entendido. Ajustarei a detecção em `Workout.tsx` para tratar `nivel !== 'iniciante'` (que é como já está implementado na linha 92: `const advanced = programLevel !== 'iniciante'`). Portanto, intermediário já segue o fluxo avançado corretamente.
+Linha de base em muted, opções em azul. Se 0 candidatos → "Sem progressão sugerida".
 
 ### Arquivos alterados
 
 | Arquivo | Mudança |
 |---|---|
-| `src/components/workout/ExerciseCardAdvanced.tsx` | Fechar diálogo após salvar incremento |
-| `src/components/workout/hooks/useExerciseStateAdvanced.ts` | Adicionar toast + rounding de peso consistente |
+| `src/hooks/useEpleyProgression.ts` | Reescrever: matriz, filtro ideal→estendido, redundância <1pp, rotulação, placeholder por proximidade a 3.5% |
+| `src/components/workout/components/ExerciseHeaderAdvanced.tsx` | Multilinha com base + opções rotuladas |
+| `src/components/workout/ExerciseCardAdvanced.tsx` | Consumir novo formato (minor) |
 
