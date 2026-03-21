@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ExerciseHeaderAdvanced } from "./components/ExerciseHeaderAdvanced";
@@ -86,13 +86,30 @@ export function ExerciseCardAdvanced({
     exercise.incremento_minimo || null
   );
 
-  const suggestedWeight = epleyResult?.suggestedWeight || exercise.peso || 0;
-  const suggestedReps = epleyResult?.suggestedReps || (() => {
+  const defaultMinReps = (() => {
     if (exercise.repeticoes?.includes('-')) {
       return parseInt(exercise.repeticoes.split('-')[0]) || 8;
     }
     return parseInt(exercise.repeticoes || '8') || 8;
   })();
+
+  const suggestedWeight = epleyResult?.suggestedWeight || exercise.peso || 0;
+  const suggestedReps = epleyResult?.suggestedReps || defaultMinReps;
+
+  // Update sets with Epley suggestions when they arrive
+  useEffect(() => {
+    if (!epleyResult) return;
+    setSets(prev => prev.map(set => {
+      if (set.completed) return set;
+      const isDefaultWeight = set.weight === null;
+      const isDefaultReps = set.reps === null || set.reps === defaultMinReps;
+      return {
+        ...set,
+        weight: isDefaultWeight ? epleyResult.suggestedWeight : set.weight,
+        reps: isDefaultReps ? epleyResult.suggestedReps : set.reps,
+      };
+    }));
+  }, [epleyResult]);
 
   const allSetsCompleted = sets.every(set => set.completed);
 
