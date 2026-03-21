@@ -116,6 +116,7 @@ export function ExerciseCardAdvanced({
         <ExerciseHeaderAdvanced
           exercise={exercise}
           resolvedRer={resolvedRer}
+          epleyResult={epleyResult}
           observation={observation}
           isOpen={isOpen}
           setIsOpen={setIsOpen}
