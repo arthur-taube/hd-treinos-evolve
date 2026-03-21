@@ -5,7 +5,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Youtube, MoreHorizontal, Check, Play, TrendingUp, Zap } from "lucide-react";
 import { roundSetsForDisplay } from "@/utils/progressionCalculator";
 import { supabase } from "@/integrations/supabase/client";
-import { useEpleyProgression } from "@/hooks/useEpleyProgression";
+import { type EpleyResult } from "@/hooks/useEpleyProgression";
 
 interface ExerciseHeaderAdvancedProps {
   exercise: {
