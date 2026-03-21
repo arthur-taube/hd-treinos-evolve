@@ -5,7 +5,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Youtube, MoreHorizontal, Check, Play, TrendingUp, Zap } from "lucide-react";
 import { roundSetsForDisplay } from "@/utils/progressionCalculator";
 import { supabase } from "@/integrations/supabase/client";
-import { useEpleyProgression } from "@/hooks/useEpleyProgression";
+import { type EpleyResult } from "@/hooks/useEpleyProgression";
 
 interface ExerciseHeaderAdvancedProps {
   exercise: {
@@ -27,6 +27,7 @@ interface ExerciseHeaderAdvancedProps {
     treino_usuario_id: string;
   };
   resolvedRer: string;
+  epleyResult: EpleyResult | null;
   observation: string;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
@@ -40,6 +41,7 @@ interface ExerciseHeaderAdvancedProps {
 export function ExerciseHeaderAdvanced({
   exercise,
   resolvedRer,
+  epleyResult,
   observation,
   isOpen,
   setIsOpen,
@@ -50,15 +52,6 @@ export function ExerciseHeaderAdvanced({
   onMethodChange
 }: ExerciseHeaderAdvancedProps) {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
-
-  const epleyResult = useEpleyProgression(
-    exercise.id,
-    exercise.exercicio_original_id || null,
-    exercise.card_original_id || null,
-    exercise.treino_usuario_id,
-    exercise.repeticoes,
-    exercise.incremento_minimo || null
-  );
 
   // Fetch video_url from exercicios_avancados
   useEffect(() => {
@@ -157,12 +150,19 @@ export function ExerciseHeaderAdvanced({
           </p>
 
           {/* Epley progression indicator */}
-          {epleyResult && (
-            <div className="flex items-center gap-1 mt-1">
-              <TrendingUp className="h-3 w-3 text-blue-600" />
-              <span className="text-xs font-medium text-blue-600">
-                {epleyResult.message}
+          {epleyResult && epleyResult.options.length > 0 && (
+            <div className="mt-1.5 space-y-0.5">
+              <span className="text-[11px] text-muted-foreground">
+                Progressão sugerida: (base: {epleyResult.base.weight}kg x {epleyResult.base.reps} reps – 1RMe = {epleyResult.base.estimated1RM.toFixed(1)}kg)
               </span>
+              {epleyResult.options.map((opt, i) => (
+                <div key={i} className="flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3 text-blue-600" />
+                  <span className="text-xs font-medium text-blue-600">
+                    {opt.weight}kg x {opt.reps} reps – 1RMe = {opt.estimated1RM.toFixed(1)}kg ({opt.label} – {opt.percentIncrease.toFixed(1)}%)
+                  </span>
+                </div>
+              ))}
             </div>
           )}
 
