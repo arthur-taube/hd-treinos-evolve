@@ -27,6 +27,7 @@ interface ExerciseHeaderAdvancedProps {
     treino_usuario_id: string;
   };
   resolvedRer: string;
+  epleyResult: EpleyResult | null;
   observation: string;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
@@ -40,6 +41,7 @@ interface ExerciseHeaderAdvancedProps {
 export function ExerciseHeaderAdvanced({
   exercise,
   resolvedRer,
+  epleyResult,
   observation,
   isOpen,
   setIsOpen,
@@ -50,15 +52,6 @@ export function ExerciseHeaderAdvanced({
   onMethodChange
 }: ExerciseHeaderAdvancedProps) {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
-
-  const epleyResult = useEpleyProgression(
-    exercise.id,
-    exercise.exercicio_original_id || null,
-    exercise.card_original_id || null,
-    exercise.treino_usuario_id,
-    exercise.repeticoes,
-    exercise.incremento_minimo || null
-  );
 
   // Fetch video_url from exercicios_avancados
   useEffect(() => {
