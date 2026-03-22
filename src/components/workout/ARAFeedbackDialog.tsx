@@ -19,12 +19,12 @@ const PUMP_OPTIONS = [
   {
     label: "Inexistente",
     value: 0.25,
-    description: "Eu não tive nenhum pump com esse exercício.",
+    description: "Eu não tive nenhum pump (inchaço muscular) com esse exercício.",
   },
   {
     label: "Presente",
     value: 0,
-    description: "Eu tive um pump perceptível com esse exercício.",
+    description: "Eu tive um pump (inchaço muscular) perceptível com esse exercício.",
   },
 ];
 
