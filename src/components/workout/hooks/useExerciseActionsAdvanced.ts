@@ -128,8 +128,8 @@ export const useExerciseActionsAdvanced = (
     }
   };
 
-  const handleExerciseComplete = async () => {
-    if (exercise.concluido) return;
+  const handleExerciseComplete = async (): Promise<boolean> => {
+    if (exercise.concluido) return false;
 
     const completedSets = sets.filter(set => set.completed);
     if (completedSets.length === 0) {
@@ -138,7 +138,7 @@ export const useExerciseActionsAdvanced = (
         description: "Complete pelo menos uma série antes de finalizar o exercício.",
         variant: "destructive"
       });
-      return;
+      return false;
     }
 
     try {
@@ -151,13 +151,34 @@ export const useExerciseActionsAdvanced = (
       }
 
       await onExerciseComplete(exercise.id, true);
-      setIsOpen(false);
+      return true;
     } catch (error: any) {
       toast({
         title: "Erro ao concluir exercício",
         description: error.message,
         variant: "destructive"
       });
+      return false;
+    }
+  };
+
+  const saveARAFeedback = async (pumpValue: number, fadigaValue: number) => {
+    try {
+      const { error } = await supabase
+        .from('exercicios_treino_usuario_avancado')
+        .update({
+          avaliacao_pump: pumpValue,
+          avaliacao_fadiga: fadigaValue,
+          data_avaliacao: new Date().toISOString()
+        })
+        .eq('id', exercise.id);
+
+      if (error) throw error;
+
+      setIsOpen(false);
+      toast({ title: "Avaliação salva", description: "Feedback ARA registrado com sucesso!" });
+    } catch (error: any) {
+      toast({ title: "Erro ao salvar avaliação", description: error.message, variant: "destructive" });
     }
   };
 
@@ -233,6 +254,7 @@ export const useExerciseActionsAdvanced = (
     handleNoteChange,
     saveSetNote,
     handleExerciseComplete,
+    saveARAFeedback,
     saveObservation,
     skipIncompleteSets
   };

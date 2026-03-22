@@ -5,6 +5,7 @@ import { ExerciseHeaderAdvanced } from "./components/ExerciseHeaderAdvanced";
 import { ExerciseObservation } from "./components/ExerciseObservation";
 import { ExerciseSetsAdvanced } from "./components/ExerciseSetsAdvanced";
 import { FeedbackDialog } from "./FeedbackDialog";
+import { ARAFeedbackDialog } from "./ARAFeedbackDialog";
 import { useExerciseStateAdvanced } from "./hooks/useExerciseStateAdvanced";
 import { useExerciseActionsAdvanced } from "./hooks/useExerciseActionsAdvanced";
 import { usePreviousSeriesAdvanced } from "./hooks/usePreviousSeriesAdvanced";
@@ -47,6 +48,8 @@ export function ExerciseCardAdvanced({
   onExerciseComplete,
   onWeightUpdate
 }: ExerciseCardAdvancedProps) {
+  const [showARADialog, setShowARADialog] = useState(false);
+
   const {
     isOpen, setIsOpen,
     observation, setObservation,
@@ -69,7 +72,8 @@ export function ExerciseCardAdvanced({
   const {
     handleSetComplete, handleWeightChange, handleRepsChange, handleWeightFocus,
     handleNoteChange, saveSetNote,
-    handleExerciseComplete, saveObservation, skipIncompleteSets
+    handleExerciseComplete, saveARAFeedback,
+    saveObservation, skipIncompleteSets
   } = useExerciseActionsAdvanced(
     exercise, sets, setSets,
     onExerciseComplete, onWeightUpdate,
@@ -122,6 +126,23 @@ export function ExerciseCardAdvanced({
     setShowIncrementDialog(false);
   };
 
+  const handleCompleteWithFeedback = async () => {
+    const success = await handleExerciseComplete();
+    if (success) {
+      const feedbackModel = exercise.modelo_feedback || 'ARA/ART';
+      if (feedbackModel.includes('ARA')) {
+        setShowARADialog(true);
+      } else {
+        setIsOpen(false);
+      }
+    }
+  };
+
+  const handleARASubmit = async (pumpValue: number, fadigaValue: number) => {
+    await saveARAFeedback(pumpValue, fadigaValue);
+    setShowARADialog(false);
+  };
+
   // Placeholder for method change (will be implemented later)
   const handleMethodChange = () => {
     // TODO: Open method selection dialog
@@ -166,7 +187,7 @@ export function ExerciseCardAdvanced({
                 handleWeightFocus={handleWeightFocus}
                 handleNoteChange={handleNoteChange}
                 saveSetNote={saveSetNote}
-                handleExerciseComplete={handleExerciseComplete}
+                handleExerciseComplete={handleCompleteWithFeedback}
                 allSetsCompleted={allSetsCompleted}
                 exerciseConcluido={exercise.concluido}
                 suggestedWeight={suggestedWeight}
@@ -198,6 +219,12 @@ export function ExerciseCardAdvanced({
           setIsOpen(false);
           resetIncrementDialogShown();
         }}
+      />
+
+      <ARAFeedbackDialog
+        isOpen={showARADialog}
+        exerciseName={exercise.nome}
+        onSubmit={handleARASubmit}
       />
     </>
   );
