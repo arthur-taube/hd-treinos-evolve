@@ -254,6 +254,7 @@ export const useExerciseActionsAdvanced = (
     handleNoteChange,
     saveSetNote,
     handleExerciseComplete,
+    saveARAFeedback,
     saveObservation,
     skipIncompleteSets
   };
