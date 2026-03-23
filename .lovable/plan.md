@@ -1,35 +1,34 @@
+## Análise e Plano: Fallback substituto_custom_id
 
 
-## Plano: Ajuste de séries via ARA + correção de legendas
 
-### 1. Atualizar legendas no `ARAFeedbackDialog.tsx`
+### 2. Fallback para `substituto_custom_id`
 
-Adicionar "(inchaço muscular)" nas descrições de Pump:
-- `"Eu não tive nenhum pump (inchaço muscular) com esse exercício."`
-- `"Eu tive um pump (inchaço muscular) perceptível com esse exercício."`
+**Resposta direta**: Não, o fallback para `substituto_custom_id` **não está implementado** no sistema avançado. A cadeia de identificação no ARA e em outros pontos do código avançado usa apenas:
 
-### 2. Adicionar lógica de ajuste de séries no `saveARAFeedback`
-
-No `useExerciseActionsAdvanced.ts`, após salvar pump/fadiga:
-
-1. Buscar o exercício atual para obter `series`, `card_original_id`, `exercicio_original_id`, `treino_usuario_id`
-2. Via join, obter `programa_usuario_id`
-3. Calcular `newSeries = currentSeries + pumpValue + fadigaValue`, arredondando: `≤ .5 → floor`, `≥ .51 → ceil`
-4. Encontrar a próxima instância do mesmo exercício (não concluída, próxima semana) em `exercicios_treino_usuario_avancado`, usando `card_original_id` (preferencial) ou `exercicio_original_id` (fallback)
-5. Atualizar `series` dessa próxima instância
-
-Lógica de busca da próxima instância: mesmo padrão do beginner (`findNextExerciseInstance`), mas consultando `exercicios_treino_usuario_avancado`.
-
-```typescript
-// Rounding rule: ≤ .5 → floor, ≥ .51 → ceil
-const rawSeries = currentSeries + pumpValue + fadigaValue;
-const newSeries = (rawSeries % 1 > 0.5) ? Math.ceil(rawSeries) : Math.floor(rawSeries);
 ```
+card_original_id → exercicio_original_id
+```
+
+Mas no sistema iniciante, a cadeia completa é:
+
+```
+card_original_id → exercicio_original_id → substituto_custom_id
+```
+
+Isso afeta:
+
+- `saveARAFeedback` — ao buscar a próxima instância para ajustar séries
+- `saveObservation` — ao replicar observações para exercícios futuros
+- `usePreviousSeriesAdvanced` — ao buscar histórico (este já tem o fallback correto)
+- `useEpleyProgression` — ao buscar dados para cálculo de progressão
+
+**Correção**: Adicionar o terceiro nível de fallback (`substituto_custom_id`) em `saveARAFeedback` e `saveObservation` dentro de `useExerciseActionsAdvanced.ts`.
 
 ### Arquivos alterados
 
-| Arquivo | Mudança |
-|---|---|
-| `src/components/workout/ARAFeedbackDialog.tsx` | Legendas pump com "(inchaço muscular)" |
-| `src/components/workout/hooks/useExerciseActionsAdvanced.ts` | `saveARAFeedback` atualiza séries da próxima semana |
 
+| Arquivo                         | Mudança                                                                            | &nbsp; | &nbsp; | &nbsp; | &nbsp; |
+| ------------------------------- | ---------------------------------------------------------------------------------- | ------ | ------ | ------ | ------ |
+| &nbsp;                          | &nbsp;                                                                             | &nbsp; | &nbsp; | &nbsp; | &nbsp; |
+| `useExerciseActionsAdvanced.ts` | Adicionar fallback `substituto_custom_id` em `saveARAFeedback` e `saveObservation` | &nbsp; | &nbsp; | &nbsp; | &nbsp; |
