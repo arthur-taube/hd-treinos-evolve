@@ -224,6 +224,8 @@ export const useExerciseActionsAdvanced = (
               query = query.eq('card_original_id', currentExercise.card_original_id);
             } else if (currentExercise.exercicio_original_id) {
               query = query.eq('exercicio_original_id', currentExercise.exercicio_original_id);
+            } else if (currentExercise.substituto_custom_id) {
+              query = query.eq('substituto_custom_id', currentExercise.substituto_custom_id);
             }
 
             await query;
