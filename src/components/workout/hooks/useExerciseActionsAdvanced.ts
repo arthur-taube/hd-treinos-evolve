@@ -258,6 +258,7 @@ export const useExerciseActionsAdvanced = (
         .select(`
           exercicio_original_id,
           card_original_id,
+          substituto_custom_id,
           treino_usuario_id,
           treinos_usuario!inner(programa_usuario_id)
         `)
