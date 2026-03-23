@@ -183,6 +183,7 @@ export const useExerciseActionsAdvanced = (
           series,
           card_original_id,
           exercicio_original_id,
+          substituto_custom_id,
           treino_usuario_id,
           treinos_usuario!inner(programa_usuario_id, ordem_semana)
         `)
