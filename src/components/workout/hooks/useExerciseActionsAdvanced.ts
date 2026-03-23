@@ -282,6 +282,8 @@ export const useExerciseActionsAdvanced = (
             replicationQuery = replicationQuery.eq('card_original_id', currentExercise.card_original_id);
           } else if (currentExercise.exercicio_original_id) {
             replicationQuery = replicationQuery.eq('exercicio_original_id', currentExercise.exercicio_original_id);
+          } else if (currentExercise.substituto_custom_id) {
+            replicationQuery = replicationQuery.eq('substituto_custom_id', currentExercise.substituto_custom_id);
           }
 
           await replicationQuery;
