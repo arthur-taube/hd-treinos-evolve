@@ -183,6 +183,7 @@ export const useExerciseActionsAdvanced = (
           series,
           card_original_id,
           exercicio_original_id,
+          substituto_custom_id,
           treino_usuario_id,
           treinos_usuario!inner(programa_usuario_id, ordem_semana)
         `)
@@ -223,6 +224,8 @@ export const useExerciseActionsAdvanced = (
               query = query.eq('card_original_id', currentExercise.card_original_id);
             } else if (currentExercise.exercicio_original_id) {
               query = query.eq('exercicio_original_id', currentExercise.exercicio_original_id);
+            } else if (currentExercise.substituto_custom_id) {
+              query = query.eq('substituto_custom_id', currentExercise.substituto_custom_id);
             }
 
             await query;
@@ -255,6 +258,7 @@ export const useExerciseActionsAdvanced = (
         .select(`
           exercicio_original_id,
           card_original_id,
+          substituto_custom_id,
           treino_usuario_id,
           treinos_usuario!inner(programa_usuario_id)
         `)
@@ -278,6 +282,8 @@ export const useExerciseActionsAdvanced = (
             replicationQuery = replicationQuery.eq('card_original_id', currentExercise.card_original_id);
           } else if (currentExercise.exercicio_original_id) {
             replicationQuery = replicationQuery.eq('exercicio_original_id', currentExercise.exercicio_original_id);
+          } else if (currentExercise.substituto_custom_id) {
+            replicationQuery = replicationQuery.eq('substituto_custom_id', currentExercise.substituto_custom_id);
           }
 
           await replicationQuery;
