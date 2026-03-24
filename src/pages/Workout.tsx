@@ -9,7 +9,9 @@ import { ChevronLeft, CheckCircle, ChevronRight } from "lucide-react";
 import { ExerciseCard } from "@/components/workout/ExerciseCard";
 import { ExerciseCardAdvanced, ExerciseAdvancedData } from "@/components/workout/ExerciseCardAdvanced";
 import { FeedbackDialog } from "@/components/workout/FeedbackDialog";
+import { ARTFeedbackDialog } from "@/components/workout/ARTFeedbackDialog";
 import { useExerciseFeedback } from "@/hooks/use-exercise-feedback";
+import { useARTCheck } from "@/hooks/useARTCheck";
 import { applyWorkoutProgression } from "@/utils/workoutProgressionLoader";
 import { resolveExerciseRer } from "@/utils/rerResolver";
 
@@ -56,6 +58,19 @@ export default function Workout() {
   const [rerPerWeek, setRerPerWeek] = useState<Record<string, string> | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // ART check for advanced workouts
+  const {
+    pendingExercises: artPendingExercises,
+    showARTDialog,
+    setShowARTDialog,
+    saveARTFeedback,
+  } = useARTCheck(
+    treino?.programa_usuario_id || null,
+    treinoId || null,
+    exerciciosAdvanced,
+    isAdvanced && !loading
+  );
   
   useEffect(() => {
     async function fetchWorkoutData() {
@@ -408,6 +423,15 @@ export default function Workout() {
             </Button>
           </div>
         </div>
+      )}
+
+      {/* ART Dialog for advanced workouts */}
+      {isAdvanced && (
+        <ARTFeedbackDialog
+          isOpen={showARTDialog}
+          pendingExercises={artPendingExercises}
+          onSubmit={saveARTFeedback}
+        />
       )}
     </div>
   );
