@@ -20,19 +20,22 @@ interface ARTFeedbackDialogProps {
 
 const ART_OPTIONS = [
   {
-    label: "Ainda Dolorido / Não recuperado",
+    labelLine1: "Ainda Dolorido",
+    labelLine2: "Não recuperado",
     value: -0.5,
     description:
       "Tive (ou ainda tenho) muita dor muscular e/ou minha performance caiu.",
   },
   {
-    label: "Alguma dor / 100% recuperado",
+    labelLine1: "Alguma dor",
+    labelLine2: "100% recuperado",
     value: 0,
     description:
       "Tive alguma dor muscular e me recuperei a tempo do treino de hoje.",
   },
   {
-    label: "Nenhuma dor / 200% recuperado",
+    labelLine1: "Nenhuma dor",
+    labelLine2: "200% recuperado",
     value: 0.5,
     description:
       "Pouca ou nenhuma dor e me recuperei muito antes do treino de hoje.",
@@ -105,24 +108,25 @@ export function ARTFeedbackDialog({
                 </span>
               </div>
 
-              <div className="flex flex-col gap-1.5">
+              <div className="grid grid-cols-3 gap-1.5">
                 {ART_OPTIONS.map((option) => (
                   <Button
-                    key={option.label}
+                    key={option.value}
                     variant={
                       evaluations[exercise.id] === option.value
                         ? "default"
                         : "outline"
                     }
                     size="sm"
-                    className={`w-full justify-start text-left text-xs h-auto py-2 px-3 ${
+                    className={`w-full justify-center text-center text-[10px] leading-tight h-auto py-2 px-1.5 flex flex-col gap-0.5 ${
                       evaluations[exercise.id] === option.value
                         ? "bg-primary hover:bg-primary/90"
                         : ""
                     }`}
                     onClick={() => handleSelect(exercise.id, option.value)}
                   >
-                    {option.label}
+                    <span>{option.labelLine1}</span>
+                    <span>{option.labelLine2}</span>
                   </Button>
                 ))}
               </div>
