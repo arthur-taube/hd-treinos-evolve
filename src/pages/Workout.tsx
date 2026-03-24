@@ -9,7 +9,9 @@ import { ChevronLeft, CheckCircle, ChevronRight } from "lucide-react";
 import { ExerciseCard } from "@/components/workout/ExerciseCard";
 import { ExerciseCardAdvanced, ExerciseAdvancedData } from "@/components/workout/ExerciseCardAdvanced";
 import { FeedbackDialog } from "@/components/workout/FeedbackDialog";
+import { ARTFeedbackDialog } from "@/components/workout/ARTFeedbackDialog";
 import { useExerciseFeedback } from "@/hooks/use-exercise-feedback";
+import { useARTCheck } from "@/hooks/useARTCheck";
 import { applyWorkoutProgression } from "@/utils/workoutProgressionLoader";
 import { resolveExerciseRer } from "@/utils/rerResolver";
 
