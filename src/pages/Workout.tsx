@@ -424,6 +424,15 @@ export default function Workout() {
           </div>
         </div>
       )}
+
+      {/* ART Dialog for advanced workouts */}
+      {isAdvanced && (
+        <ARTFeedbackDialog
+          isOpen={showARTDialog}
+          pendingExercises={artPendingExercises}
+          onSubmit={saveARTFeedback}
+        />
+      )}
     </div>
   );
 }
