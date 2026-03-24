@@ -58,6 +58,19 @@ export default function Workout() {
   const [rerPerWeek, setRerPerWeek] = useState<Record<string, string> | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // ART check for advanced workouts
+  const {
+    pendingExercises: artPendingExercises,
+    showARTDialog,
+    setShowARTDialog,
+    saveARTFeedback,
+  } = useARTCheck(
+    treino?.programa_usuario_id || null,
+    treinoId || null,
+    exerciciosAdvanced,
+    isAdvanced && !loading
+  );
   
   useEffect(() => {
     async function fetchWorkoutData() {
