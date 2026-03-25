@@ -49,6 +49,7 @@ export function ExerciseCardAdvanced({
   onWeightUpdate
 }: ExerciseCardAdvancedProps) {
   const [showARADialog, setShowARADialog] = useState(false);
+  const [showAMPDialog, setShowAMPDialog] = useState(false);
 
   const {
     isOpen, setIsOpen,
@@ -72,7 +73,7 @@ export function ExerciseCardAdvanced({
   const {
     handleSetComplete, handleWeightChange, handleRepsChange, handleWeightFocus,
     handleNoteChange, saveSetNote,
-    handleExerciseComplete, saveARAFeedback,
+    handleExerciseComplete, saveARAFeedback, saveAMPFeedback,
     saveObservation, skipIncompleteSets
   } = useExerciseActionsAdvanced(
     exercise, sets, setSets,
@@ -132,6 +133,8 @@ export function ExerciseCardAdvanced({
       const feedbackModel = exercise.modelo_feedback || 'ARA/ART';
       if (feedbackModel.includes('ARA')) {
         setShowARADialog(true);
+      } else if (feedbackModel.includes('AMP')) {
+        setShowAMPDialog(true);
       } else {
         setIsOpen(false);
       }
@@ -225,6 +228,36 @@ export function ExerciseCardAdvanced({
         isOpen={showARADialog}
         exerciseName={exercise.nome}
         onSubmit={handleARASubmit}
+      />
+
+      <FeedbackDialog
+        isOpen={showAMPDialog}
+        onClose={() => setShowAMPDialog(false)}
+        onSubmit={(value) => {
+          saveAMPFeedback(Number(value));
+          setShowAMPDialog(false);
+        }}
+        title="Avaliação de Manutenção da Performance"
+        description={`Você está conseguindo manter ou aumentar a força e a performance no exercício {exerciseName}?`}
+        exerciseName={exercise.nome}
+        required={true}
+        options={[
+          {
+            value: 1,
+            label: "Perdi, muito fofo!",
+            description: "Eu notei perda de força e performance nesse exercício, provavelmente devido a uma falta de treino, pois minha recuperação está ótima."
+          },
+          {
+            value: 0,
+            label: "Mantive/Ganhei",
+            description: "Eu mantive ou aumentei minha força/performance nesse exercício."
+          },
+          {
+            value: -1,
+            label: "Perdi, estou exausto!",
+            description: "Eu notei perda de força/performance nesse exercício e estou sentindo dificuldade na recuperação (treino excessivo)."
+          }
+        ]}
       />
     </>
   );
