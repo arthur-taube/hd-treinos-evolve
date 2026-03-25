@@ -1,60 +1,40 @@
 
 
-## Plano: ART com detecção por músculos trabalhados
+## Plano: AMP — Avaliação de Manutenção da Performance
 
-### Lógica de detecção (hook `useARTCheck.ts`)
+### Conceito
 
-Ao abrir um workout avançado:
+Dialog pós-exercício (igual à ARA) que aparece quando `modelo_feedback` inclui `'AMP'` (e não `'ARA'`). Usa o mesmo padrão visual do `FeedbackDialog` existente (opções toggle + legenda ao selecionar).
 
-1. **Listar músculos do workout atual**: Para cada exercício do workout, buscar `exercicio_original_id` → lookup em `exercicios_avancados` para obter `primary_muscle`, `secondary_muscle`, `tertiary_muscle`, `quaternary_muscle`. Criar um Set de todos os músculos não-nulos.
+### Valores
 
-2. **Buscar exercícios pendentes de ART**: Exercícios concluídos em workouts anteriores (mesmo `programa_usuario_id`, `ordem_semana` anterior OU mesmo `ordem_semana` com `ordem_dia` anterior) onde:
-   - `avaliacao_pump IS NOT NULL` (ARA feito)
-   - `avaliacao_dor IS NULL` (ART pendente)
+- **Perdi, muito fofo!** = +1 — "Eu notei perda de força e performance nesse exercício, provavelmente devido a uma falta de treino, pois minha recuperação está ótima."
+- **Mantive/Ganhei** = 0 — "Eu mantive ou aumentei minha força/performance nesse exercício."
+- **Perdi, estou exausto!** = -1 — "Eu notei perda de força/performance nesse exercício e estou sentindo dificuldade na recuperação (treino excessivo)."
 
-3. **Filtrar por coincidência de músculos**: Para cada exercício pendente, buscar seus músculos via `exercicios_avancados` (usando `exercicio_original_id`). Se houver interseção com o Set do passo 1, incluir na lista de pendentes.
+Cálculo: `séries_próxima_semana = séries_atuais + AMP`, mesmo rounding (≤.5→floor, ≥.51→ceil).
 
-4. **Retornar lista** com nome do exercício, grupo muscular e músculos coincidentes.
+### Implementação
 
-Performance: ~2-3 queries leves (exercícios do workout atual, exercícios pendentes anteriores, lookup de músculos). Dataset por usuário é pequeno, sem impacto perceptível.
+**1. `ExerciseCardAdvanced.tsx`** — No `handleCompleteWithFeedback`:
+- Se `feedbackModel` inclui `'ARA'` → abre ARA dialog (já existe)
+- Se `feedbackModel` inclui `'AMP'` → abre AMP dialog (novo estado `showAMPDialog`)
+- Senão → fecha direto
 
-### Componente `ARTFeedbackDialog.tsx`
+Nova função `handleAMPSubmit(value: number)` que chama `saveAMPFeedback` do hook de actions e fecha o dialog.
 
-Dialog obrigatória no início do workout. Lista exercícios pendentes agrupados por grupo muscular:
+**2. `useExerciseActionsAdvanced.ts`** — Nova função `saveAMPFeedback(ampValue: number)`:
+- Update `avaliacao_performance = ampValue` e `data_avaliacao` no exercício atual
+- Buscar `series` atual, calcular `newSeries = series + ampValue` (rounding)
+- Encontrar próxima instância (mesma lógica de 3 fallbacks: `card_original_id` → `exercicio_original_id` → `substituto_custom_id`) e atualizar séries
+- Toast de confirmação
 
-```text
-ART - Avalie sua dor muscular e recuperação após os exercícios do treino anterior:
+**3. Reutilizar `FeedbackDialog` existente** — Não precisa de componente novo. O `FeedbackDialog` já suporta opções toggle com legenda. Basta passar as 3 opções AMP como props.
 
-[Grupo Muscular] - [Nome do Exercício]
-  ○ Ainda Dolorido/Não recuperado (-0.5)
-  ○ Alguma dor/100% recuperado (0)
-  ○ Nenhuma dor/200% recuperado (+0.5)
-```
+### Arquivos alterados
 
-3 opções tipo toggle (mesmo padrão visual do ARA). Botão Salvar habilitado quando todos avaliados.
-
-### Salvamento e cálculo
-
-Ao salvar:
-1. Para cada exercício avaliado, update `avaliacao_dor` na linha do exercício do **workout anterior**
-2. Recalcular séries: `rawSeries = series + pump + fadiga + art`, arredondar (≤.5→floor, ≥.51→ceil)
-3. Atualizar séries da próxima semana (mesma lógica de busca do ARA com fallback `card_original_id` → `exercicio_original_id` → `substituto_custom_id`)
-
-### Fluxo em `Workout.tsx`
-
-Após `fetchAdvancedExercises`, chamar o hook `useARTCheck`. Se `pendingExercises.length > 0`, exibir `ARTFeedbackDialog` antes de liberar o workout.
-
-### Arquivos
-
-| Arquivo | Tipo |
+| Arquivo | Mudança |
 |---|---|
-| `src/components/workout/ARTFeedbackDialog.tsx` | Novo |
-| `src/hooks/useARTCheck.ts` | Novo |
-| `src/pages/Workout.tsx` | Alterado (integrar ART check + dialog) |
-
-### Garantia de não-interferência
-
-- Só dispara quando `isAdvanced === true`
-- Nenhum arquivo do sistema iniciante é modificado
-- Fluxo iniciante em `Workout.tsx` permanece intacto
+| `src/components/workout/ExerciseCardAdvanced.tsx` | Estado `showAMPDialog`, branch no `handleCompleteWithFeedback`, render do `FeedbackDialog` para AMP |
+| `src/components/workout/hooks/useExerciseActionsAdvanced.ts` | Nova função `saveAMPFeedback` com cálculo e update da próxima semana |
 
