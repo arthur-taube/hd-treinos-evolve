@@ -240,6 +240,81 @@ export const useExerciseActionsAdvanced = (
     }
   };
 
+  const saveAMPFeedback = async (ampValue: number) => {
+    try {
+      // 1. Save feedback on current exercise
+      const { error } = await supabase
+        .from('exercicios_treino_usuario_avancado')
+        .update({
+          avaliacao_performance: ampValue,
+          data_avaliacao: new Date().toISOString()
+        })
+        .eq('id', exercise.id);
+
+      if (error) throw error;
+
+      // 2. Calculate new series for next week
+      const { data: currentExercise } = await supabase
+        .from('exercicios_treino_usuario_avancado')
+        .select(`
+          series,
+          card_original_id,
+          exercicio_original_id,
+          substituto_custom_id,
+          treino_usuario_id,
+          treinos_usuario!inner(programa_usuario_id, ordem_semana)
+        `)
+        .eq('id', exercise.id)
+        .single();
+
+      if (currentExercise) {
+        const currentSeries = Number(currentExercise.series);
+        const rawSeries = currentSeries + ampValue;
+        const newSeries = (rawSeries % 1 > 0.5) ? Math.ceil(rawSeries) : Math.floor(rawSeries);
+
+        if (newSeries !== currentSeries && newSeries >= 1) {
+          const programaUsuarioId = (currentExercise.treinos_usuario as any).programa_usuario_id;
+          const currentWeek = (currentExercise.treinos_usuario as any).ordem_semana;
+
+          const { data: futureWorkouts } = await supabase
+            .from('treinos_usuario')
+            .select('id, ordem_semana')
+            .eq('programa_usuario_id', programaUsuarioId)
+            .gt('ordem_semana', currentWeek)
+            .order('ordem_semana', { ascending: true });
+
+          if (futureWorkouts && futureWorkouts.length > 0) {
+            const nextWeek = futureWorkouts[0].ordem_semana;
+            const nextWeekWorkoutIds = futureWorkouts
+              .filter(w => w.ordem_semana === nextWeek)
+              .map(w => w.id);
+
+            let query = supabase
+              .from('exercicios_treino_usuario_avancado')
+              .update({ series: newSeries })
+              .eq('concluido', false)
+              .in('treino_usuario_id', nextWeekWorkoutIds);
+
+            if (currentExercise.card_original_id) {
+              query = query.eq('card_original_id', currentExercise.card_original_id);
+            } else if (currentExercise.exercicio_original_id) {
+              query = query.eq('exercicio_original_id', currentExercise.exercicio_original_id);
+            } else if (currentExercise.substituto_custom_id) {
+              query = query.eq('substituto_custom_id', currentExercise.substituto_custom_id);
+            }
+
+            await query;
+          }
+        }
+      }
+
+      setIsOpen(false);
+      toast({ title: "Avaliação salva", description: "Feedback AMP registrado com sucesso!" });
+    } catch (error: any) {
+      toast({ title: "Erro ao salvar avaliação", description: error.message, variant: "destructive" });
+    }
+  };
+
   const saveObservation = async (
     observation: string,
     setShowObservationInput: React.Dispatch<React.SetStateAction<boolean>>
@@ -316,6 +391,7 @@ export const useExerciseActionsAdvanced = (
     saveSetNote,
     handleExerciseComplete,
     saveARAFeedback,
+    saveAMPFeedback,
     saveObservation,
     skipIncompleteSets
   };
