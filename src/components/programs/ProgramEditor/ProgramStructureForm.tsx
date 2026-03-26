@@ -405,6 +405,34 @@ export default function ProgramStructureForm() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={showCreateTituloDialog} onOpenChange={setShowCreateTituloDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Criar Novo Título</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nome *</Label>
+              <Input value={newTituloNome} onChange={(e) => setNewTituloNome(e.target.value)} placeholder="Ex: HDNI, FULL HD, 4K..." />
+            </div>
+            <div className="space-y-2">
+              <Label>Descrição</Label>
+              <Textarea value={newTituloDescricao} onChange={(e) => setNewTituloDescricao(e.target.value)} placeholder="Descrição do título..." rows={3} className="resize-none" />
+            </div>
+            <div className="space-y-2">
+              <Label>URL da Imagem</Label>
+              <Input value={newTituloImageUrl} onChange={(e) => setNewTituloImageUrl(e.target.value)} placeholder="https://..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateTituloDialog(false)}>Cancelar</Button>
+            <Button onClick={handleCreateTitulo} disabled={!newTituloNome.trim() || creatingSaving}>
+              {creatingSaving ? "Salvando..." : "Criar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

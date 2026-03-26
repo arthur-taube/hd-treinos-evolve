@@ -29,6 +29,7 @@ interface ProgramExercisesFormProps {
   programLevel: string;
   weeklyFrequency: number;
   mesocycles: number;
+  tituloId?: string;
   programData: {
     description?: string;
     duration: string;
