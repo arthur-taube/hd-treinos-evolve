@@ -80,7 +80,24 @@ export default function ProgramStructureForm() {
   const navigate = useNavigate();
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [showPhase2, setShowPhase2] = useState(false);
-  
+  const [titulos, setTitulos] = useState<{ id: string; nome: string }[]>([]);
+  const [selectedTituloId, setSelectedTituloId] = useState<string>("");
+  const [showCreateTituloDialog, setShowCreateTituloDialog] = useState(false);
+  const [newTituloNome, setNewTituloNome] = useState("");
+  const [newTituloDescricao, setNewTituloDescricao] = useState("");
+  const [newTituloImageUrl, setNewTituloImageUrl] = useState("");
+  const [creatingSaving, setCreatingSaving] = useState(false);
+
+  useEffect(() => {
+    supabase
+      .from("titulos_programa")
+      .select("id, nome")
+      .order("nome")
+      .then(({ data }) => {
+        if (data) setTitulos(data);
+      });
+  }, []);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -108,6 +125,30 @@ export default function ProgramStructureForm() {
     }
   };
 
+  const handleCreateTitulo = async () => {
+    if (!newTituloNome.trim()) return;
+    setCreatingSaving(true);
+    try {
+      const { data, error } = await supabase
+        .from("titulos_programa")
+        .insert({ nome: newTituloNome.trim(), descricao: newTituloDescricao.trim() || null, image_url: newTituloImageUrl.trim() || null })
+        .select("id, nome")
+        .single();
+      if (error) throw error;
+      setTitulos((prev) => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)));
+      setSelectedTituloId(data.id);
+      setShowCreateTituloDialog(false);
+      setNewTituloNome("");
+      setNewTituloDescricao("");
+      setNewTituloImageUrl("");
+      toast({ title: "Título criado com sucesso!" });
+    } catch (err: any) {
+      toast({ title: "Erro ao criar título", description: err.message, variant: "destructive" });
+    } finally {
+      setCreatingSaving(false);
+    }
+  };
+
   if (showPhase2) {
     return (
       <div className="space-y-6">
@@ -116,6 +157,7 @@ export default function ProgramStructureForm() {
           programLevel={form.getValues().level}
           weeklyFrequency={form.getValues().weeklyFrequency}
           mesocycles={form.getValues().mesocycles}
+          tituloId={selectedTituloId || undefined}
           programData={{
             description: form.getValues().description,
             duration: form.getValues().duration,
