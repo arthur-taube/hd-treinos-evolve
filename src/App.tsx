@@ -64,6 +64,14 @@ const App = () => (
               }
             />
             <Route
+              path="/program-catalog/:tituloId"
+              element={
+                <AppLayout>
+                  <ProgramCatalogTitle />
+                </AppLayout>
+              }
+            />
+            <Route
               path="/active-program"
               element={
                 <AppLayout>
