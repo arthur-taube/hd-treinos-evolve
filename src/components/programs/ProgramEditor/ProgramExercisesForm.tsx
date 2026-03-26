@@ -211,7 +211,8 @@ export default function ProgramExercisesForm({
         frequencia_semanal: weeklyFrequency,
         duracao_semanas: mesocycleDurations.reduce((acc, curr) => acc + curr, 0),
         split: programData.split,
-        criado_por: userId
+        criado_por: userId,
+        titulo_id: tituloId || null
       } as any)
       .select()
       .single();
