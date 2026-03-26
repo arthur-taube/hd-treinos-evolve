@@ -23,6 +23,7 @@ import ProgramEditor from "./pages/ProgramEditor";
 import ProgramEditorEdit from "./pages/ProgramEditorEdit";
 import ProgramCustomize from "./pages/ProgramCustomize";
 import ProgramUserEdit from "./pages/ProgramUserEdit";
+import ProgramCatalogTitle from "./pages/ProgramCatalogTitle";
 
 const queryClient = new QueryClient();
 
