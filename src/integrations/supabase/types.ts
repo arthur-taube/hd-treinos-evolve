@@ -807,6 +807,7 @@ export type Database = {
           objetivo: string[]
           privado: boolean
           split: string
+          titulo_id: string | null
           updated_at: string
         }
         Insert: {
@@ -821,6 +822,7 @@ export type Database = {
           objetivo: string[]
           privado?: boolean
           split: string
+          titulo_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -835,9 +837,18 @@ export type Database = {
           objetivo?: string[]
           privado?: boolean
           split?: string
+          titulo_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "programas_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "titulos_programa"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       programas_usuario: {
         Row: {
@@ -931,6 +942,33 @@ export type Database = {
           repeticoes?: number
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      titulos_programa: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          id: string
+          image_url: string | null
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          image_url?: string | null
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          image_url?: string | null
+          nome?: string
+          updated_at?: string
         }
         Relationships: []
       }

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -33,6 +33,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   name: z.string().min(1, "Nome do programa é obrigatório"),
@@ -70,7 +80,24 @@ export default function ProgramStructureForm() {
   const navigate = useNavigate();
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [showPhase2, setShowPhase2] = useState(false);
-  
+  const [titulos, setTitulos] = useState<{ id: string; nome: string }[]>([]);
+  const [selectedTituloId, setSelectedTituloId] = useState<string>("");
+  const [showCreateTituloDialog, setShowCreateTituloDialog] = useState(false);
+  const [newTituloNome, setNewTituloNome] = useState("");
+  const [newTituloDescricao, setNewTituloDescricao] = useState("");
+  const [newTituloImageUrl, setNewTituloImageUrl] = useState("");
+  const [creatingSaving, setCreatingSaving] = useState(false);
+
+  useEffect(() => {
+    supabase
+      .from("titulos_programa")
+      .select("id, nome")
+      .order("nome")
+      .then(({ data }) => {
+        if (data) setTitulos(data);
+      });
+  }, []);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -98,6 +125,30 @@ export default function ProgramStructureForm() {
     }
   };
 
+  const handleCreateTitulo = async () => {
+    if (!newTituloNome.trim()) return;
+    setCreatingSaving(true);
+    try {
+      const { data, error } = await supabase
+        .from("titulos_programa")
+        .insert({ nome: newTituloNome.trim(), descricao: newTituloDescricao.trim() || null, image_url: newTituloImageUrl.trim() || null })
+        .select("id, nome")
+        .single();
+      if (error) throw error;
+      setTitulos((prev) => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)));
+      setSelectedTituloId(data.id);
+      setShowCreateTituloDialog(false);
+      setNewTituloNome("");
+      setNewTituloDescricao("");
+      setNewTituloImageUrl("");
+      toast({ title: "Título criado com sucesso!" });
+    } catch (err: any) {
+      toast({ title: "Erro ao criar título", description: err.message, variant: "destructive" });
+    } finally {
+      setCreatingSaving(false);
+    }
+  };
+
   if (showPhase2) {
     return (
       <div className="space-y-6">
@@ -106,6 +157,7 @@ export default function ProgramStructureForm() {
           programLevel={form.getValues().level}
           weeklyFrequency={form.getValues().weeklyFrequency}
           mesocycles={form.getValues().mesocycles}
+          tituloId={selectedTituloId || undefined}
           programData={{
             description: form.getValues().description,
             duration: form.getValues().duration,
@@ -121,6 +173,27 @@ export default function ProgramStructureForm() {
     <div className="space-y-6">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Título do Programa */}
+          <div className="space-y-2">
+            <Label>Título (agrupamento)</Label>
+            <div className="flex gap-2">
+              <Select value={selectedTituloId} onValueChange={setSelectedTituloId}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Selecione um título (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem título</SelectItem>
+                  {titulos.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button type="button" variant="outline" onClick={() => setShowCreateTituloDialog(true)}>
+                + Novo
+              </Button>
+            </div>
+          </div>
+
           <FormField
             control={form.control}
             name="name"
@@ -332,6 +405,34 @@ export default function ProgramStructureForm() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={showCreateTituloDialog} onOpenChange={setShowCreateTituloDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Criar Novo Título</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nome *</Label>
+              <Input value={newTituloNome} onChange={(e) => setNewTituloNome(e.target.value)} placeholder="Ex: HDNI, FULL HD, 4K..." />
+            </div>
+            <div className="space-y-2">
+              <Label>Descrição</Label>
+              <Textarea value={newTituloDescricao} onChange={(e) => setNewTituloDescricao(e.target.value)} placeholder="Descrição do título..." rows={3} className="resize-none" />
+            </div>
+            <div className="space-y-2">
+              <Label>URL da Imagem</Label>
+              <Input value={newTituloImageUrl} onChange={(e) => setNewTituloImageUrl(e.target.value)} placeholder="https://..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateTituloDialog(false)}>Cancelar</Button>
+            <Button onClick={handleCreateTitulo} disabled={!newTituloNome.trim() || creatingSaving}>
+              {creatingSaving ? "Salvando..." : "Criar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
