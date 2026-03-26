@@ -173,6 +173,27 @@ export default function ProgramStructureForm() {
     <div className="space-y-6">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Título do Programa */}
+          <div className="space-y-2">
+            <Label>Título (agrupamento)</Label>
+            <div className="flex gap-2">
+              <Select value={selectedTituloId} onValueChange={setSelectedTituloId}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Selecione um título (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem título</SelectItem>
+                  {titulos.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button type="button" variant="outline" onClick={() => setShowCreateTituloDialog(true)}>
+                + Novo
+              </Button>
+            </div>
+          </div>
+
           <FormField
             control={form.control}
             name="name"
