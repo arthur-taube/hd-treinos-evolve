@@ -49,6 +49,7 @@ export default function ProgramExercisesForm({
   programLevel,
   weeklyFrequency,
   mesocycles,
+  tituloId,
   programData,
   initialExercisesPerDay = {},
   initialSavedSchedules = [],
