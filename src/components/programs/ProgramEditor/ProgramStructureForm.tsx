@@ -85,7 +85,8 @@ export default function ProgramStructureForm() {
   const [showCreateTituloDialog, setShowCreateTituloDialog] = useState(false);
   const [newTituloNome, setNewTituloNome] = useState("");
   const [newTituloDescricao, setNewTituloDescricao] = useState("");
-  const [newTituloImageUrl, setNewTituloImageUrl] = useState("");
+  const [newTituloImageFile, setNewTituloImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [creatingSaving, setCreatingSaving] = useState(false);
 
   useEffect(() => {
@@ -125,13 +126,35 @@ export default function ProgramStructureForm() {
     }
   };
 
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setNewTituloImageFile(file);
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImagePreview(file ? URL.createObjectURL(file) : null);
+  };
+
   const handleCreateTitulo = async () => {
     if (!newTituloNome.trim()) return;
     setCreatingSaving(true);
     try {
+      let imageUrl: string | null = null;
+
+      if (newTituloImageFile) {
+        const ext = newTituloImageFile.name.split('.').pop() || 'png';
+        const filePath = `${crypto.randomUUID()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from('titulo-images')
+          .upload(filePath, newTituloImageFile);
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabase.storage
+          .from('titulo-images')
+          .getPublicUrl(filePath);
+        imageUrl = urlData.publicUrl;
+      }
+
       const { data, error } = await supabase
         .from("titulos_programa")
-        .insert({ nome: newTituloNome.trim(), descricao: newTituloDescricao.trim() || null, image_url: newTituloImageUrl.trim() || null })
+        .insert({ nome: newTituloNome.trim(), descricao: newTituloDescricao.trim() || null, image_url: imageUrl })
         .select("id, nome")
         .single();
       if (error) throw error;
@@ -140,7 +163,9 @@ export default function ProgramStructureForm() {
       setShowCreateTituloDialog(false);
       setNewTituloNome("");
       setNewTituloDescricao("");
-      setNewTituloImageUrl("");
+      setNewTituloImageFile(null);
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+      setImagePreview(null);
       toast({ title: "Título criado com sucesso!" });
     } catch (err: any) {
       toast({ title: "Erro ao criar título", description: err.message, variant: "destructive" });
@@ -421,8 +446,11 @@ export default function ProgramStructureForm() {
               <Textarea value={newTituloDescricao} onChange={(e) => setNewTituloDescricao(e.target.value)} placeholder="Descrição do título..." rows={3} className="resize-none" />
             </div>
             <div className="space-y-2">
-              <Label>URL da Imagem</Label>
-              <Input value={newTituloImageUrl} onChange={(e) => setNewTituloImageUrl(e.target.value)} placeholder="https://..." />
+              <Label>Imagem</Label>
+              <Input type="file" accept="image/*" onChange={handleImageFileChange} />
+              {imagePreview && (
+                <img src={imagePreview} alt="Preview" className="mt-2 w-full max-h-40 object-cover rounded-md border border-border" />
+              )}
             </div>
           </div>
           <DialogFooter>
