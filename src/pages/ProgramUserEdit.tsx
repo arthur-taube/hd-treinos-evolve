@@ -45,6 +45,8 @@ export default function ProgramUserEdit() {
   // Saving
   const [isSaving, setIsSaving] = useState(false);
 
+  const isAdvanced = programData?.programLevel !== 'iniciante';
+
   // Track if there are unsaved changes
   const [initialState, setInitialState] = useState<{
     name: string;
