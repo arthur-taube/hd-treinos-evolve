@@ -310,6 +310,7 @@ interface UpdateUserProgramParams {
   customName: string;
   customExercises: Record<string, Exercise[]>;
   customDayTitles: Record<string, string>;
+  programLevel?: string;
 }
 
 /**
