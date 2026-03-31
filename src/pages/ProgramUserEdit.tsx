@@ -183,6 +183,7 @@ export default function ProgramUserEdit() {
         customName: customProgramName,
         customExercises,
         customDayTitles,
+        programLevel: programData.programLevel,
       });
 
       toast({
