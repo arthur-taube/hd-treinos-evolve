@@ -325,7 +325,10 @@ export async function updateUserProgram(
     customName,
     customExercises,
     customDayTitles,
+    programLevel,
   } = params;
+
+  const isAdvanced = programLevel && programLevel !== 'iniciante';
 
   console.log('📝 updateUserProgram - Iniciando atualização:', programaUsuarioId);
 
