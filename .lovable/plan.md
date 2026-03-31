@@ -1,52 +1,30 @@
+## Plano: Suporte avançado no ProgramUserEdit
 
+O problema é duplo: (1) a página sempre renderiza `ExerciseKanban` (iniciante), e (2) o `updateUserProgram` sempre grava em `exercicios_treino_usuario`. Para programas avançados, precisa usar `ExerciseKanbanAdvanced` e gravar em `exercicios_treino_usuario_avancado`.
 
-## Plano: Upload de imagem para Títulos via Supabase Storage
+### 1. `ProgramUserEdit.tsx` — Renderizar kanban condicional
 
-### 1. Migration: criar bucket `titulo-images`
+- Importar `ExerciseKanbanAdvanced`
+- Verificar `programData.programLevel !== 'iniciante'` para decidir qual kanban renderizar
+- Para o avançado: usar `customizerMode={true}`, `maxSets={5}`, mesma lógica de props do `ProgramCustomize.tsx`
 
-```sql
-insert into storage.buckets (id, name, public) values ('titulo-images', 'titulo-images', true);
+### 2. `programCustomizer.ts` — `updateUserProgram` com suporte avançado
 
--- Qualquer um pode ver (bucket público)
-create policy "Acesso público de leitura" on storage.objects
-  for select using (bucket_id = 'titulo-images');
+Adicionar parâmetro `programLevel` ao `UpdateUserProgramParams`. Quando `nivel !== 'iniciante'`:
 
--- Apenas dev/admin pode fazer upload
-create policy "Dev pode fazer upload" on storage.objects
-  for insert to authenticated with check (
-    bucket_id = 'titulo-images' AND (
-      auth.uid() = 'a2eba955-7a98-42a6-ba49-1cf31dfad15d'::uuid
-      OR (auth.jwt()->>'email') = 'arthurtaube.com.br@gmail.com'
-    )
-  );
+- Buscar exercícios existentes de `exercicios_treino_usuario_avancado` em vez de `exercicios_treino_usuario`
+- Deletar/ocultar exercícios na tabela avançada
+- Atualizar exercícios existentes com campos avançados (`metodo_especial` apenas, de forma idêntica ao customizador avançado)
+- Inserir novos exercícios na tabela avançada
 
--- Apenas dev/admin pode deletar
-create policy "Dev pode deletar imagens" on storage.objects
-  for delete to authenticated using (
-    bucket_id = 'titulo-images' AND (
-      auth.uid() = 'a2eba955-7a98-42a6-ba49-1cf31dfad15d'::uuid
-      OR (auth.jwt()->>'email') = 'arthurtaube.com.br@gmail.com'
-    )
-  );
-```
+### 3. `ProgramUserEdit.tsx` — Passar `programLevel` no save
 
-### 2. Alteração no dialog "Criar Novo Título" (`ProgramStructureForm.tsx`)
-
-Substituir o campo "URL da Imagem" (input text, linha 424-425) por um campo de upload:
-
-- `<input type="file" accept="image/*">` com botão estilizado
-- Ao selecionar arquivo, mostrar preview local (via `URL.createObjectURL`)
-- Ao clicar "Criar":
-  1. Upload do arquivo para `titulo-images/{uuid}.{ext}` via `supabase.storage.from('titulo-images').upload(...)`
-  2. Obter URL pública via `getPublicUrl()`
-  3. Gravar `image_url` na tabela `titulos_programa`
-- Loading state no botão durante upload
-- Estado: trocar `newTituloImageUrl` (string) por `newTituloImageFile` (File | null) + `imagePreview` (string | null)
+Incluir `programLevel: programData.programLevel` na chamada a `updateUserProgram`.
 
 ### Arquivos
 
-| Arquivo | Tipo |
-|---|---|
-| Migration (bucket + policies) | Novo |
-| `src/components/programs/ProgramEditor/ProgramStructureForm.tsx` | Alterado (file upload no dialog) |
 
+| Arquivo                          | Alteração                                        |
+| -------------------------------- | ------------------------------------------------ |
+| `src/pages/ProgramUserEdit.tsx`  | Kanban condicional + passar programLevel no save |
+| `src/utils/programCustomizer.ts` | `updateUserProgram` com branch avançado          |
