@@ -310,6 +310,7 @@ interface UpdateUserProgramParams {
   customName: string;
   customExercises: Record<string, Exercise[]>;
   customDayTitles: Record<string, string>;
+  programLevel?: string;
 }
 
 /**
@@ -324,7 +325,10 @@ export async function updateUserProgram(
     customName,
     customExercises,
     customDayTitles,
+    programLevel,
   } = params;
+
+  const isAdvanced = programLevel && programLevel !== 'iniciante';
 
   console.log('📝 updateUserProgram - Iniciando atualização:', programaUsuarioId);
 
@@ -388,61 +392,119 @@ export async function updateUserProgram(
           .eq("id", treino.id);
       }
 
-      // 6. Buscar exercícios atuais deste treino
-      const { data: exerciciosAtuais } = await supabase
-        .from("exercicios_treino_usuario")
-        .select("*")
-        .eq("treino_usuario_id", treino.id)
-        .order("ordem");
+      if (isAdvanced) {
+        // === ADVANCED FLOW ===
+        const { data: exerciciosAtuais } = await supabase
+          .from("exercicios_treino_usuario_avancado" as any)
+          .select("*")
+          .eq("treino_usuario_id", treino.id)
+          .order("ordem");
 
-      // 7. Remover exercícios que não estão mais na lista (foram ocultados)
-      const exerciseIdsToKeep = exercises.filter(e => !e.hidden).map(e => e.id);
-      const exerciciosParaRemover = exerciciosAtuais?.filter(
-        ex => !exerciseIdsToKeep.includes(ex.id) && !ex.concluido
-      ) || [];
+        const exerciciosAtuaisTyped = exerciciosAtuais as any[] || [];
 
-      if (exerciciosParaRemover.length > 0) {
-        await supabase
-          .from("exercicios_treino_usuario")
-          .delete()
-          .in("id", exerciciosParaRemover.map(e => e.id));
-      }
+        const exerciseIdsToKeep = exercises.filter(e => !e.hidden).map(e => e.id);
+        const exerciciosParaRemover = exerciciosAtuaisTyped.filter(
+          (ex: any) => !exerciseIdsToKeep.includes(ex.id) && !ex.concluido
+        );
 
-      // 8. Atualizar ou criar exercícios
-      const visibleExercises = exercises.filter(e => !e.hidden);
-      for (let i = 0; i < visibleExercises.length; i++) {
-        const exercise = visibleExercises[i];
-        const existingExercise = exerciciosAtuais?.find(ex => ex.id === exercise.id);
+        if (exerciciosParaRemover.length > 0) {
+          await supabase
+            .from("exercicios_treino_usuario_avancado" as any)
+            .delete()
+            .in("id", exerciciosParaRemover.map((e: any) => e.id));
+        }
 
-        if (existingExercise) {
-          // Atualizar exercício existente (se não foi concluído)
-          if (!existingExercise.concluido) {
+        const visibleExercises = exercises.filter(e => !e.hidden);
+        for (let i = 0; i < visibleExercises.length; i++) {
+          const exercise = visibleExercises[i];
+          const existingExercise = exerciciosAtuaisTyped.find((ex: any) => ex.id === exercise.id);
+
+          if (existingExercise) {
+            if (!existingExercise.concluido) {
+              await supabase
+                .from("exercicios_treino_usuario_avancado" as any)
+                .update({
+                  nome: exercise.name,
+                  grupo_muscular: exercise.muscleGroup,
+                  series: exercise.sets,
+                  repeticoes: exercise.reps?.toString() || null,
+                  ordem: i + 1,
+                  metodo_especial: exercise.specialMethod || null,
+                })
+                .eq("id", existingExercise.id);
+            }
+          } else {
             await supabase
-              .from("exercicios_treino_usuario")
-              .update({
+              .from("exercicios_treino_usuario_avancado" as any)
+              .insert({
+                treino_usuario_id: treino.id,
+                exercicio_original_id: exercise.originalId || null,
                 nome: exercise.name,
                 grupo_muscular: exercise.muscleGroup,
                 series: exercise.sets,
                 repeticoes: exercise.reps?.toString() || null,
+                oculto: false,
                 ordem: i + 1,
-              })
-              .eq("id", existingExercise.id);
+                card_original_id: (exercise as any).cardOriginalId || null,
+                rer: exercise.rer || 'do_microciclo',
+                metodo_especial: exercise.specialMethod || null,
+                modelo_feedback: exercise.feedbackModel || 'ARA/ART',
+              });
           }
-        } else {
-          // Inserir novo exercício
+        }
+      } else {
+        // === BEGINNER FLOW ===
+        const { data: exerciciosAtuais } = await supabase
+          .from("exercicios_treino_usuario")
+          .select("*")
+          .eq("treino_usuario_id", treino.id)
+          .order("ordem");
+
+        const exerciseIdsToKeep = exercises.filter(e => !e.hidden).map(e => e.id);
+        const exerciciosParaRemover = exerciciosAtuais?.filter(
+          ex => !exerciseIdsToKeep.includes(ex.id) && !ex.concluido
+        ) || [];
+
+        if (exerciciosParaRemover.length > 0) {
           await supabase
             .from("exercicios_treino_usuario")
-            .insert({
-              treino_usuario_id: treino.id,
-              exercicio_original_id: exercise.originalId || null,
-              nome: exercise.name,
-              grupo_muscular: exercise.muscleGroup,
-              series: exercise.sets,
-              repeticoes: exercise.reps?.toString() || null,
-              oculto: false,
-              ordem: i + 1,
-              card_original_id: (exercise as any).cardOriginalId || null,
-            });
+            .delete()
+            .in("id", exerciciosParaRemover.map(e => e.id));
+        }
+
+        const visibleExercises = exercises.filter(e => !e.hidden);
+        for (let i = 0; i < visibleExercises.length; i++) {
+          const exercise = visibleExercises[i];
+          const existingExercise = exerciciosAtuais?.find(ex => ex.id === exercise.id);
+
+          if (existingExercise) {
+            if (!existingExercise.concluido) {
+              await supabase
+                .from("exercicios_treino_usuario")
+                .update({
+                  nome: exercise.name,
+                  grupo_muscular: exercise.muscleGroup,
+                  series: exercise.sets,
+                  repeticoes: exercise.reps?.toString() || null,
+                  ordem: i + 1,
+                })
+                .eq("id", existingExercise.id);
+            }
+          } else {
+            await supabase
+              .from("exercicios_treino_usuario")
+              .insert({
+                treino_usuario_id: treino.id,
+                exercicio_original_id: exercise.originalId || null,
+                nome: exercise.name,
+                grupo_muscular: exercise.muscleGroup,
+                series: exercise.sets,
+                repeticoes: exercise.reps?.toString() || null,
+                oculto: false,
+                ordem: i + 1,
+                card_original_id: (exercise as any).cardOriginalId || null,
+              });
+          }
         }
       }
     }
