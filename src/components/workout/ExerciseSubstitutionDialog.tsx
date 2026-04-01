@@ -54,6 +54,7 @@ export function ExerciseSubstitutionDialog({
   onClose,
   currentExercise,
   type,
+  isAdvanced = false,
   onConfirm
 }: ExerciseSubstitutionDialogProps) {
   const [availableExercises, setAvailableExercises] = useState<Exercise[]>([]);
