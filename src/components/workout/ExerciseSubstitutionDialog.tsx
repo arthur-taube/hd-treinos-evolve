@@ -183,13 +183,14 @@ export function ExerciseSubstitutionDialog({
 
   const fetchRepsRanges = async () => {
     try {
+      const tableName = isAdvanced ? 'faixas_repeticoes_avancado' : 'faixas_repeticoes';
       const { data, error } = await supabase
-        .from('faixas_repeticoes')
+        .from(tableName)
         .select('*')
         .order('min_reps');
 
       if (error) throw error;
-      setRepsRanges(data || []);
+      setRepsRanges((data || []).map(r => ({ ...r, tipo: (r as any).tipo || '' })));
     } catch (error: any) {
       console.error("Error fetching reps ranges:", error);
     }
