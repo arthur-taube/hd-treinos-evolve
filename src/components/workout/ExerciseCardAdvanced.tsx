@@ -314,6 +314,22 @@ export function ExerciseCardAdvanced({
           }
         ]}
       />
+      <ExerciseSubstitutionDialog
+        isOpen={showSubstitutionDialog}
+        onClose={() => setShowSubstitutionDialog(false)}
+        currentExercise={{
+          id: exercise.id,
+          nome: exercise.nome,
+          grupo_muscular: exercise.grupo_muscular,
+          series: exercise.series,
+          repeticoes: exercise.repeticoes,
+          exercicio_original_id: exercise.exercicio_original_id || '',
+          treino_usuario_id: exercise.treino_usuario_id
+        }}
+        type={substitutionType}
+        isAdvanced={true}
+        onConfirm={handleSubstitutionConfirm}
+      />
     </>
   );
 }
