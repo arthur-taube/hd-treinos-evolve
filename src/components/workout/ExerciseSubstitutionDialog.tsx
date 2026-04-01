@@ -38,6 +38,7 @@ interface ExerciseSubstitutionDialogProps {
     treino_usuario_id: string;
   };
   type: 'replace-all' | 'replace-this';
+  isAdvanced?: boolean;
   onConfirm: (data: {
     exerciseId: string;
     exerciseName: string;
