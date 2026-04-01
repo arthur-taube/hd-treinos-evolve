@@ -38,6 +38,7 @@ interface ExerciseSubstitutionDialogProps {
     treino_usuario_id: string;
   };
   type: 'replace-all' | 'replace-this';
+  isAdvanced?: boolean;
   onConfirm: (data: {
     exerciseId: string;
     exerciseName: string;
@@ -53,6 +54,7 @@ export function ExerciseSubstitutionDialog({
   onClose,
   currentExercise,
   type,
+  isAdvanced = false,
   onConfirm
 }: ExerciseSubstitutionDialogProps) {
   const [availableExercises, setAvailableExercises] = useState<Exercise[]>([]);
@@ -78,9 +80,12 @@ export function ExerciseSubstitutionDialog({
 
   const fetchExerciseDetails = async () => {
     try {
+      const userTable = isAdvanced ? 'exercicios_treino_usuario_avancado' : 'exercicios_treino_usuario';
+      const templateTable = isAdvanced ? 'exercicios_treino_avancado' : 'exercicios_treino';
+
       // First try to get card_original_id from the user's exercise
       const { data: exercicioUsuario, error: userExError } = await supabase
-        .from('exercicios_treino_usuario')
+        .from(userTable)
         .select('card_original_id')
         .eq('id', currentExercise.id)
         .single();
@@ -90,9 +95,8 @@ export function ExerciseSubstitutionDialog({
       let exercicioTreino = null;
 
       if (exercicioUsuario?.card_original_id) {
-        // Primary path: fetch by card_original_id (works for custom and reordered exercises)
         const { data, error } = await supabase
-          .from('exercicios_treino')
+          .from(templateTable)
           .select('available_groups, allow_multiple_groups')
           .eq('id', exercicioUsuario.card_original_id)
           .single();
@@ -110,7 +114,7 @@ export function ExerciseSubstitutionDialog({
 
         if (treinoData) {
           const { data } = await supabase
-            .from('exercicios_treino')
+            .from(templateTable)
             .select('available_groups, allow_multiple_groups')
             .eq('treino_id', treinoData.treino_original_id)
             .eq('exercicio_original_id', currentExercise.exercicio_original_id)
@@ -132,12 +136,40 @@ export function ExerciseSubstitutionDialog({
   const fetchExercises = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.rpc('get_available_exercises', {
-        p_muscle_group: selectedMuscleGroup
-      });
+      if (isAdvanced) {
+        // For advanced: query exercicios_avancados directly with array overlap
+        const { data, error } = await supabase
+          .from('exercicios_avancados')
+          .select('id, nome')
+          .overlaps('grupo_muscular', [selectedMuscleGroup])
+          .order('nome');
 
-      if (error) throw error;
-      setAvailableExercises(data || []);
+        if (error) throw error;
+        
+        // Also fetch custom exercises
+        const { data: customData } = await supabase
+          .from('exercicios_custom')
+          .select('id, nome, user_id')
+          .eq('grupo_muscular', selectedMuscleGroup)
+          .eq('user_id', (await supabase.auth.getUser()).data.user?.id || '');
+
+        const exercises: Exercise[] = [
+          ...(data || []).map(e => ({ id: e.id, nome: e.nome, is_custom: false })),
+          ...(customData || []).map(e => ({ id: e.id, nome: e.nome, is_custom: true, user_id: e.user_id }))
+        ].sort((a, b) => {
+          if (a.is_custom !== b.is_custom) return a.is_custom ? 1 : -1;
+          return a.nome.localeCompare(b.nome);
+        });
+
+        setAvailableExercises(exercises);
+      } else {
+        const { data, error } = await supabase.rpc('get_available_exercises', {
+          p_muscle_group: selectedMuscleGroup
+        });
+
+        if (error) throw error;
+        setAvailableExercises(data || []);
+      }
     } catch (error: any) {
       toast({
         title: "Erro ao carregar exercícios",
@@ -151,13 +183,14 @@ export function ExerciseSubstitutionDialog({
 
   const fetchRepsRanges = async () => {
     try {
+      const tableName = isAdvanced ? 'faixas_repeticoes_avancado' : 'faixas_repeticoes';
       const { data, error } = await supabase
-        .from('faixas_repeticoes')
+        .from(tableName)
         .select('*')
         .order('min_reps');
 
       if (error) throw error;
-      setRepsRanges(data || []);
+      setRepsRanges((data || []).map(r => ({ ...r, tipo: (r as any).tipo || '' })));
     } catch (error: any) {
       console.error("Error fetching reps ranges:", error);
     }
@@ -165,7 +198,8 @@ export function ExerciseSubstitutionDialog({
 
   const getMuscleGroups = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_distinct_muscle_groups');
+      const rpcName = isAdvanced ? 'get_distinct_muscle_groups_avancado' : 'get_distinct_muscle_groups';
+      const { data, error } = await supabase.rpc(rpcName);
       if (error) throw error;
       return data?.map(item => item.grupo_muscular) || [];
     } catch (error) {

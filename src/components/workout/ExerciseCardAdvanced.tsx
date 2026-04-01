@@ -6,10 +6,13 @@ import { ExerciseObservation } from "./components/ExerciseObservation";
 import { ExerciseSetsAdvanced } from "./components/ExerciseSetsAdvanced";
 import { FeedbackDialog } from "./FeedbackDialog";
 import { ARAFeedbackDialog } from "./ARAFeedbackDialog";
+import { ExerciseSubstitutionDialog } from "./ExerciseSubstitutionDialog";
 import { useExerciseStateAdvanced } from "./hooks/useExerciseStateAdvanced";
 import { useExerciseActionsAdvanced } from "./hooks/useExerciseActionsAdvanced";
 import { usePreviousSeriesAdvanced } from "./hooks/usePreviousSeriesAdvanced";
 import { useEpleyProgression } from "@/hooks/useEpleyProgression";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 export interface ExerciseAdvancedData {
   id: string;
@@ -50,6 +53,8 @@ export function ExerciseCardAdvanced({
 }: ExerciseCardAdvancedProps) {
   const [showARADialog, setShowARADialog] = useState(false);
   const [showAMPDialog, setShowAMPDialog] = useState(false);
+  const [showSubstitutionDialog, setShowSubstitutionDialog] = useState(false);
+  const [substitutionType, setSubstitutionType] = useState<'replace-all' | 'replace-this'>('replace-this');
 
   const {
     isOpen, setIsOpen,
@@ -151,6 +156,56 @@ export function ExerciseCardAdvanced({
     // TODO: Open method selection dialog
   };
 
+  const handleOpenSubstitution = (type: 'replace-all' | 'replace-this') => {
+    setSubstitutionType(type);
+    setShowSubstitutionDialog(true);
+  };
+
+  const handleSubstitutionConfirm = async (data: {
+    exerciseId: string;
+    exerciseName: string;
+    muscleGroup: string;
+    series: number;
+    reps: string;
+    isCustom: boolean;
+  }) => {
+    try {
+      if (substitutionType === 'replace-this') {
+        await supabase.rpc('apply_temporary_substitution_advanced', {
+          p_exercise_id: exercise.id,
+          p_substitute_exercise_id: data.exerciseId,
+          p_substitute_name: data.exerciseName,
+          p_is_custom_substitute: data.isCustom
+        });
+        toast({
+          title: "Exercício substituído",
+          description: `${data.exerciseName} substituirá ${exercise.nome} apenas neste treino.`
+        });
+      } else {
+        await supabase.rpc('replace_exercise_future_instances_advanced', {
+          p_current_exercise_id: exercise.id,
+          p_new_exercise_id: data.exerciseId,
+          p_new_exercise_name: data.exerciseName,
+          p_new_series: data.series,
+          p_new_reps: data.reps,
+          p_new_muscle_group: data.muscleGroup,
+          p_is_custom_exercise: data.isCustom
+        });
+        toast({
+          title: "Exercício alterado",
+          description: `${data.exerciseName} substituirá ${exercise.nome} em todos os treinos futuros.`
+        });
+      }
+      window.location.reload();
+    } catch (error: any) {
+      toast({
+        title: "Erro na substituição",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <>
       <Card className="mb-4 overflow-hidden">
@@ -164,7 +219,7 @@ export function ExerciseCardAdvanced({
           setShowObservationInput={setShowObservationInput}
           setShowIncrementDialog={setShowIncrementDialog}
           skipIncompleteSets={skipIncompleteSets}
-          onSubstitutionRequest={() => {}}
+          onSubstitutionRequest={handleOpenSubstitution}
           onMethodChange={handleMethodChange}
         />
 
@@ -258,6 +313,22 @@ export function ExerciseCardAdvanced({
             description: "Eu notei perda de força/performance nesse exercício e estou sentindo dificuldade na recuperação (treino excessivo)."
           }
         ]}
+      />
+      <ExerciseSubstitutionDialog
+        isOpen={showSubstitutionDialog}
+        onClose={() => setShowSubstitutionDialog(false)}
+        currentExercise={{
+          id: exercise.id,
+          nome: exercise.nome,
+          grupo_muscular: exercise.grupo_muscular,
+          series: exercise.series,
+          repeticoes: exercise.repeticoes,
+          exercicio_original_id: exercise.exercicio_original_id || '',
+          treino_usuario_id: exercise.treino_usuario_id
+        }}
+        type={substitutionType}
+        isAdvanced={true}
+        onConfirm={handleSubstitutionConfirm}
       />
     </>
   );
