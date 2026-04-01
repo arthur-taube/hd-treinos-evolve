@@ -219,7 +219,7 @@ export function ExerciseCardAdvanced({
           setShowObservationInput={setShowObservationInput}
           setShowIncrementDialog={setShowIncrementDialog}
           skipIncompleteSets={skipIncompleteSets}
-          onSubstitutionRequest={() => {}}
+          onSubstitutionRequest={handleOpenSubstitution}
           onMethodChange={handleMethodChange}
         />
 
