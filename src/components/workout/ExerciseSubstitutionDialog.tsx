@@ -136,12 +136,40 @@ export function ExerciseSubstitutionDialog({
   const fetchExercises = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.rpc('get_available_exercises', {
-        p_muscle_group: selectedMuscleGroup
-      });
+      if (isAdvanced) {
+        // For advanced: query exercicios_avancados directly with array overlap
+        const { data, error } = await supabase
+          .from('exercicios_avancados')
+          .select('id, nome')
+          .overlaps('grupo_muscular', [selectedMuscleGroup])
+          .order('nome');
 
-      if (error) throw error;
-      setAvailableExercises(data || []);
+        if (error) throw error;
+        
+        // Also fetch custom exercises
+        const { data: customData } = await supabase
+          .from('exercicios_custom')
+          .select('id, nome, user_id')
+          .eq('grupo_muscular', selectedMuscleGroup)
+          .eq('user_id', (await supabase.auth.getUser()).data.user?.id || '');
+
+        const exercises: Exercise[] = [
+          ...(data || []).map(e => ({ id: e.id, nome: e.nome, is_custom: false })),
+          ...(customData || []).map(e => ({ id: e.id, nome: e.nome, is_custom: true, user_id: e.user_id }))
+        ].sort((a, b) => {
+          if (a.is_custom !== b.is_custom) return a.is_custom ? 1 : -1;
+          return a.nome.localeCompare(b.nome);
+        });
+
+        setAvailableExercises(exercises);
+      } else {
+        const { data, error } = await supabase.rpc('get_available_exercises', {
+          p_muscle_group: selectedMuscleGroup
+        });
+
+        if (error) throw error;
+        setAvailableExercises(data || []);
+      }
     } catch (error: any) {
       toast({
         title: "Erro ao carregar exercícios",
