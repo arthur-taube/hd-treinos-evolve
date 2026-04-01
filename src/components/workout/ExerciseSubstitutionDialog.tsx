@@ -198,7 +198,8 @@ export function ExerciseSubstitutionDialog({
 
   const getMuscleGroups = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_distinct_muscle_groups');
+      const rpcName = isAdvanced ? 'get_distinct_muscle_groups_avancado' : 'get_distinct_muscle_groups';
+      const { data, error } = await supabase.rpc(rpcName);
       if (error) throw error;
       return data?.map(item => item.grupo_muscular) || [];
     } catch (error) {
