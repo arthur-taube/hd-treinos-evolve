@@ -1223,6 +1223,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      apply_temporary_substitution_advanced: {
+        Args: {
+          p_exercise_id: string
+          p_is_custom_substitute?: boolean
+          p_substitute_exercise_id: string
+          p_substitute_name: string
+        }
+        Returns: undefined
+      }
       ensure_series_table: { Args: never; Returns: undefined }
       get_available_exercises: {
         Args: { p_muscle_group: string }
@@ -1274,6 +1283,18 @@ export type Database = {
         Returns: boolean
       }
       replace_exercise_future_instances: {
+        Args: {
+          p_current_exercise_id: string
+          p_is_custom_exercise?: boolean
+          p_new_exercise_id: string
+          p_new_exercise_name: string
+          p_new_muscle_group: string
+          p_new_reps: string
+          p_new_series: number
+        }
+        Returns: undefined
+      }
+      replace_exercise_future_instances_advanced: {
         Args: {
           p_current_exercise_id: string
           p_is_custom_exercise?: boolean
