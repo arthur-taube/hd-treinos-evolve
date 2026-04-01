@@ -53,6 +53,8 @@ export function ExerciseCardAdvanced({
 }: ExerciseCardAdvancedProps) {
   const [showARADialog, setShowARADialog] = useState(false);
   const [showAMPDialog, setShowAMPDialog] = useState(false);
+  const [showSubstitutionDialog, setShowSubstitutionDialog] = useState(false);
+  const [substitutionType, setSubstitutionType] = useState<'replace-all' | 'replace-this'>('replace-this');
 
   const {
     isOpen, setIsOpen,
