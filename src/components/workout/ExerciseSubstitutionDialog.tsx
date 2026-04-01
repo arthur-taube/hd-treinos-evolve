@@ -80,9 +80,12 @@ export function ExerciseSubstitutionDialog({
 
   const fetchExerciseDetails = async () => {
     try {
+      const userTable = isAdvanced ? 'exercicios_treino_usuario_avancado' : 'exercicios_treino_usuario';
+      const templateTable = isAdvanced ? 'exercicios_treino_avancado' : 'exercicios_treino';
+
       // First try to get card_original_id from the user's exercise
       const { data: exercicioUsuario, error: userExError } = await supabase
-        .from('exercicios_treino_usuario')
+        .from(userTable)
         .select('card_original_id')
         .eq('id', currentExercise.id)
         .single();
@@ -92,9 +95,8 @@ export function ExerciseSubstitutionDialog({
       let exercicioTreino = null;
 
       if (exercicioUsuario?.card_original_id) {
-        // Primary path: fetch by card_original_id (works for custom and reordered exercises)
         const { data, error } = await supabase
-          .from('exercicios_treino')
+          .from(templateTable)
           .select('available_groups, allow_multiple_groups')
           .eq('id', exercicioUsuario.card_original_id)
           .single();
@@ -112,7 +114,7 @@ export function ExerciseSubstitutionDialog({
 
         if (treinoData) {
           const { data } = await supabase
-            .from('exercicios_treino')
+            .from(templateTable)
             .select('available_groups, allow_multiple_groups')
             .eq('treino_id', treinoData.treino_original_id)
             .eq('exercicio_original_id', currentExercise.exercicio_original_id)
