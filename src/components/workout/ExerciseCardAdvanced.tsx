@@ -6,10 +6,13 @@ import { ExerciseObservation } from "./components/ExerciseObservation";
 import { ExerciseSetsAdvanced } from "./components/ExerciseSetsAdvanced";
 import { FeedbackDialog } from "./FeedbackDialog";
 import { ARAFeedbackDialog } from "./ARAFeedbackDialog";
+import { ExerciseSubstitutionDialog } from "./ExerciseSubstitutionDialog";
 import { useExerciseStateAdvanced } from "./hooks/useExerciseStateAdvanced";
 import { useExerciseActionsAdvanced } from "./hooks/useExerciseActionsAdvanced";
 import { usePreviousSeriesAdvanced } from "./hooks/usePreviousSeriesAdvanced";
 import { useEpleyProgression } from "@/hooks/useEpleyProgression";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 export interface ExerciseAdvancedData {
   id: string;
