@@ -33,7 +33,8 @@ export function useARTCheck(
     setLoading(true);
     try {
       // 1. Get muscles of current workout exercises
-      const originalIds = currentExercises
+      const araArtExercises = currentExercises.filter(e => e.modelo_feedback !== 'AMP');
+      const originalIds = araArtExercises
         .map(e => e.exercicio_original_id)
         .filter(Boolean) as string[];
 
