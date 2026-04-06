@@ -17,7 +17,7 @@ export interface PendingARTExercise {
 export function useARTCheck(
   programaUsuarioId: string | null,
   currentWorkoutId: string | null,
-  currentExercises: { exercicio_original_id: string | null }[],
+  currentExercises: { exercicio_original_id: string | null; modelo_feedback?: string | null }[],
   isAdvanced: boolean
 ) {
   const [pendingExercises, setPendingExercises] = useState<PendingARTExercise[]>([]);
