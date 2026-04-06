@@ -17,7 +17,7 @@ export interface PendingARTExercise {
 export function useARTCheck(
   programaUsuarioId: string | null,
   currentWorkoutId: string | null,
-  currentExercises: { exercicio_original_id: string | null }[],
+  currentExercises: { exercicio_original_id: string | null; modelo_feedback?: string | null }[],
   isAdvanced: boolean
 ) {
   const [pendingExercises, setPendingExercises] = useState<PendingARTExercise[]>([]);
@@ -33,7 +33,8 @@ export function useARTCheck(
     setLoading(true);
     try {
       // 1. Get muscles of current workout exercises
-      const originalIds = currentExercises
+      const araArtExercises = currentExercises.filter(e => e.modelo_feedback !== 'AMP');
+      const originalIds = araArtExercises
         .map(e => e.exercicio_original_id)
         .filter(Boolean) as string[];
 
@@ -86,7 +87,8 @@ export function useARTCheck(
         .in('treino_usuario_id', prevWorkoutIds)
         .not('avaliacao_pump', 'is', null)
         .is('avaliacao_dor', null)
-        .eq('concluido', true);
+        .eq('concluido', true)
+        .neq('modelo_feedback', 'AMP');
 
       if (!pendingCandidates || pendingCandidates.length === 0) { setLoading(false); return; }
 
