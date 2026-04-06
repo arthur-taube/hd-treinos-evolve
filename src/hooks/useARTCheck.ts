@@ -87,7 +87,8 @@ export function useARTCheck(
         .in('treino_usuario_id', prevWorkoutIds)
         .not('avaliacao_pump', 'is', null)
         .is('avaliacao_dor', null)
-        .eq('concluido', true);
+        .eq('concluido', true)
+        .neq('modelo_feedback', 'AMP');
 
       if (!pendingCandidates || pendingCandidates.length === 0) { setLoading(false); return; }
 
