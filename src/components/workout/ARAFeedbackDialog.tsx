@@ -93,6 +93,11 @@ export function ARAFeedbackDialog({
         <DialogHeader>
           <DialogTitle>Avaliação das Respostas Agudas</DialogTitle>
           <DialogDescription>{exerciseName}</DialogDescription>
+          {muscleGroup && (
+            <p className="text-sm text-muted-foreground pt-1">
+              Como você sentiu o(s) músculo(s) <span className="font-medium text-foreground">{muscleGroup}</span> após o exercício <span className="font-medium text-foreground">{exerciseName}</span>?
+            </p>
+          )}
         </DialogHeader>
 
         <div className="space-y-5 py-2">
