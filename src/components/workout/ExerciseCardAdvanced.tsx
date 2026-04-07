@@ -337,6 +337,14 @@ export function ExerciseCardAdvanced({
         isAdvanced={true}
         onConfirm={handleSubstitutionConfirm}
       />
+      <SpecialMethodDialog
+        isOpen={showMethodDialog}
+        onClose={() => setShowMethodDialog(false)}
+        exerciseId={exercise.id}
+        exerciseName={exercise.nome}
+        currentMethod={exercise.metodo_especial || null}
+        onSaved={handleMethodSaved}
+      />
     </>
   );
 }
