@@ -153,9 +153,13 @@ export function ExerciseCardAdvanced({
     setShowARADialog(false);
   };
 
-  // Placeholder for method change (will be implemented later)
   const handleMethodChange = () => {
-    // TODO: Open method selection dialog
+    setShowMethodDialog(true);
+  };
+
+  const handleMethodSaved = () => {
+    setShowMethodDialog(false);
+    window.location.reload();
   };
 
   const handleOpenSubstitution = (type: 'replace-all' | 'replace-this') => {
