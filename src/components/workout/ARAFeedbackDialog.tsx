@@ -12,6 +12,7 @@ import {
 interface ARAFeedbackDialogProps {
   isOpen: boolean;
   exerciseName: string;
+  muscleGroup?: string;
   onSubmit: (pumpValue: number, fadigaValue: number) => void;
 }
 
