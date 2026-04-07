@@ -7,6 +7,7 @@ import { ExerciseSetsAdvanced } from "./components/ExerciseSetsAdvanced";
 import { FeedbackDialog } from "./FeedbackDialog";
 import { ARAFeedbackDialog } from "./ARAFeedbackDialog";
 import { ExerciseSubstitutionDialog } from "./ExerciseSubstitutionDialog";
+import { SpecialMethodDialog } from "./SpecialMethodDialog";
 import { useExerciseStateAdvanced } from "./hooks/useExerciseStateAdvanced";
 import { useExerciseActionsAdvanced } from "./hooks/useExerciseActionsAdvanced";
 import { usePreviousSeriesAdvanced } from "./hooks/usePreviousSeriesAdvanced";
@@ -54,6 +55,7 @@ export function ExerciseCardAdvanced({
   const [showARADialog, setShowARADialog] = useState(false);
   const [showAMPDialog, setShowAMPDialog] = useState(false);
   const [showSubstitutionDialog, setShowSubstitutionDialog] = useState(false);
+  const [showMethodDialog, setShowMethodDialog] = useState(false);
   const [substitutionType, setSubstitutionType] = useState<'replace-all' | 'replace-this'>('replace-this');
 
   const {
@@ -151,9 +153,13 @@ export function ExerciseCardAdvanced({
     setShowARADialog(false);
   };
 
-  // Placeholder for method change (will be implemented later)
   const handleMethodChange = () => {
-    // TODO: Open method selection dialog
+    setShowMethodDialog(true);
+  };
+
+  const handleMethodSaved = () => {
+    setShowMethodDialog(false);
+    window.location.reload();
   };
 
   const handleOpenSubstitution = (type: 'replace-all' | 'replace-this') => {
@@ -282,6 +288,7 @@ export function ExerciseCardAdvanced({
       <ARAFeedbackDialog
         isOpen={showARADialog}
         exerciseName={exercise.nome}
+        muscleGroup={exercise.grupo_muscular}
         onSubmit={handleARASubmit}
       />
 
@@ -329,6 +336,14 @@ export function ExerciseCardAdvanced({
         type={substitutionType}
         isAdvanced={true}
         onConfirm={handleSubstitutionConfirm}
+      />
+      <SpecialMethodDialog
+        isOpen={showMethodDialog}
+        onClose={() => setShowMethodDialog(false)}
+        exerciseId={exercise.id}
+        exerciseName={exercise.nome}
+        currentMethod={exercise.metodo_especial || null}
+        onSaved={handleMethodSaved}
       />
     </>
   );

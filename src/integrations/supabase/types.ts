@@ -1324,6 +1324,10 @@ export type Database = {
           id: string
         }[]
       }
+      update_special_method_advanced: {
+        Args: { p_exercise_id: string; p_method_name?: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "developer" | "user"
