@@ -53,6 +53,7 @@ const FADIGA_OPTIONS = [
 export function ARAFeedbackDialog({
   isOpen,
   exerciseName,
+  muscleGroup,
   onSubmit,
 }: ARAFeedbackDialogProps) {
   const [selectedPump, setSelectedPump] = useState<number | null>(null);
