@@ -55,6 +55,7 @@ export function ExerciseCardAdvanced({
   const [showARADialog, setShowARADialog] = useState(false);
   const [showAMPDialog, setShowAMPDialog] = useState(false);
   const [showSubstitutionDialog, setShowSubstitutionDialog] = useState(false);
+  const [showMethodDialog, setShowMethodDialog] = useState(false);
   const [substitutionType, setSubstitutionType] = useState<'replace-all' | 'replace-this'>('replace-this');
 
   const {
