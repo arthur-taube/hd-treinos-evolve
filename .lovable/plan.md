@@ -1,38 +1,51 @@
 
 
-## Plano: Filtrar exercícios AMP da detecção de ART
+## Plano: Texto contextual na ARA + Dialog de Método Especial com propagação
 
-O problema: a lógica atual do `useARTCheck` considera **todos** os exercícios ao montar a lista de músculos e ao buscar candidatos pendentes de ART, incluindo os que usam modelo AMP. Como AMP é independente de ARA/ART, esses exercícios não devem participar do cruzamento muscular.
+### 1. `ARAFeedbackDialog.tsx` — Texto contextual
 
-### Alteração em `src/hooks/useARTCheck.ts`
+- Adicionar prop `muscleGroup?: string`
+- Abaixo do `DialogDescription` (nome do exercício), inserir:
+  `"Como você sentiu o(s) músculo(s) [grupo muscular] após o exercício [nome do exercício]?"`
 
-**1. Ampliar o tipo de `currentExercises` no parâmetro do hook**
+### 2. `ExerciseCardAdvanced.tsx` — Passar `grupo_muscular` ao ARA dialog
 
-Aceitar `modelo_feedback` além de `exercicio_original_id`:
-```typescript
-currentExercises: { exercicio_original_id: string | null; modelo_feedback?: string | null }[]
-```
+- Passar `muscleGroup={exercise.grupo_muscular}` no `<ARAFeedbackDialog>`
 
-**2. Filtrar exercícios do workout atual (passo 1)**
+### 3. Novo componente `SpecialMethodDialog.tsx`
 
-Antes de coletar `originalIds`, filtrar apenas exercícios com `modelo_feedback !== 'AMP'` (ou seja, somente `ARA/ART` ou `null`/`undefined`):
-```typescript
-const araArtExercises = currentExercises.filter(e => e.modelo_feedback !== 'AMP');
-const originalIds = araArtExercises.map(e => e.exercicio_original_id).filter(Boolean);
-```
+Dialog com:
+- Fetch da tabela `metodos_especiais` (campos `id`, `nome`, `descricao`)
+- Select/dropdown listando os métodos pelo `nome`
+- Ao selecionar, exibir `descricao` abaixo do select
+- Opção "Nenhum" para remover método especial
+- Botões "Cancelar" e "Salvar"
 
-**3. Filtrar candidatos pendentes nos workouts anteriores (passo 4)**
+### 4. Ao salvar método especial — Update + propagação futura
 
-Adicionar `.neq('modelo_feedback', 'AMP')` na query que busca exercícios com ARA feita mas ART pendente:
-```typescript
-.neq('modelo_feedback', 'AMP')
-```
+Ao salvar:
+1. Update `exercicios_treino_usuario_avancado` set `metodo_especial = X` where `id = exerciseId`
+2. Propagar para instâncias futuras: update todos os registros em `exercicios_treino_usuario_avancado` que compartilhem o mesmo `card_original_id`, estejam em semanas >= semana atual do mesmo `programa_usuario_id`, e não estejam concluídos
 
-Isso garante que exercícios AMP não entrem como candidatos a ART, nem contribuam músculos para o cruzamento.
+Isso será feito via uma nova função SQL `update_special_method_advanced` que:
+- Recebe `p_exercise_id` e `p_method_name` (text, nullable)
+- Busca `card_original_id`, `treino_usuario_id` do exercício
+- Busca `programa_usuario_id` e `ordem_semana` do treino
+- Atualiza o exercício atual + todos os futuros não concluídos com mesmo `card_original_id`
 
-### Arquivo
+### 5. `ExerciseCardAdvanced.tsx` — Integrar dialog
+
+- Adicionar estado `showMethodDialog`
+- `handleMethodChange` → `setShowMethodDialog(true)`
+- Renderizar `<SpecialMethodDialog>` com `exerciseId`, `currentMethod`, `onSave`, `onClose`
+- Após salvar com sucesso, reload da página (mesmo padrão da substituição)
+
+### Arquivos
 
 | Arquivo | Alteração |
 |---|---|
-| `src/hooks/useARTCheck.ts` | Filtrar AMP em ambos os lados do cruzamento |
+| Migration SQL | Nova função `update_special_method_advanced` |
+| `src/components/workout/ARAFeedbackDialog.tsx` | Prop `muscleGroup` + texto contextual |
+| `src/components/workout/SpecialMethodDialog.tsx` | Novo componente |
+| `src/components/workout/ExerciseCardAdvanced.tsx` | Integrar ambos os dialogs |
 
