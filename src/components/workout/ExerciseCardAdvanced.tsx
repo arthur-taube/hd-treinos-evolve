@@ -288,6 +288,7 @@ export function ExerciseCardAdvanced({
       <ARAFeedbackDialog
         isOpen={showARADialog}
         exerciseName={exercise.nome}
+        muscleGroup={exercise.grupo_muscular}
         onSubmit={handleARASubmit}
       />
 
