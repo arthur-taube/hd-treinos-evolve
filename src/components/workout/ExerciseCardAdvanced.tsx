@@ -7,6 +7,7 @@ import { ExerciseSetsAdvanced } from "./components/ExerciseSetsAdvanced";
 import { FeedbackDialog } from "./FeedbackDialog";
 import { ARAFeedbackDialog } from "./ARAFeedbackDialog";
 import { ExerciseSubstitutionDialog } from "./ExerciseSubstitutionDialog";
+import { SpecialMethodDialog } from "./SpecialMethodDialog";
 import { useExerciseStateAdvanced } from "./hooks/useExerciseStateAdvanced";
 import { useExerciseActionsAdvanced } from "./hooks/useExerciseActionsAdvanced";
 import { usePreviousSeriesAdvanced } from "./hooks/usePreviousSeriesAdvanced";
