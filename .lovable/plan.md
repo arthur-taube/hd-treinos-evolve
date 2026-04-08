@@ -1,51 +1,44 @@
 
 
-## Plano: Texto contextual na ARA + Dialog de Método Especial com propagação
+## Plano: Proteção de rotas + redirecionamento inteligente na Index
 
-### 1. `ARAFeedbackDialog.tsx` — Texto contextual
+### Problema atual
 
-- Adicionar prop `muscleGroup?: string`
-- Abaixo do `DialogDescription` (nome do exercício), inserir:
-  `"Como você sentiu o(s) músculo(s) [grupo muscular] após o exercício [nome do exercício]?"`
+1. **Sem proteção**: `AppLayout` não verifica autenticação — qualquer rota é acessível sem login
+2. **Index fixa**: `/` sempre redireciona para `/auth`, mesmo para usuários já logados
+3. **Auth acessível logado**: usuários autenticados podem voltar para `/auth` manualmente
 
-### 2. `ExerciseCardAdvanced.tsx` — Passar `grupo_muscular` ao ARA dialog
+### Solução
 
-- Passar `muscleGroup={exercise.grupo_muscular}` no `<ARAFeedbackDialog>`
+**1. Criar componente `ProtectedRoute`**
 
-### 3. Novo componente `SpecialMethodDialog.tsx`
+Novo arquivo `src/components/auth/ProtectedRoute.tsx`:
+- Usa `useAuth()` para verificar `user` e `loading`
+- Se `loading`, exibe spinner/skeleton
+- Se não autenticado, redireciona para `/auth`
+- Se autenticado, renderiza `children`
 
-Dialog com:
-- Fetch da tabela `metodos_especiais` (campos `id`, `nome`, `descricao`)
-- Select/dropdown listando os métodos pelo `nome`
-- Ao selecionar, exibir `descricao` abaixo do select
-- Opção "Nenhum" para remover método especial
-- Botões "Cancelar" e "Salvar"
+**2. Atualizar `AppLayout`**
 
-### 4. Ao salvar método especial — Update + propagação futura
+Envolver o conteúdo com `ProtectedRoute`, tornando todas as rotas que usam `AppLayout` automaticamente protegidas.
 
-Ao salvar:
-1. Update `exercicios_treino_usuario_avancado` set `metodo_especial = X` where `id = exerciseId`
-2. Propagar para instâncias futuras: update todos os registros em `exercicios_treino_usuario_avancado` que compartilhem o mesmo `card_original_id`, estejam em semanas >= semana atual do mesmo `programa_usuario_id`, e não estejam concluídos
+**3. Atualizar `Index` (`/`)**
 
-Isso será feito via uma nova função SQL `update_special_method_advanced` que:
-- Recebe `p_exercise_id` e `p_method_name` (text, nullable)
-- Busca `card_original_id`, `treino_usuario_id` do exercício
-- Busca `programa_usuario_id` e `ordem_semana` do treino
-- Atualiza o exercício atual + todos os futuros não concluídos com mesmo `card_original_id`
+Condicionar o redirecionamento:
+- Autenticado → `/dashboard`
+- Não autenticado → `/auth`
+- Loading → spinner
 
-### 5. `ExerciseCardAdvanced.tsx` — Integrar dialog
+**4. Proteger Auth (`/auth`)**
 
-- Adicionar estado `showMethodDialog`
-- `handleMethodChange` → `setShowMethodDialog(true)`
-- Renderizar `<SpecialMethodDialog>` com `exerciseId`, `currentMethod`, `onSave`, `onClose`
-- Após salvar com sucesso, reload da página (mesmo padrão da substituição)
+Se o usuário já estiver logado e acessar `/auth`, redirecionar para `/dashboard`.
 
 ### Arquivos
 
 | Arquivo | Alteração |
 |---|---|
-| Migration SQL | Nova função `update_special_method_advanced` |
-| `src/components/workout/ARAFeedbackDialog.tsx` | Prop `muscleGroup` + texto contextual |
-| `src/components/workout/SpecialMethodDialog.tsx` | Novo componente |
-| `src/components/workout/ExerciseCardAdvanced.tsx` | Integrar ambos os dialogs |
+| `src/components/auth/ProtectedRoute.tsx` | Novo componente |
+| `src/components/layout/AppLayout.tsx` | Envolver com `ProtectedRoute` |
+| `src/pages/Index.tsx` | Redirecionamento condicional |
+| `src/pages/Auth.tsx` | Redirecionar logados para `/dashboard` |
 
