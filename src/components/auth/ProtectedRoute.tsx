@@ -1,15 +1,15 @@
 
-import { useEffect } from "react";
+import { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const Index = () => {
-  const { user, loading } = useAuth();
+interface ProtectedRouteProps {
+  children: ReactNode;
+}
 
-  useEffect(() => {
-    document.title = "HD Treinos | Evolua Seus Treinos";
-  }, []);
+const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -17,12 +17,17 @@ const Index = () => {
         <div className="space-y-4 w-full max-w-md px-4">
           <Skeleton className="h-8 w-3/4 mx-auto" />
           <Skeleton className="h-4 w-1/2 mx-auto" />
+          <Skeleton className="h-64 w-full rounded-lg" />
         </div>
       </div>
     );
   }
 
-  return <Navigate to={user ? "/dashboard" : "/auth"} replace />;
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  return <>{children}</>;
 };
 
-export default Index;
+export default ProtectedRoute;

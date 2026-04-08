@@ -1,11 +1,18 @@
 
 import { useState } from "react";
+import { Navigate } from "react-router-dom";
 import LoginForm from "@/components/auth/LoginForm";
 import RegisterForm from "@/components/auth/RegisterForm";
+import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
 
 const Auth = () => {
+  const { user, loading } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
+
+  if (!loading && user) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const toggleForm = () => {
     setIsLogin(!isLogin);
