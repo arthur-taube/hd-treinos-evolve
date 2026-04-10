@@ -132,7 +132,7 @@ const WorkoutTimer = () => {
           visible ? "max-h-16 opacity-100" : "max-h-0 opacity-0"
         }`}
       >
-        <div className="bg-card border-t border-border/40 px-3 py-2 flex items-center gap-2">
+        <div className="border-t border-border/40 px-3 py-2 flex items-center gap-2" style={{ backgroundColor: 'hsl(216, 30%, 40%)' }}>
           {/* Mode toggle - stacked vertically */}
           <div className="flex flex-col gap-0.5 shrink-0">
             <button
