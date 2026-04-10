@@ -361,6 +361,7 @@ export default function Workout() {
 
   return (
     <div className="pb-20">
+      <WorkoutTimer />
       <PageHeader title={treino?.nome || "Carregando..."}>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => navigateToAdjacentWorkout('previous')}>
