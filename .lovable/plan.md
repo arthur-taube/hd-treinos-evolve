@@ -1,44 +1,42 @@
 
 
-## Plano: Proteção de rotas + redirecionamento inteligente na Index
+## Plano: Cronômetro horizontal integrado aos Workouts
 
-### Problema atual
+### Componente `WorkoutTimer.tsx`
 
-1. **Sem proteção**: `AppLayout` não verifica autenticação — qualquer rota é acessível sem login
-2. **Index fixa**: `/` sempre redireciona para `/auth`, mesmo para usuários já logados
-3. **Auth acessível logado**: usuários autenticados podem voltar para `/auth` manualmente
+Barra horizontal retrátil, posicionada acima do `BottomNav`, com layout compacto:
 
-### Solução
+```text
+Recolhido:
+                         ⏱ ← botão semicircular toggle
 
-**1. Criar componente `ProtectedRoute`**
+Expandido:
+┌──────────────────────────────────────────────────┐
+│ [Cronômetro]                                     │
+│ [  Timer  ]   (-5s)  01:30  (+15s)  [▶] [⟲]    │
+└──────────────────────────────────────────────────┘
+```
 
-Novo arquivo `src/components/auth/ProtectedRoute.tsx`:
-- Usa `useAuth()` para verificar `user` e `loading`
-- Se `loading`, exibe spinner/skeleton
-- Se não autenticado, redireciona para `/auth`
-- Se autenticado, renderiza `children`
-
-**2. Atualizar `AppLayout`**
-
-Envolver o conteúdo com `ProtectedRoute`, tornando todas as rotas que usam `AppLayout` automaticamente protegidas.
-
-**3. Atualizar `Index` (`/`)**
-
-Condicionar o redirecionamento:
-- Autenticado → `/dashboard`
-- Não autenticado → `/auth`
-- Loading → spinner
-
-**4. Proteger Auth (`/auth`)**
-
-Se o usuário já estiver logado e acessar `/auth`, redirecionar para `/dashboard`.
+- **Esquerda**: Toggle de modo empilhado verticalmente (Cronômetro / Timer)
+- **Centro**: Display do tempo (MM:SS.cs para stopwatch, MM:SS para timer)
+- **Direita**: Botões de controle (Iniciar/Parar, Zerar)
+- **Timer**: botão -5s antes do display, +15s depois do display
+- **Timer inicia em 1:30** por padrão
+- Beep via Web Audio API quando timer chega a zero
+- Botão semicircular centralizado para expandir/recolher
 
 ### Arquivos
 
 | Arquivo | Alteração |
 |---|---|
-| `src/components/auth/ProtectedRoute.tsx` | Novo componente |
-| `src/components/layout/AppLayout.tsx` | Envolver com `ProtectedRoute` |
-| `src/pages/Index.tsx` | Redirecionamento condicional |
-| `src/pages/Auth.tsx` | Redirecionar logados para `/dashboard` |
+| `src/components/workout/WorkoutTimer.tsx` | Novo componente |
+| `src/pages/Workout.tsx` | Importar e renderizar `WorkoutTimer` |
+
+### Detalhes técnicos
+
+- Estado interno: modo, running, tempo, visibilidade
+- `useRef` + `setInterval` (10ms stopwatch, 1000ms timer)
+- Cleanup no unmount
+- Tailwind `transition-all` para animação de expand/collapse
+- `z-index` entre conteúdo e BottomNav
 
