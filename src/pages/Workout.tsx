@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronLeft, CheckCircle, ChevronRight } from "lucide-react";
+import WorkoutTimer from "@/components/workout/WorkoutTimer";
 import { ExerciseCard } from "@/components/workout/ExerciseCard";
 import { ExerciseCardAdvanced, ExerciseAdvancedData } from "@/components/workout/ExerciseCardAdvanced";
 import { FeedbackDialog } from "@/components/workout/FeedbackDialog";
