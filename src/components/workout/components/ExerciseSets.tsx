@@ -137,11 +137,11 @@ export function ExerciseSets({
       return <div key={index} className={`grid grid-cols-4 gap-2 items-center py-2 ${index !== sets.length - 1 ? "border-b" : ""}`}>
             <div>{set.number}</div>
             <div className="flex items-center">
-              <Input type="number" value={displayWeight} placeholder={placeholderWeight} onFocus={() => handleWeightFocus(index, suggestedWeight)} onChange={e => handleWeightChange(index, e.target.value)} step={0.5} className="w-20 h-8 text-sm" />
+              <Input type="number" value={displayWeight} placeholder={placeholderWeight} onFocus={() => handleWeightFocus(index, suggestedWeight)} onChange={e => handleWeightChange(index, e.target.value)} step={0.5} className="w-20 h-8 text-base" />
               <span className="ml-1 text-sm">kg</span>
             </div>
             <div>
-              <Input type="number" value={displayReps} placeholder={placeholderReps} onChange={e => handleRepsChange(index, Number(e.target.value))} min={0} step={1} className="w-20 h-8 text-sm" />
+              <Input type="number" value={displayReps} placeholder={placeholderReps} onChange={e => handleRepsChange(index, Number(e.target.value))} min={0} step={1} className="w-20 h-8 text-base" />
             </div>
             <div className="flex justify-center gap-1">
               <Button variant={set.completed ? "default" : "outline"} size="sm" className="h-8 w-8 p-0" onClick={() => handleSetComplete(index)}>
