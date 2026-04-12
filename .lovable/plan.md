@@ -1,42 +1,29 @@
 
+## Plano: Corrigir zoom automático em inputs no mobile
 
-## Plano: Cronômetro horizontal integrado aos Workouts
+### O problema
 
-### Componente `WorkoutTimer.tsx`
+Você está certo: o Safari (e outros browsers no iOS) aplicam zoom automático quando um campo de input tem `font-size` menor que **16px**. No código atual, os inputs de peso e reps no workout usam a classe `text-sm` (14px), o que dispara esse comportamento.
 
-Barra horizontal retrátil, posicionada acima do `BottomNav`, com layout compacto:
+### Solução
 
-```text
-Recolhido:
-                         ⏱ ← botão semicircular toggle
+Duas alterações simples:
 
-Expandido:
-┌──────────────────────────────────────────────────┐
-│ [Cronômetro]                                     │
-│ [  Timer  ]   (-5s)  01:30  (+15s)  [▶] [⟲]    │
-└──────────────────────────────────────────────────┘
+**1. Remover `text-sm` dos inputs de workout**
+
+Nos arquivos `ExerciseSets.tsx` e `ExerciseSetsAdvanced.tsx`, os inputs de peso e reps usam `className="w-20 h-8 text-sm"`. Trocar `text-sm` por `text-base` (16px) — tamanho mínimo para evitar o zoom.
+
+**2. Viewport meta tag (segurança extra)**
+
+Adicionar `maximum-scale=1` no `index.html` para prevenir qualquer zoom automático residual:
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
 ```
 
-- **Esquerda**: Toggle de modo empilhado verticalmente (Cronômetro / Timer)
-- **Centro**: Display do tempo (MM:SS.cs para stopwatch, MM:SS para timer)
-- **Direita**: Botões de controle (Iniciar/Parar, Zerar)
-- **Timer**: botão -5s antes do display, +15s depois do display
-- **Timer inicia em 1:30** por padrão
-- Beep via Web Audio API quando timer chega a zero
-- Botão semicircular centralizado para expandir/recolher
-
-### Arquivos
+### Arquivos afetados
 
 | Arquivo | Alteração |
 |---|---|
-| `src/components/workout/WorkoutTimer.tsx` | Novo componente |
-| `src/pages/Workout.tsx` | Importar e renderizar `WorkoutTimer` |
-
-### Detalhes técnicos
-
-- Estado interno: modo, running, tempo, visibilidade
-- `useRef` + `setInterval` (10ms stopwatch, 1000ms timer)
-- Cleanup no unmount
-- Tailwind `transition-all` para animação de expand/collapse
-- `z-index` entre conteúdo e BottomNav
-
+| `src/components/workout/components/ExerciseSets.tsx` | `text-sm` → `text-base` nos inputs |
+| `src/components/workout/components/ExerciseSetsAdvanced.tsx` | `text-sm` → `text-base` nos inputs |
+| `index.html` | Adicionar `maximum-scale=1` ao viewport |
