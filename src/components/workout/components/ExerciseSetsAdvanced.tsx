@@ -134,7 +134,7 @@ export function ExerciseSetsAdvanced({
                 onChange={e => handleRepsChange(index, Number(e.target.value))}
                 min={0}
                 step={1}
-                className="w-full h-8 text-sm"
+                className="w-full h-8 text-base"
               />
             </div>
             <div className="flex justify-center">
