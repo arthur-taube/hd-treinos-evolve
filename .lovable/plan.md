@@ -1,29 +1,52 @@
+## Plano: Configurar PWA instalável com ícones
 
-## Plano: Corrigir zoom automático em inputs no mobile
+O usuário enviou os 3 ícones necessários. Agora é só configurar.
 
-### O problema
+### Etapa 1: Copiar ícones para `public/icons/`
 
-Você está certo: o Safari (e outros browsers no iOS) aplicam zoom automático quando um campo de input tem `font-size` menor que **16px**. No código atual, os inputs de peso e reps no workout usam a classe `text-sm` (14px), o que dispara esse comportamento.
+- `apple-touch-icon.png` → `public/icons/apple-touch-icon.png`
+- `icon-192x192.png` → `public/icons/icon-192x192.png`
+- `icon-512x512.png` → `public/icons/icon-512x512.png`
 
-### Solução
+### Etapa 2: Criar `public/manifest.json`
 
-Duas alterações simples:
-
-**1. Remover `text-sm` dos inputs de workout**
-
-Nos arquivos `ExerciseSets.tsx` e `ExerciseSetsAdvanced.tsx`, os inputs de peso e reps usam `className="w-20 h-8 text-sm"`. Trocar `text-sm` por `text-base` (16px) — tamanho mínimo para evitar o zoom.
-
-**2. Viewport meta tag (segurança extra)**
-
-Adicionar `maximum-scale=1` no `index.html` para prevenir qualquer zoom automático residual:
-```html
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+```json
+{
+  "name": "HD Treinos",
+  "short_name": "HD Treinos",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "icons": [
+    { "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
 ```
 
-### Arquivos afetados
+### Etapa 3: Atualizar `index.html`
 
-| Arquivo | Alteração |
-|---|---|
-| `src/components/workout/components/ExerciseSets.tsx` | `text-sm` → `text-base` nos inputs |
-| `src/components/workout/components/ExerciseSetsAdvanced.tsx` | `text-sm` → `text-base` nos inputs |
-| `index.html` | Adicionar `maximum-scale=1` ao viewport |
+Adicionar no `<head>`:
+
+```html
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+```
+
+### Nota
+
+Sem service worker -- apenas manifest + meta tags. Isso permite instalação e aparência nativa (sem barra do browser) sem riscos de cache no preview. As funcionalidades PWA só funcionam no app publicado/deployed, não no preview do Lovable.
+
+### Arquivos
+
+
+| Arquivo                | Ação                    |
+| ---------------------- | ----------------------- |
+| `public/icons/*.png`   | Copiar 3 ícones         |
+| `public/manifest.json` | Criar                   |
+| `index.html`           | Adicionar meta tags PWA |
