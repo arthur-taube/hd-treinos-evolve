@@ -122,7 +122,7 @@ export function ExerciseSetsAdvanced({
                 onFocus={() => handleWeightFocus(index, suggestedWeight)}
                 onChange={e => handleWeightChange(index, e.target.value)}
                 step={0.5}
-                className="w-full h-8 text-sm"
+                className="w-full h-8 text-base"
               />
               <span className="ml-1 text-xs text-muted-foreground">kg</span>
             </div>
