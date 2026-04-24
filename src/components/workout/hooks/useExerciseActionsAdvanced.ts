@@ -193,9 +193,8 @@ export const useExerciseActionsAdvanced = (
       if (currentExercise) {
         const currentSeries = Number(currentExercise.series);
         const rawSeries = currentSeries + pumpValue + fadigaValue;
-        const newSeries = (rawSeries % 1 > 0.5) ? Math.ceil(rawSeries) : Math.floor(rawSeries);
 
-        if (newSeries !== currentSeries && newSeries >= 1) {
+        if (rawSeries >= 1) {
           const programaUsuarioId = (currentExercise.treinos_usuario as any).programa_usuario_id;
           const currentWeek = (currentExercise.treinos_usuario as any).ordem_semana;
 
@@ -216,7 +215,7 @@ export const useExerciseActionsAdvanced = (
             // Build query to find next instance
             let query = supabase
               .from('exercicios_treino_usuario_avancado')
-              .update({ series: newSeries })
+              .update({ series: rawSeries })
               .eq('concluido', false)
               .in('treino_usuario_id', nextWeekWorkoutIds);
 
@@ -270,9 +269,8 @@ export const useExerciseActionsAdvanced = (
       if (currentExercise) {
         const currentSeries = Number(currentExercise.series);
         const rawSeries = currentSeries + ampValue;
-        const newSeries = (rawSeries % 1 > 0.5) ? Math.ceil(rawSeries) : Math.floor(rawSeries);
 
-        if (newSeries !== currentSeries && newSeries >= 1) {
+        if (rawSeries >= 1) {
           const programaUsuarioId = (currentExercise.treinos_usuario as any).programa_usuario_id;
           const currentWeek = (currentExercise.treinos_usuario as any).ordem_semana;
 
@@ -291,7 +289,7 @@ export const useExerciseActionsAdvanced = (
 
             let query = supabase
               .from('exercicios_treino_usuario_avancado')
-              .update({ series: newSeries })
+              .update({ series: rawSeries })
               .eq('concluido', false)
               .in('treino_usuario_id', nextWeekWorkoutIds);
 

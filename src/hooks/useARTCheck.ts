@@ -146,9 +146,8 @@ export function useARTCheck(
         // 2. Recalculate series with ARA + ART
         const currentSeries = Number(exercise.series);
         const rawSeries = currentSeries + exercise.avaliacao_pump + exercise.avaliacao_fadiga + artValue;
-        const newSeries = (rawSeries % 1 > 0.5) ? Math.ceil(rawSeries) : Math.floor(rawSeries);
 
-        if (newSeries !== currentSeries && newSeries >= 1) {
+        if (rawSeries >= 1) {
           // Find the workout's week
           const { data: workoutData } = await supabase
             .from('treinos_usuario')
@@ -173,7 +172,7 @@ export function useARTCheck(
 
               let query = supabase
                 .from('exercicios_treino_usuario_avancado')
-                .update({ series: newSeries })
+                .update({ series: rawSeries })
                 .eq('concluido', false)
                 .in('treino_usuario_id', nextWeekIds);
 
