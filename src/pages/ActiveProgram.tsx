@@ -276,18 +276,59 @@ export default function ActiveProgram() {
   const handleRestartWorkout = async (treinoId: string) => {
     setActionLoading(true);
     try {
-      // 1. Resetar exercícios: limpar avaliações e status
-      await supabase
-        .from('exercicios_treino_usuario')
-        .update({
-          concluido: false,
-          avaliacao_dificuldade: null,
-          avaliacao_fadiga: null,
-          data_avaliacao: null
-        })
-        .eq('treino_usuario_id', treinoId);
+      const isAdvanced = programaOriginal && programaOriginal.nivel !== 'iniciante';
 
-      // 2. Resetar treino
+      // 1. Coletar IDs de exercícios do treino (das duas tabelas, por robustez)
+      const exerciseIds: string[] = [];
+
+      const { data: exBase } = await supabase
+        .from('exercicios_treino_usuario')
+        .select('id')
+        .eq('treino_usuario_id', treinoId);
+      (exBase || []).forEach(e => exerciseIds.push(e.id));
+
+      const { data: exAdv } = await supabase
+        .from('exercicios_treino_usuario_avancado' as any)
+        .select('id')
+        .eq('treino_usuario_id', treinoId);
+      (exAdv as any[] || []).forEach((e: any) => exerciseIds.push(e.id));
+
+      // 2. Deletar séries gravadas (peso/reps/concluida) — usuário refaz do zero
+      if (exerciseIds.length > 0) {
+        await supabase
+          .from('series_exercicio_usuario')
+          .delete()
+          .in('exercicio_usuario_id', exerciseIds);
+      }
+
+      // 3. Resetar exercícios + avaliações (na tabela correta)
+      if (isAdvanced) {
+        await supabase
+          .from('exercicios_treino_usuario_avancado' as any)
+          .update({
+            concluido: false,
+            avaliacao_pump: null,
+            avaliacao_fadiga: null,
+            avaliacao_dor: null,
+            avaliacao_recuperacao: null,
+            avaliacao_performance: null,
+            data_avaliacao: null,
+          })
+          .eq('treino_usuario_id', treinoId);
+      } else {
+        await supabase
+          .from('exercicios_treino_usuario')
+          .update({
+            concluido: false,
+            avaliacao_dificuldade: null,
+            avaliacao_fadiga: null,
+            avaliacao_dor: null,
+            data_avaliacao: null,
+          })
+          .eq('treino_usuario_id', treinoId);
+      }
+
+      // 4. Resetar treino
       await supabase
         .from('treinos_usuario')
         .update({
@@ -297,7 +338,7 @@ export default function ActiveProgram() {
         })
         .eq('id', treinoId);
 
-      // 3. Atualizar estado local
+      // 5. Atualizar estado local
       setTreinos(prev => prev.map(t =>
         t.id === treinoId
           ? { ...t, concluido: false, pulado: false, data_concluido: null }

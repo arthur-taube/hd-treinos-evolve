@@ -289,23 +289,38 @@ export const loadUserProgramForCustomize = async (programaUsuarioId: string): Pr
     const isAdvanced = programaOriginal.nivel !== 'iniciante';
     console.log('📊 Programa do usuário carregado:', programaUsuario.nome_personalizado || programaOriginal.nome);
 
-    // 2. Buscar treinos do usuário (apenas semana 1 para o kanban)
-    const { data: treinosUsuario, error: treinosError } = await supabase
+    // 2. Buscar TODOS os treinos do usuário e escolher por dia o "vigente"
+    // (primeiro não-concluído e não-pulado; se todos finalizados, último por ordem_semana).
+    const { data: allTreinosUsuario, error: treinosError } = await supabase
       .from('treinos_usuario')
       .select('*')
       .eq('programa_usuario_id', programaUsuarioId)
-      .eq('ordem_semana', 1)
-      .order('ordem_dia');
+      .order('ordem_dia')
+      .order('ordem_semana');
 
     if (treinosError) {
       console.error('❌ Erro ao carregar treinos do usuário:', treinosError);
       return null;
     }
 
-    console.log('📊 Treinos do usuário carregados (semana 1):', treinosUsuario?.length || 0);
+    const treinosByDayMap = new Map<number, any[]>();
+    (allTreinosUsuario || []).forEach(t => {
+      const list = treinosByDayMap.get(t.ordem_dia) || [];
+      list.push(t);
+      treinosByDayMap.set(t.ordem_dia, list);
+    });
+
+    const treinosUsuario: any[] = [];
+    treinosByDayMap.forEach((list) => {
+      const vigente = list.find(t => !t.concluido && !t.pulado) || list[list.length - 1];
+      if (vigente) treinosUsuario.push(vigente);
+    });
+    treinosUsuario.sort((a, b) => a.ordem_dia - b.ordem_dia);
+
+    console.log('📊 Treinos vigentes carregados (1 por dia):', treinosUsuario.length);
 
     // 3. Buscar exercícios desses treinos
-    const treinoIds = treinosUsuario?.map(t => t.id) || [];
+    const treinoIds = treinosUsuario.map(t => t.id);
     
     let exercicios: any[] = [];
 
