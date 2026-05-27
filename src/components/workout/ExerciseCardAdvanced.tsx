@@ -44,13 +44,15 @@ interface ExerciseCardAdvancedProps {
   resolvedRer: string;
   onExerciseComplete: (exerciseId: string, isCompleted: boolean) => Promise<void>;
   onWeightUpdate: (exerciseId: string, weight: number) => Promise<void>;
+  peekMode?: boolean;
 }
 
 export function ExerciseCardAdvanced({
   exercise,
   resolvedRer,
   onExerciseComplete,
-  onWeightUpdate
+  onWeightUpdate,
+  peekMode = false
 }: ExerciseCardAdvancedProps) {
   const [showARADialog, setShowARADialog] = useState(false);
   const [showAMPDialog, setShowAMPDialog] = useState(false);
@@ -68,7 +70,7 @@ export function ExerciseCardAdvanced({
     showIncrementDialog, setShowIncrementDialog,
     saveIncrementSetting,
     resetIncrementDialogShown
-  } = useExerciseStateAdvanced(exercise, onExerciseComplete, onWeightUpdate);
+  } = useExerciseStateAdvanced(exercise, onExerciseComplete, onWeightUpdate, peekMode);
 
   const { isLoadingSeries, previousSeries } = usePreviousSeriesAdvanced(
     isOpen,
