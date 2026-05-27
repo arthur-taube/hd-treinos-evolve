@@ -34,6 +34,7 @@ interface ExerciseSetsAdvancedProps {
   onAddSet?: () => void;
   onRemoveSet?: (index: number) => void;
   originalSetCount?: number;
+  peekMode?: boolean;
 }
 
 export function ExerciseSetsAdvanced({
@@ -54,6 +55,7 @@ export function ExerciseSetsAdvanced({
   onAddSet,
   onRemoveSet,
   originalSetCount = 0,
+  peekMode = false,
 }: ExerciseSetsAdvancedProps) {
   const [showAddSetDialog, setShowAddSetDialog] = useState(false);
 
@@ -119,9 +121,10 @@ export function ExerciseSetsAdvanced({
                 type="number"
                 value={displayWeight}
                 placeholder={suggestedWeight.toString()}
-                onFocus={() => handleWeightFocus(index, suggestedWeight)}
+                onFocus={() => !peekMode && handleWeightFocus(index, suggestedWeight)}
                 onChange={e => handleWeightChange(index, e.target.value)}
                 step={0.5}
+                readOnly={peekMode}
                 className="w-full h-8 text-base"
               />
               <span className="ml-1 text-xs text-muted-foreground">kg</span>
@@ -134,6 +137,7 @@ export function ExerciseSetsAdvanced({
                 onChange={e => handleRepsChange(index, Number(e.target.value))}
                 min={0}
                 step={1}
+                readOnly={peekMode}
                 className="w-full h-8 text-base"
               />
             </div>
@@ -143,6 +147,7 @@ export function ExerciseSetsAdvanced({
                   <Button
                     variant="ghost"
                     size="sm"
+                    disabled={peekMode}
                     className={`h-8 w-8 p-0 ${hasNote ? 'text-amber-500' : 'text-muted-foreground'}`}
                   >
                     <StickyNote className="h-4 w-4" />
@@ -161,7 +166,7 @@ export function ExerciseSetsAdvanced({
               </Popover>
             </div>
             <div className="flex justify-center">
-              {canRemove ? (
+              {canRemove && !peekMode ? (
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive" onClick={() => onRemoveSet(index)}>
                   <X className="h-4 w-4" />
                 </Button>
@@ -169,6 +174,7 @@ export function ExerciseSetsAdvanced({
                 <Button
                   variant={set.completed ? "default" : "outline"}
                   size="sm"
+                  disabled={peekMode}
                   className="h-8 w-8 p-0"
                   onClick={() => handleSetComplete(index)}
                 >
@@ -181,7 +187,7 @@ export function ExerciseSetsAdvanced({
       })}
 
       {/* Add set */}
-      {!exerciseConcluido && onAddSet && (
+      {!exerciseConcluido && !peekMode && onAddSet && (
         <button
           type="button"
           className="mt-2 text-sm text-primary hover:underline flex items-center gap-1"
