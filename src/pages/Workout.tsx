@@ -1,11 +1,11 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, CheckCircle, ChevronRight } from "lucide-react";
+import { ChevronLeft, CheckCircle, ChevronRight, Eye } from "lucide-react";
 import WorkoutTimer from "@/components/workout/WorkoutTimer";
 import { ExerciseCard } from "@/components/workout/ExerciseCard";
 import { ExerciseCardAdvanced, ExerciseAdvancedData } from "@/components/workout/ExerciseCardAdvanced";
@@ -52,6 +52,7 @@ interface ExercicioUsuario {
 export default function Workout() {
   const { treinoId } = useParams<{ treinoId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [treino, setTreino] = useState<TreinoUsuario | null>(null);
   const [exercicios, setExercicios] = useState<ExercicioUsuario[]>([]);
   const [exerciciosAdvanced, setExerciciosAdvanced] = useState<ExerciseAdvancedData[]>([]);
@@ -59,6 +60,10 @@ export default function Workout() {
   const [rerPerWeek, setRerPerWeek] = useState<Record<string, string> | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Peek mode: read-only view; only meaningful for advanced programs
+  const peekRequested = new URLSearchParams(location.search).get('peek') === '1';
+  const peekMode = peekRequested && isAdvanced;
 
   // ART check for advanced workouts
   const {
@@ -70,7 +75,7 @@ export default function Workout() {
     treino?.programa_usuario_id || null,
     treinoId || null,
     exerciciosAdvanced,
-    isAdvanced && !loading
+    isAdvanced && !loading && !peekMode
   );
   
   useEffect(() => {
