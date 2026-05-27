@@ -7,9 +7,11 @@ interface ActiveProgram {
   nome_personalizado: string | null;
   progresso: number;
   data_inicio: string;
+  nivel: string;
 }
 
 interface NextWorkout {
+  id: string;
   nome: string;
   dia: string;
   data: string;
@@ -44,7 +46,7 @@ export function useDashboardData() {
           progresso,
           data_inicio,
           nome_personalizado,
-          programas!inner(nome)
+          programas!inner(nome, nivel)
         `)
         .eq('usuario_id', userId)
         .eq('ativo', true)
@@ -66,13 +68,14 @@ export function useDashboardData() {
           nome: activeProgramData.programas.nome,
           nome_personalizado: activeProgramData.nome_personalizado,
           progresso: realProgress,
-          data_inicio: activeProgramData.data_inicio
+          data_inicio: activeProgramData.data_inicio,
+          nivel: activeProgramData.programas.nivel
         });
 
         // Get next workout
         const { data: nextWorkoutData } = await supabase
           .from('treinos_usuario')
-          .select('nome, ordem_semana')
+          .select('id, nome, ordem_semana')
           .eq('programa_usuario_id', activeProgramData.id)
           .eq('concluido', false)
           .order('ordem_semana')
@@ -84,6 +87,7 @@ export function useDashboardData() {
           nextDate.setDate(nextDate.getDate() + 1);
           
           setNextWorkout({
+            id: nextWorkoutData.id,
             nome: nextWorkoutData.nome,
             dia: `Dia ${nextWorkoutData.ordem_semana}`,
             data: nextDate.toLocaleDateString('pt-BR'),

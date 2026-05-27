@@ -54,7 +54,12 @@ const Dashboard = () => {
               workoutDay={`${nextWorkout.dia}: ${nextWorkout.nome}`}
               date={nextWorkout.data}
               weekday={nextWorkout.diaSemana}
-              onStart={() => navigate('/active-program')}
+              onStart={() => navigate(`/workout/${nextWorkout.id}`)}
+              onPeek={
+                activeProgram && activeProgram.nivel !== 'iniciante'
+                  ? () => navigate(`/workout/${nextWorkout.id}?peek=1`)
+                  : undefined
+              }
             />
           ) : (
             <div className="bg-card p-4 rounded-lg border border-border/40 text-center">

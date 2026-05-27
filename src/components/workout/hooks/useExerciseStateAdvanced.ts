@@ -29,7 +29,8 @@ interface ExerciseAdvanced {
 export const useExerciseStateAdvanced = (
   exercise: ExerciseAdvanced,
   onExerciseComplete: (exerciseId: string, isCompleted: boolean) => Promise<void>,
-  onWeightUpdate: (exerciseId: string, weight: number) => Promise<void>
+  onWeightUpdate: (exerciseId: string, weight: number) => Promise<void>,
+  peekMode: boolean = false
 ) => {
   const [isOpen, setIsOpen] = useState(false);
   const [observation, setObservation] = useState(exercise.observacao || "");
@@ -46,6 +47,7 @@ export const useExerciseStateAdvanced = (
   // Check for increment config when opened
   useEffect(() => {
     const checkIncrementConfig = async () => {
+      if (peekMode) return;
       if (isOpen && !exercise.concluido && !incrementDialogShown) {
         if (!exercise.configuracao_inicial && !exercise.incremento_minimo) {
           setShowIncrementDialog(true);
@@ -54,7 +56,7 @@ export const useExerciseStateAdvanced = (
       }
     };
     checkIncrementConfig();
-  }, [isOpen, exercise.concluido, incrementDialogShown, exercise.id]);
+  }, [isOpen, exercise.concluido, incrementDialogShown, exercise.id, peekMode]);
 
   // Initialize sets
   useEffect(() => {

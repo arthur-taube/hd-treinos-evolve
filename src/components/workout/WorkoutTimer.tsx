@@ -3,7 +3,10 @@ import { Timer, Clock, Play, Pause, RotateCcw, Minus, Plus } from "lucide-react"
 
 type Mode = "stopwatch" | "timer";
 
-const WorkoutTimer = () => {
+interface WorkoutTimerProps { peekMode?: boolean }
+
+const WorkoutTimer = ({ peekMode = false }: WorkoutTimerProps = {}) => {
+  if (peekMode) return null;
   const [visible, setVisible] = useState(false);
   const [mode, setMode] = useState<Mode>("timer");
   const [running, setRunning] = useState(false);

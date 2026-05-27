@@ -1,7 +1,6 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Play } from "lucide-react";
+import { Play, Eye } from "lucide-react";
 
 interface NextWorkoutCardProps {
   programName?: string;
@@ -9,6 +8,7 @@ interface NextWorkoutCardProps {
   date?: string;
   weekday?: string;
   onStart?: () => void;
+  onPeek?: () => void;
 }
 
 const NextWorkoutCard = ({
@@ -17,6 +17,7 @@ const NextWorkoutCard = ({
   date = "",
   weekday = "",
   onStart,
+  onPeek,
 }: NextWorkoutCardProps) => {
   const hasActiveProgram = programName !== "Sem programa ativo";
 
@@ -26,12 +27,27 @@ const NextWorkoutCard = ({
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-medium">Próximo Treino</h3>
           {hasActiveProgram && (
-            <Button
-              className="rounded-full p-2 h-10 w-10 bg-primary hover:bg-blue-600"
-              onClick={onStart}
-            >
-              <Play className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-2">
+              {onPeek && (
+                <Button
+                  variant="outline"
+                  className="rounded-full p-2 h-10 w-10"
+                  onClick={onPeek}
+                  title="Espiar"
+                  aria-label="Espiar treino"
+                >
+                  <Eye className="h-5 w-5" />
+                </Button>
+              )}
+              <Button
+                className="rounded-full p-2 h-10 w-10 bg-primary hover:bg-blue-600"
+                onClick={onStart}
+                title="Iniciar"
+                aria-label="Iniciar treino"
+              >
+                <Play className="h-5 w-5" />
+              </Button>
+            </div>
           )}
         </div>
 

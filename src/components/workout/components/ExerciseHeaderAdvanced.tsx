@@ -36,6 +36,7 @@ interface ExerciseHeaderAdvancedProps {
   skipIncompleteSets: () => void;
   onSubstitutionRequest: (type: 'replace-all' | 'replace-this') => void;
   onMethodChange?: () => void;
+  peekMode?: boolean;
 }
 
 export function ExerciseHeaderAdvanced({
@@ -49,7 +50,8 @@ export function ExerciseHeaderAdvanced({
   setShowIncrementDialog,
   skipIncompleteSets,
   onSubstitutionRequest,
-  onMethodChange
+  onMethodChange,
+  peekMode = false
 }: ExerciseHeaderAdvancedProps) {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
 
@@ -98,34 +100,36 @@ export function ExerciseHeaderAdvanced({
             </a>
           )}
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setShowObservationInput(true)}>
-                Adicionar observações
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onMethodChange}>
-                {hasMethod ? 'Alterar' : 'Implementar'} Método Especial
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowIncrementDialog(true)}>
-                Redefinir incremento mínimo
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={skipIncompleteSets}>
-                Pular séries não concluídas
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onSubstitutionRequest('replace-this')}>
-                Substituir exercício neste treino
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onSubstitutionRequest('replace-all')}>
-                Mudar exercício em todos os treinos
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {!peekMode && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setShowObservationInput(true)}>
+                  Adicionar observações
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onMethodChange}>
+                  {hasMethod ? 'Alterar' : 'Implementar'} Método Especial
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowIncrementDialog(true)}>
+                  Redefinir incremento mínimo
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={skipIncompleteSets}>
+                  Pular séries não concluídas
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => onSubstitutionRequest('replace-this')}>
+                  Substituir exercício neste treino
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onSubstitutionRequest('replace-all')}>
+                  Mudar exercício em todos os treinos
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
 

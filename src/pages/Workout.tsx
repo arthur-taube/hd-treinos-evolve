@@ -1,11 +1,11 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, CheckCircle, ChevronRight } from "lucide-react";
+import { ChevronLeft, CheckCircle, ChevronRight, Eye } from "lucide-react";
 import WorkoutTimer from "@/components/workout/WorkoutTimer";
 import { ExerciseCard } from "@/components/workout/ExerciseCard";
 import { ExerciseCardAdvanced, ExerciseAdvancedData } from "@/components/workout/ExerciseCardAdvanced";
@@ -52,6 +52,7 @@ interface ExercicioUsuario {
 export default function Workout() {
   const { treinoId } = useParams<{ treinoId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [treino, setTreino] = useState<TreinoUsuario | null>(null);
   const [exercicios, setExercicios] = useState<ExercicioUsuario[]>([]);
   const [exerciciosAdvanced, setExerciciosAdvanced] = useState<ExerciseAdvancedData[]>([]);
@@ -59,6 +60,10 @@ export default function Workout() {
   const [rerPerWeek, setRerPerWeek] = useState<Record<string, string> | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Peek mode: read-only view; only meaningful for advanced programs
+  const peekRequested = new URLSearchParams(location.search).get('peek') === '1';
+  const peekMode = peekRequested && isAdvanced;
 
   // ART check for advanced workouts
   const {
@@ -70,7 +75,7 @@ export default function Workout() {
     treino?.programa_usuario_id || null,
     treinoId || null,
     exerciciosAdvanced,
-    isAdvanced && !loading
+    isAdvanced && !loading && !peekMode
   );
   
   useEffect(() => {
@@ -221,6 +226,7 @@ export default function Workout() {
   const tableName = isAdvanced ? 'exercicios_treino_usuario_avancado' : 'exercicios_treino_usuario';
 
   const toggleExerciseCompletion = async (exerciseId: string, isCompleted: boolean) => {
+    if (peekMode) return;
     if (isAdvanced) {
       setExerciciosAdvanced(prev =>
         prev.map(ex => ex.id === exerciseId ? { ...ex, concluido: isCompleted } : ex)
@@ -257,6 +263,7 @@ export default function Workout() {
   };
 
   const updateExerciseWeight = async (exerciseId: string, weight: number) => {
+    if (peekMode) return;
     if (isAdvanced) {
       setExerciciosAdvanced(prev =>
         prev.map(ex => ex.id === exerciseId ? { ...ex, peso: weight } : ex)
@@ -283,6 +290,7 @@ export default function Workout() {
   };
 
   const completeWorkout = async () => {
+    if (peekMode) return;
     if (!treino) return;
     setSaving(true);
     try {
@@ -361,7 +369,7 @@ export default function Workout() {
 
   return (
     <div className="pb-20">
-      <WorkoutTimer />
+      <WorkoutTimer peekMode={peekMode} />
       <PageHeader title={treino?.nome || "Carregando..."}>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => navigateToAdjacentWorkout('previous')}>
@@ -382,6 +390,21 @@ export default function Workout() {
         </div>
       ) : (
         <div className="space-y-6">
+          {peekMode && (
+            <div className="flex items-center gap-3 p-3 rounded-md border border-amber-500/40 bg-amber-500/10">
+              <Eye className="h-5 w-5 text-amber-500 shrink-0" />
+              <p className="text-sm flex-1">
+                Modo visualização — nada será salvo.
+              </p>
+              <Button
+                size="sm"
+                onClick={() => navigate(`/workout/${treinoId}`, { replace: true })}
+              >
+                Iniciar treino
+              </Button>
+            </div>
+          )}
+
           <div className="space-y-4">
             {isAdvanced
               ? exerciciosAdvanced
@@ -397,6 +420,7 @@ export default function Workout() {
                       )}
                       onExerciseComplete={toggleExerciseCompletion}
                       onWeightUpdate={updateExerciseWeight}
+                      peekMode={peekMode}
                     />
                   ))
               : exercicios
@@ -412,18 +436,20 @@ export default function Workout() {
             }
           </div>
 
-          <div className="pt-4">
-            <Button
-              className="w-full"
-              onClick={completeWorkout}
-              disabled={saving || isWorkoutAlreadyCompleted() || !isAllExercisesCompleted()}
-            >
-              {saving ? "Salvando..." :
-               isWorkoutAlreadyCompleted() ? "Treino Já Concluído!" :
-               isAllExercisesCompleted() ? "Concluir Treino" : "Complete todos os exercícios"}
-              {(isAllExercisesCompleted() || isWorkoutAlreadyCompleted()) && <CheckCircle className="ml-2 h-4 w-4" />}
-            </Button>
-          </div>
+          {!peekMode && (
+            <div className="pt-4">
+              <Button
+                className="w-full"
+                onClick={completeWorkout}
+                disabled={saving || isWorkoutAlreadyCompleted() || !isAllExercisesCompleted()}
+              >
+                {saving ? "Salvando..." :
+                 isWorkoutAlreadyCompleted() ? "Treino Já Concluído!" :
+                 isAllExercisesCompleted() ? "Concluir Treino" : "Complete todos os exercícios"}
+                {(isAllExercisesCompleted() || isWorkoutAlreadyCompleted()) && <CheckCircle className="ml-2 h-4 w-4" />}
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
