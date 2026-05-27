@@ -312,7 +312,7 @@ export default function ProgramUserEdit() {
                 setShowHiddenExercisesDialog(true);
               }}
               onDeleteExercise={handleDeleteExercise}
-              maxSets={5}
+              maxSets={10}
               onMoveExerciseBetweenDays={(sourceDay, destDay, exercise) => {
                 setPendingExerciseMove({ sourceDay, destDay, exercise });
                 setShowMoveExerciseWarning(true);
@@ -342,7 +342,7 @@ export default function ProgramUserEdit() {
                 setShowHiddenExercisesDialog(true);
               }}
               onDeleteExercise={handleDeleteExercise}
-              maxSets={3}
+              maxSets={6}
               onMoveExerciseBetweenDays={(sourceDay, destDay, exercise) => {
                 setPendingExerciseMove({ sourceDay, destDay, exercise });
                 setShowMoveExerciseWarning(true);
