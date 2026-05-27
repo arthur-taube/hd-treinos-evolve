@@ -7,6 +7,7 @@ interface ActiveProgram {
   nome_personalizado: string | null;
   progresso: number;
   data_inicio: string;
+  nivel: string;
 }
 
 interface NextWorkout {
@@ -44,7 +45,7 @@ export function useDashboardData() {
           progresso,
           data_inicio,
           nome_personalizado,
-          programas!inner(nome)
+          programas!inner(nome, nivel)
         `)
         .eq('usuario_id', userId)
         .eq('ativo', true)
@@ -66,7 +67,8 @@ export function useDashboardData() {
           nome: activeProgramData.programas.nome,
           nome_personalizado: activeProgramData.nome_personalizado,
           progresso: realProgress,
-          data_inicio: activeProgramData.data_inicio
+          data_inicio: activeProgramData.data_inicio,
+          nivel: activeProgramData.programas.nivel
         });
 
         // Get next workout
