@@ -216,11 +216,13 @@ export function ExerciseSetsAdvanced({
       </AlertDialog>
 
       {/* Bottom actions */}
-      <div className="mt-4">
-        <Button className="w-full" disabled={exerciseConcluido} onClick={handleExerciseComplete}>
-          {allSetsCompleted ? "Todas séries concluídas" : "Concluir exercício"}
-        </Button>
-      </div>
+      {!peekMode && (
+        <div className="mt-4">
+          <Button className="w-full" disabled={exerciseConcluido} onClick={handleExerciseComplete}>
+            {allSetsCompleted ? "Todas séries concluídas" : "Concluir exercício"}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
