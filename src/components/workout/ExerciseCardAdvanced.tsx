@@ -262,6 +262,7 @@ export function ExerciseCardAdvanced({
                 onAddSet={addSet}
                 onRemoveSet={removeSet}
                 originalSetCount={originalSetCount}
+                peekMode={peekMode}
               />
             </AccordionContent>
           </AccordionItem>
