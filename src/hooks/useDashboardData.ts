@@ -75,7 +75,7 @@ export function useDashboardData() {
         // Get next workout
         const { data: nextWorkoutData } = await supabase
           .from('treinos_usuario')
-          .select('nome, ordem_semana')
+          .select('id, nome, ordem_semana')
           .eq('programa_usuario_id', activeProgramData.id)
           .eq('concluido', false)
           .order('ordem_semana')
@@ -87,6 +87,7 @@ export function useDashboardData() {
           nextDate.setDate(nextDate.getDate() + 1);
           
           setNextWorkout({
+            id: nextWorkoutData.id,
             nome: nextWorkoutData.nome,
             dia: `Dia ${nextWorkoutData.ordem_semana}`,
             data: nextDate.toLocaleDateString('pt-BR'),
