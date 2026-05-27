@@ -105,6 +105,7 @@ export function DayColumnAdvanced({
                         }
                         mode={mode}
                         customizerMode={customizerMode}
+                        maxSets={maxSets}
                       />
                     </div>
                   )}

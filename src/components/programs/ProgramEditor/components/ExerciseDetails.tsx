@@ -7,12 +7,14 @@ interface ExerciseDetailsProps {
   exercise: Exercise;
   repsRanges: RepsRange[];
   onExerciseUpdate: (field: keyof Exercise, value: string | number | boolean) => void;
+  maxSets?: number;
 }
 
 export function ExerciseDetails({
   exercise,
   repsRanges,
   onExerciseUpdate,
+  maxSets = 5,
 }: ExerciseDetailsProps) {
   const formatRepsRange = (range: RepsRange) => {
     if (range.min_reps === range.max_reps) {
@@ -20,6 +22,8 @@ export function ExerciseDetails({
     }
     return `${range.min_reps}-${range.max_reps}`;
   };
+
+  const setsOptions = Array.from({ length: maxSets }, (_, i) => i + 1);
 
   return (
     <div className="grid grid-cols-2 gap-2">
@@ -33,7 +37,7 @@ export function ExerciseDetails({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {[1, 2, 3, 4, 5].map((num) => (
+            {setsOptions.map((num) => (
               <SelectItem key={num} value={String(num)}>
                 {num}
               </SelectItem>
