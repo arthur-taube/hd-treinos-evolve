@@ -11,6 +11,7 @@ interface ActiveProgram {
 }
 
 interface NextWorkout {
+  id: string;
   nome: string;
   dia: string;
   data: string;
