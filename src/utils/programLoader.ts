@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { roundSetsForDisplay } from '@/utils/progressionCalculator';
 
 export interface LoadedProgramData {
   programName: string;
@@ -176,7 +177,7 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
             id: exercicio.id,
             name: exercicio.nome,
             muscleGroup: exercicio.grupo_muscular,
-            sets: exercicio.series,
+            sets: roundSetsForDisplay(exercicio.series),
             reps: exercicio.repeticoes,
             hidden: exercicio.oculto,
             originalId: exercicio.exercicio_original_id,
@@ -396,7 +397,7 @@ export const loadUserProgramForCustomize = async (programaUsuarioId: string): Pr
           id: exercicio.id,
           name: exercicio.nome,
           muscleGroup: exercicio.grupo_muscular,
-          sets: exercicio.series,
+          sets: roundSetsForDisplay(exercicio.series),
           reps: exercicio.repeticoes,
           hidden: exercicio.oculto,
           originalId: exercicio.exercicio_original_id,

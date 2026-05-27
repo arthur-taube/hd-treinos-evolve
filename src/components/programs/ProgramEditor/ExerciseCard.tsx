@@ -19,6 +19,7 @@ interface ExerciseCardProps {
   onDelete: () => void;
   onExerciseUpdate: (field: keyof Exercise, value: string | number | boolean) => void;
   mode?: 'edit' | 'customize';
+  maxSets?: number;
 }
 
 export function ExerciseCard({
@@ -27,6 +28,7 @@ export function ExerciseCard({
   onDelete,
   onExerciseUpdate,
   mode = 'edit',
+  maxSets = 5,
 }: ExerciseCardProps) {
   const [exercises, setExercises] = useState<Array<{ nome: string }>>([]);
   const [repsRanges, setRepsRanges] = useState<RepsRange[]>([]);
@@ -144,6 +146,7 @@ export function ExerciseCard({
           exercise={exercise}
           repsRanges={repsRanges}
           onExerciseUpdate={onExerciseUpdate}
+          maxSets={maxSets}
         />
       </CardContent>
     </Card>

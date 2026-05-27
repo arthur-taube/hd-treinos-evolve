@@ -33,6 +33,7 @@ interface ExerciseCardAdvancedProps {
   onExerciseUpdate: (field: keyof Exercise, value: string | number | boolean) => void;
   mode?: 'edit' | 'customize';
   customizerMode?: boolean;
+  maxSets?: number;
 }
 
 export function ExerciseCardAdvanced({
@@ -42,6 +43,7 @@ export function ExerciseCardAdvanced({
   onExerciseUpdate,
   mode = 'edit',
   customizerMode = false,
+  maxSets = 5,
 }: ExerciseCardAdvancedProps) {
   const [exercises, setExercises] = useState<Array<{ nome: string }>>([]);
   const [repsRanges, setRepsRanges] = useState<RepsRangeAdvanced[]>([]);
@@ -174,6 +176,7 @@ export function ExerciseCardAdvanced({
           specialMethods={specialMethods}
           onExerciseUpdate={onExerciseUpdate}
           customizerMode={customizerMode}
+          maxSets={maxSets}
         />
       </CardContent>
     </Card>

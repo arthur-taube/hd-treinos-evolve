@@ -19,6 +19,7 @@ interface ExerciseDetailsAdvancedProps {
   specialMethods: SpecialMethod[];
   onExerciseUpdate: (field: keyof Exercise, value: string | number | boolean) => void;
   customizerMode?: boolean;
+  maxSets?: number;
 }
 
 const RER_OPTIONS = [
@@ -43,6 +44,7 @@ export function ExerciseDetailsAdvanced({
   specialMethods,
   onExerciseUpdate,
   customizerMode = false,
+  maxSets = 5,
 }: ExerciseDetailsAdvancedProps) {
   const formatRepsRange = (range: RepsRangeAdvanced) => {
     if (range.min_reps === range.max_reps) {
@@ -50,6 +52,8 @@ export function ExerciseDetailsAdvanced({
     }
     return `${range.min_reps}-${range.max_reps}`;
   };
+
+  const setsOptions = Array.from({ length: maxSets }, (_, i) => i + 1);
 
   return (
     <div className="space-y-2">
@@ -64,7 +68,7 @@ export function ExerciseDetailsAdvanced({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {[1, 2, 3, 4, 5].map((num) => (
+              {setsOptions.map((num) => (
                 <SelectItem key={num} value={String(num)}>
                   {num}
                 </SelectItem>

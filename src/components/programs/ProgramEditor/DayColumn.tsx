@@ -105,6 +105,7 @@ export function DayColumn({
                           onExerciseUpdate(exercise.id, field, value)
                         }
                         mode={mode}
+                        maxSets={maxSets}
                       />
                     </div>
                   )}
