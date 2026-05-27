@@ -369,7 +369,7 @@ export default function Workout() {
 
   return (
     <div className="pb-20">
-      <WorkoutTimer />
+      <WorkoutTimer peekMode={peekMode} />
       <PageHeader title={treino?.nome || "Carregando..."}>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => navigateToAdjacentWorkout('previous')}>
@@ -390,6 +390,21 @@ export default function Workout() {
         </div>
       ) : (
         <div className="space-y-6">
+          {peekMode && (
+            <div className="flex items-center gap-3 p-3 rounded-md border border-amber-500/40 bg-amber-500/10">
+              <Eye className="h-5 w-5 text-amber-500 shrink-0" />
+              <p className="text-sm flex-1">
+                Modo visualização — nada será salvo.
+              </p>
+              <Button
+                size="sm"
+                onClick={() => navigate(`/workout/${treinoId}`, { replace: true })}
+              >
+                Iniciar treino
+              </Button>
+            </div>
+          )}
+
           <div className="space-y-4">
             {isAdvanced
               ? exerciciosAdvanced
@@ -405,6 +420,7 @@ export default function Workout() {
                       )}
                       onExerciseComplete={toggleExerciseCompletion}
                       onWeightUpdate={updateExerciseWeight}
+                      peekMode={peekMode}
                     />
                   ))
               : exercicios
@@ -420,18 +436,20 @@ export default function Workout() {
             }
           </div>
 
-          <div className="pt-4">
-            <Button
-              className="w-full"
-              onClick={completeWorkout}
-              disabled={saving || isWorkoutAlreadyCompleted() || !isAllExercisesCompleted()}
-            >
-              {saving ? "Salvando..." :
-               isWorkoutAlreadyCompleted() ? "Treino Já Concluído!" :
-               isAllExercisesCompleted() ? "Concluir Treino" : "Complete todos os exercícios"}
-              {(isAllExercisesCompleted() || isWorkoutAlreadyCompleted()) && <CheckCircle className="ml-2 h-4 w-4" />}
-            </Button>
-          </div>
+          {!peekMode && (
+            <div className="pt-4">
+              <Button
+                className="w-full"
+                onClick={completeWorkout}
+                disabled={saving || isWorkoutAlreadyCompleted() || !isAllExercisesCompleted()}
+              >
+                {saving ? "Salvando..." :
+                 isWorkoutAlreadyCompleted() ? "Treino Já Concluído!" :
+                 isAllExercisesCompleted() ? "Concluir Treino" : "Complete todos os exercícios"}
+                {(isAllExercisesCompleted() || isWorkoutAlreadyCompleted()) && <CheckCircle className="ml-2 h-4 w-4" />}
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
