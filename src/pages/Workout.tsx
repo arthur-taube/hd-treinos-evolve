@@ -451,12 +451,13 @@ export default function Workout() {
                       exercise={exercicio}
                       onExerciseComplete={toggleExerciseCompletion}
                       onWeightUpdate={updateExerciseWeight}
+                      readOnly={readOnly}
                     />
                   ))
             }
           </div>
 
-          {!peekMode && (
+          {!readOnly && (
             <div className="pt-4">
               <Button
                 className="w-full"
