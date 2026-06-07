@@ -357,7 +357,7 @@ export default function Workout() {
   const navigateToAdjacentWorkout = async (direction: 'next' | 'previous') => {
     const adjacentWorkoutId = await findAdjacentWorkout(direction);
     if (adjacentWorkoutId) {
-      navigate(`/workout/${adjacentWorkoutId}`);
+      navigate(`/workout/${adjacentWorkoutId}${viewMode ? '?view=1' : ''}`);
     } else {
       toast({
         title: `Não há treino ${direction === 'next' ? 'próximo' : 'anterior'}`,
@@ -375,15 +375,23 @@ export default function Workout() {
 
   const isWorkoutAlreadyCompleted = () => treino?.concluido === true;
 
+  const handleBack = () => {
+    if (viewMode && treino?.programa_usuario_id) {
+      navigate(`/program-view/${treino.programa_usuario_id}`);
+    } else {
+      navigate("/active-program");
+    }
+  };
+
   return (
     <div className="pb-20">
-      <WorkoutTimer peekMode={peekMode} />
+      <WorkoutTimer peekMode={readOnly} />
       <PageHeader title={treino?.nome || "Carregando..."}>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => navigateToAdjacentWorkout('previous')}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="outline" onClick={() => navigate("/active-program")}>
+          <Button variant="outline" onClick={handleBack}>
             Voltar ao Programa
           </Button>
           <Button variant="outline" size="sm" onClick={() => navigateToAdjacentWorkout('next')}>
