@@ -122,8 +122,10 @@ export default function Workout() {
         if (advanced) {
           await fetchAdvancedExercises(treinoId, treinoData);
         } else {
-          // Aplicar progressão automática (only for beginner)
-          await applyWorkoutProgression(treinoId);
+          // Aplicar progressão automática (only for beginner; skip in read-only view)
+          if (!viewMode) {
+            await applyWorkoutProgression(treinoId);
+          }
           await fetchBeginnerExercises(treinoId);
         }
       } catch (error: any) {
