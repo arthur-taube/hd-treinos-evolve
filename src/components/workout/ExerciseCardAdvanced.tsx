@@ -119,8 +119,9 @@ export function ExerciseCardAdvanced({
   const suggestedWeight = epleyResult?.suggestedWeight || exercise.peso || 0;
   const suggestedReps = epleyResult?.suggestedReps || defaultMinReps;
 
-  // Update sets with Epley suggestions when they arrive
+  // Update sets with Epley suggestions when they arrive (skip in view mode — no progression)
   useEffect(() => {
+    if (viewMode) return;
     if (!epleyResult) return;
     setSets(prev => prev.map(set => {
       if (set.completed) return set;
@@ -132,7 +133,20 @@ export function ExerciseCardAdvanced({
         reps: isDefaultReps ? epleyResult.suggestedReps : set.reps,
       };
     }));
-  }, [epleyResult]);
+  }, [epleyResult, viewMode]);
+
+  // View mode: overwrite sets with the real saved values for this day
+  useEffect(() => {
+    if (!viewMode || !savedSets || savedSets.length === 0) return;
+    setSets(savedSets.map(s => ({
+      number: s.number,
+      weight: s.weight,
+      reps: s.reps,
+      completed: s.completed,
+      note: s.note,
+    })));
+  }, [viewMode, savedSets]);
+
 
   const allSetsCompleted = sets.every(set => set.completed);
 
