@@ -61,9 +61,15 @@ export default function Workout() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Peek mode: read-only view; only meaningful for advanced programs
+  // Peek mode: read-only espiar of the active program's upcoming workout (advanced only)
   const peekRequested = new URLSearchParams(location.search).get('peek') === '1';
   const peekMode = peekRequested && isAdvanced;
+
+  // View mode: read-only revisiting of an inactive (paused/finished) program — all levels
+  const viewMode = new URLSearchParams(location.search).get('view') === '1';
+
+  // Combined read-only flag
+  const readOnly = peekMode || viewMode;
 
   // ART check for advanced workouts
   const {
@@ -75,7 +81,7 @@ export default function Workout() {
     treino?.programa_usuario_id || null,
     treinoId || null,
     exerciciosAdvanced,
-    isAdvanced && !loading && !peekMode
+    isAdvanced && !loading && !readOnly
   );
   
   useEffect(() => {
