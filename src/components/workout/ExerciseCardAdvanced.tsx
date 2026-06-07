@@ -11,6 +11,7 @@ import { SpecialMethodDialog } from "./SpecialMethodDialog";
 import { useExerciseStateAdvanced } from "./hooks/useExerciseStateAdvanced";
 import { useExerciseActionsAdvanced } from "./hooks/useExerciseActionsAdvanced";
 import { usePreviousSeriesAdvanced } from "./hooks/usePreviousSeriesAdvanced";
+import { useSavedSeries } from "./hooks/useSavedSeries";
 import { useEpleyProgression } from "@/hooks/useEpleyProgression";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
