@@ -159,7 +159,7 @@ export function ExerciseSets({
     })}
 
       {/* Add set button */}
-      {!exerciseConcluido && onAddSet && (
+      {!exerciseConcluido && onAddSet && !readOnly && (
         <button
           type="button"
           className="mt-2 text-sm text-primary hover:underline flex items-center gap-1"
