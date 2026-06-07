@@ -228,7 +228,7 @@ export function ExerciseCard({
             <AccordionContent>
               <ExerciseSets
                 sets={sets}
-                previousSeries={previousSeries}
+                previousSeries={viewMode ? [] : previousSeries}
                 isLoadingSeries={isLoadingSeries}
                 handleSetComplete={handleSetComplete}
                 handleWeightChange={handleWeightChange}
