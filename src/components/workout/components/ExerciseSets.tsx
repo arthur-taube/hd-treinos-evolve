@@ -139,17 +139,17 @@ export function ExerciseSets({
       return <div key={index} className={`grid grid-cols-4 gap-2 items-center py-2 ${index !== sets.length - 1 ? "border-b" : ""}`}>
             <div>{set.number}</div>
             <div className="flex items-center">
-              <Input type="number" value={displayWeight} placeholder={placeholderWeight} onFocus={() => handleWeightFocus(index, suggestedWeight)} onChange={e => handleWeightChange(index, e.target.value)} step={0.5} className="w-20 h-8 text-base" />
+              <Input type="number" value={displayWeight} placeholder={placeholderWeight} onFocus={() => handleWeightFocus(index, suggestedWeight)} onChange={e => handleWeightChange(index, e.target.value)} step={0.5} className="w-20 h-8 text-base" readOnly={readOnly} />
               <span className="ml-1 text-sm">kg</span>
             </div>
             <div>
-              <Input type="number" value={displayReps} placeholder={placeholderReps} onChange={e => handleRepsChange(index, Number(e.target.value))} min={0} step={1} className="w-20 h-8 text-base" />
+              <Input type="number" value={displayReps} placeholder={placeholderReps} onChange={e => handleRepsChange(index, Number(e.target.value))} min={0} step={1} className="w-20 h-8 text-base" readOnly={readOnly} />
             </div>
             <div className="flex justify-center gap-1">
-              <Button variant={set.completed ? "default" : "outline"} size="sm" className="h-8 w-8 p-0" onClick={() => handleSetComplete(index)}>
+              <Button variant={set.completed ? "default" : "outline"} size="sm" className="h-8 w-8 p-0" onClick={() => handleSetComplete(index)} disabled={readOnly}>
                 {set.completed ? <Check className="h-4 w-4" /> : null}
               </Button>
-              {canRemove && (
+              {canRemove && !readOnly && (
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive" onClick={() => onRemoveSet(index)}>
                   <X className="h-4 w-4" />
                 </Button>
