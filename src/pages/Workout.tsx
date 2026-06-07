@@ -440,7 +440,7 @@ export default function Workout() {
                       )}
                       onExerciseComplete={toggleExerciseCompletion}
                       onWeightUpdate={updateExerciseWeight}
-                      peekMode={peekMode}
+                      peekMode={readOnly}
                     />
                   ))
               : exercicios
