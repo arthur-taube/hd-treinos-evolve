@@ -298,6 +298,7 @@ const Programs = () => {
                     name={program.name}
                     description={program.description}
                     isFinished
+                    onOpen={() => navigate(`/program-view/${program.id}`)}
                     onDelete={() => handleDeleteProgram(program.id, true)}
                   />
                 ))}
