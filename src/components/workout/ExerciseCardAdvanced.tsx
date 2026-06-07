@@ -269,7 +269,7 @@ export function ExerciseCardAdvanced({
             <AccordionContent>
               <ExerciseSetsAdvanced
                 sets={sets}
-                previousSeries={previousSeries}
+                previousSeries={viewMode ? [] : previousSeries}
                 isLoadingSeries={isLoadingSeries}
                 handleSetComplete={handleSetComplete}
                 handleWeightChange={handleWeightChange}
@@ -285,7 +285,7 @@ export function ExerciseCardAdvanced({
                 onAddSet={addSet}
                 onRemoveSet={removeSet}
                 originalSetCount={originalSetCount}
-                peekMode={peekMode}
+                peekMode={readOnly}
               />
             </AccordionContent>
           </AccordionItem>
