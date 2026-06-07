@@ -37,7 +37,8 @@ interface Exercise {
 export const useExerciseState = (
   exercise: Exercise,
   onExerciseComplete: (exerciseId: string, isCompleted: boolean) => Promise<void>,
-  onWeightUpdate: (exerciseId: string, weight: number) => Promise<void>
+  onWeightUpdate: (exerciseId: string, weight: number) => Promise<void>,
+  readOnly: boolean = false
 ) => {
   const [isOpen, setIsOpen] = useState(false);
   const [observation, setObservation] = useState(exercise.observacao || "");
