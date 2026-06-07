@@ -478,7 +478,7 @@ export default function ActiveProgram() {
                 const canSkip = !treino.concluido && !treino.pulado;
                 const canRestart = treino.concluido || treino.pulado;
                 const isAdvanced = programaOriginal.nivel !== 'iniciante';
-                const showPeek = isAdvanced && !treino.concluido && !treino.pulado;
+                const showPeek = !readOnly && isAdvanced && !treino.concluido && !treino.pulado;
 
                 return (
                   <Fragment key={treino.id}>
