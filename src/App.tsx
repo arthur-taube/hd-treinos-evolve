@@ -80,6 +80,14 @@ const App = () => (
               }
             />
             <Route
+              path="/program-view/:programaUsuarioId"
+              element={
+                <AppLayout>
+                  <ActiveProgram />
+                </AppLayout>
+              }
+            />
+            <Route
               path="/workout/:treinoId"
               element={
                 <AppLayout>
