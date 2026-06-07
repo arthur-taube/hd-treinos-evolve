@@ -45,6 +45,7 @@ interface ExerciseCardAdvancedProps {
   onExerciseComplete: (exerciseId: string, isCompleted: boolean) => Promise<void>;
   onWeightUpdate: (exerciseId: string, weight: number) => Promise<void>;
   peekMode?: boolean;
+  viewMode?: boolean;
 }
 
 export function ExerciseCardAdvanced({
@@ -52,8 +53,11 @@ export function ExerciseCardAdvanced({
   resolvedRer,
   onExerciseComplete,
   onWeightUpdate,
-  peekMode = false
+  peekMode = false,
+  viewMode = false
 }: ExerciseCardAdvancedProps) {
+  // Both peek and view are read-only for UI purposes
+  const readOnly = peekMode || viewMode;
   const [showARADialog, setShowARADialog] = useState(false);
   const [showAMPDialog, setShowAMPDialog] = useState(false);
   const [showSubstitutionDialog, setShowSubstitutionDialog] = useState(false);
