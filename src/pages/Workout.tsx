@@ -234,7 +234,7 @@ export default function Workout() {
   const tableName = isAdvanced ? 'exercicios_treino_usuario_avancado' : 'exercicios_treino_usuario';
 
   const toggleExerciseCompletion = async (exerciseId: string, isCompleted: boolean) => {
-    if (peekMode) return;
+    if (readOnly) return;
     if (isAdvanced) {
       setExerciciosAdvanced(prev =>
         prev.map(ex => ex.id === exerciseId ? { ...ex, concluido: isCompleted } : ex)
