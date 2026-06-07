@@ -84,25 +84,33 @@ export default function ActiveProgram() {
         if (!user) {
           toast({
             title: "Usuário não logado",
-            description: "Faça login para ver seu programa ativo.",
+            description: "Faça login para ver seu programa.",
             variant: "destructive"
           });
           navigate('/auth');
           return;
         }
-        
-        const { data: programaUsuarioData, error: programaError } = await supabase
+
+        let query = supabase
           .from('programas_usuario')
           .select('*')
-          .eq('usuario_id', user.id)
-          .eq('ativo', true)
-          .single();
+          .eq('usuario_id', user.id);
+
+        // Read-only: load a specific (possibly inactive) program by id.
+        // Default: load the active program.
+        query = readOnly
+          ? query.eq('id', programaUsuarioId)
+          : query.eq('ativo', true);
+
+        const { data: programaUsuarioData, error: programaError } = await query.single();
 
         if (programaError) {
           if (programaError.code === 'PGRST116') {
             toast({
-              title: "Nenhum programa ativo",
-              description: "Você ainda não selecionou um programa de treino.",
+              title: readOnly ? "Programa não encontrado" : "Nenhum programa ativo",
+              description: readOnly
+                ? "Não foi possível abrir este programa."
+                : "Você ainda não selecionou um programa de treino.",
             });
             navigate('/programs');
             return;
