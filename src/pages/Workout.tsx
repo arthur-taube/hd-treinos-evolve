@@ -271,7 +271,7 @@ export default function Workout() {
   };
 
   const updateExerciseWeight = async (exerciseId: string, weight: number) => {
-    if (peekMode) return;
+    if (readOnly) return;
     if (isAdvanced) {
       setExerciciosAdvanced(prev =>
         prev.map(ex => ex.id === exerciseId ? { ...ex, peso: weight } : ex)
