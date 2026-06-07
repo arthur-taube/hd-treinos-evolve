@@ -596,7 +596,7 @@ export default function ActiveProgram() {
             </div>
             
             {/* Botão Concluir Programa quando 100% */}
-            {getProgramProgress() === 100 && (
+            {!readOnly && getProgramProgress() === 100 && (
               <div className="mt-8 p-6 bg-green-900/20 border border-green-500/30 rounded-lg text-center">
                 <Trophy className="h-12 w-12 text-green-400 mx-auto mb-3" />
                 <h4 className="text-lg font-semibold text-green-400 mb-2">
