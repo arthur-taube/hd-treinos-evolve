@@ -80,7 +80,7 @@ export function ExerciseCard({
     saveIncrementSetting,
     resetIncrementDialogShown,
     checkIsFirstWeek
-  } = useExerciseState(exercise, onExerciseComplete, onWeightUpdate);
+  } = useExerciseState(exercise, onExerciseComplete, onWeightUpdate, readOnly);
 
   const { isLoadingSeries, previousSeries } = usePreviousSeries(isOpen, exercise.exercicio_original_id, exercise.card_original_id, exercise.substituto_custom_id);
 
