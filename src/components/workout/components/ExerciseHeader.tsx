@@ -29,6 +29,7 @@ interface ExerciseHeaderProps {
   setShowIncrementDialog: (show: boolean) => void;
   skipIncompleteSets: () => void;
   onSubstitutionRequest: (type: 'replace-all' | 'replace-this') => void;
+  readOnly?: boolean;
 }
 export function ExerciseHeader({
   exercise,
@@ -38,7 +39,8 @@ export function ExerciseHeader({
   setShowObservationInput,
   setShowIncrementDialog,
   skipIncompleteSets,
-  onSubstitutionRequest
+  onSubstitutionRequest,
+  readOnly = false
 }: ExerciseHeaderProps) {
   const progressionMessage = useProgressionIndicator(exercise.id, exercise.exercicio_original_id || '');
   
