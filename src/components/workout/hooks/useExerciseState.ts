@@ -60,7 +60,7 @@ export const useExerciseState = (
   // Check for increment configuration when exercise is opened (only once per session)
   useEffect(() => {
     const checkIncrementConfig = async () => {
-      if (isOpen && !exercise.concluido && !incrementDialogShown) {
+      if (isOpen && !exercise.concluido && !incrementDialogShown && !readOnly) {
         console.log(`Checking increment configuration for ${exercise.nome}`);
         
         const needsConfiguration = await feedbackHook.checkInitialConfiguration();
@@ -77,7 +77,7 @@ export const useExerciseState = (
     };
 
     checkIncrementConfig();
-  }, [isOpen, exercise.concluido, incrementDialogShown, exercise.id]);
+  }, [isOpen, exercise.concluido, incrementDialogShown, exercise.id, readOnly]);
 
   // Initialize sets with existing database values (no progression calculation)
   // Removed exercise.peso, exercise.reps_programadas, exercise.repeticoes from dependencies
