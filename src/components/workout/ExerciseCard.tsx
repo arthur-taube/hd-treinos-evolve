@@ -87,6 +87,20 @@ export function ExerciseCard({
 
   const { isLoadingSeries, previousSeries } = usePreviousSeries(isOpen, exercise.exercicio_original_id, exercise.card_original_id, exercise.substituto_custom_id);
 
+  // View mode: load the actual saved series for this exercise instance
+  const { savedSets } = useSavedSeries(isOpen && viewMode, exercise.id);
+
+  // View mode: overwrite sets with the real saved values for this day
+  useEffect(() => {
+    if (!viewMode || !savedSets || savedSets.length === 0) return;
+    setSets(savedSets.map(s => ({
+      number: s.number,
+      weight: s.weight,
+      reps: s.reps,
+      completed: s.completed,
+    })));
+  }, [viewMode, savedSets, setSets]);
+
   const {
     handleSetComplete,
     handleWeightChange,
