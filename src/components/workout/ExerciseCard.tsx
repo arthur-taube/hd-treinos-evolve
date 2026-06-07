@@ -194,6 +194,7 @@ export function ExerciseCard({
           setShowIncrementDialog={setShowIncrementDialog}
           skipIncompleteSets={skipIncompleteSets}
           onSubstitutionRequest={handleOpenSubstitution}
+          readOnly={readOnly}
         />
 
         <ExerciseObservation
