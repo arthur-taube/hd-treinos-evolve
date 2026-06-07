@@ -65,6 +65,8 @@ interface TreinoOriginal {
 
 export default function ActiveProgram() {
   const navigate = useNavigate();
+  const { programaUsuarioId } = useParams<{ programaUsuarioId?: string }>();
+  const readOnly = !!programaUsuarioId;
   const [programaUsuario, setProgramaUsuario] = useState<ProgramaUsuario | null>(null);
   const [programaOriginal, setProgramaOriginal] = useState<ProgramaOriginal | null>(null);
   const [treinos, setTreinos] = useState<TreinoUsuario[]>([]);
