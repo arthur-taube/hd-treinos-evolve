@@ -298,7 +298,7 @@ export default function Workout() {
   };
 
   const completeWorkout = async () => {
-    if (peekMode) return;
+    if (readOnly) return;
     if (!treino) return;
     setSaving(true);
     try {
