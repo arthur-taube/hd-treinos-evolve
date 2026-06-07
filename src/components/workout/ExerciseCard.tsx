@@ -229,6 +229,7 @@ export function ExerciseCard({
                 onAddSet={addSet}
                 onRemoveSet={removeSet}
                 originalSetCount={originalSetCount}
+                readOnly={readOnly}
               />
             </AccordionContent>
           </AccordionItem>
