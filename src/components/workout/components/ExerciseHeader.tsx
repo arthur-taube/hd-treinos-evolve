@@ -29,6 +29,7 @@ interface ExerciseHeaderProps {
   setShowIncrementDialog: (show: boolean) => void;
   skipIncompleteSets: () => void;
   onSubstitutionRequest: (type: 'replace-all' | 'replace-this') => void;
+  readOnly?: boolean;
 }
 export function ExerciseHeader({
   exercise,
@@ -38,7 +39,8 @@ export function ExerciseHeader({
   setShowObservationInput,
   setShowIncrementDialog,
   skipIncompleteSets,
-  onSubstitutionRequest
+  onSubstitutionRequest,
+  readOnly = false
 }: ExerciseHeaderProps) {
   const progressionMessage = useProgressionIndicator(exercise.id, exercise.exercicio_original_id || '');
   
@@ -103,31 +105,33 @@ export function ExerciseHeader({
               <Youtube className="h-5 w-5" />
             </a>}
           
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setShowObservationInput(true)}>
-                Adicionar observações
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowIncrementDialog(true)}>
-                Redefinir incremento mínimo
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={skipIncompleteSets}>
-                Pular séries não concluídas
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onSubstitutionRequest('replace-this')}>
-                Substituir exercício neste treino
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onSubstitutionRequest('replace-all')}>
-                Mudar exercício em todos os treinos
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {!readOnly && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setShowObservationInput(true)}>
+                  Adicionar observações
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowIncrementDialog(true)}>
+                  Redefinir incremento mínimo
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={skipIncompleteSets}>
+                  Pular séries não concluídas
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => onSubstitutionRequest('replace-this')}>
+                  Substituir exercício neste treino
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onSubstitutionRequest('replace-all')}>
+                  Mudar exercício em todos os treinos
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
       

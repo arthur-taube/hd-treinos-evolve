@@ -1,5 +1,5 @@
 import { useState, useEffect, Fragment } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -65,6 +65,8 @@ interface TreinoOriginal {
 
 export default function ActiveProgram() {
   const navigate = useNavigate();
+  const { programaUsuarioId } = useParams<{ programaUsuarioId?: string }>();
+  const readOnly = !!programaUsuarioId;
   const [programaUsuario, setProgramaUsuario] = useState<ProgramaUsuario | null>(null);
   const [programaOriginal, setProgramaOriginal] = useState<ProgramaOriginal | null>(null);
   const [treinos, setTreinos] = useState<TreinoUsuario[]>([]);
@@ -82,25 +84,33 @@ export default function ActiveProgram() {
         if (!user) {
           toast({
             title: "Usuário não logado",
-            description: "Faça login para ver seu programa ativo.",
+            description: "Faça login para ver seu programa.",
             variant: "destructive"
           });
           navigate('/auth');
           return;
         }
-        
-        const { data: programaUsuarioData, error: programaError } = await supabase
+
+        let query = supabase
           .from('programas_usuario')
           .select('*')
-          .eq('usuario_id', user.id)
-          .eq('ativo', true)
-          .single();
+          .eq('usuario_id', user.id);
+
+        // Read-only: load a specific (possibly inactive) program by id.
+        // Default: load the active program.
+        query = readOnly
+          ? query.eq('id', programaUsuarioId)
+          : query.eq('ativo', true);
+
+        const { data: programaUsuarioData, error: programaError } = await query.single();
 
         if (programaError) {
           if (programaError.code === 'PGRST116') {
             toast({
-              title: "Nenhum programa ativo",
-              description: "Você ainda não selecionou um programa de treino.",
+              title: readOnly ? "Programa não encontrado" : "Nenhum programa ativo",
+              description: readOnly
+                ? "Não foi possível abrir este programa."
+                : "Você ainda não selecionou um programa de treino.",
             });
             navigate('/programs');
             return;
@@ -155,10 +165,10 @@ export default function ActiveProgram() {
     }
 
     fetchActiveProgram();
-  }, [navigate]);
+  }, [navigate, programaUsuarioId, readOnly]);
 
   const navigateToWorkout = (treinoId: string) => {
-    navigate(`/workout/${treinoId}`);
+    navigate(readOnly ? `/workout/${treinoId}?view=1` : `/workout/${treinoId}`);
   };
 
   const getProgramProgress = () => {
@@ -385,7 +395,7 @@ export default function ActiveProgram() {
 
   return (
     <div className="pb-20">
-      <PageHeader title="Meu Programa Ativo">
+      <PageHeader title={readOnly ? "Visualizar Programa" : "Meu Programa Ativo"}>
         <Button variant="outline" onClick={() => navigate("/programs")}>
           Voltar
         </Button>
@@ -468,7 +478,7 @@ export default function ActiveProgram() {
                 const canSkip = !treino.concluido && !treino.pulado;
                 const canRestart = treino.concluido || treino.pulado;
                 const isAdvanced = programaOriginal.nivel !== 'iniciante';
-                const showPeek = isAdvanced && !treino.concluido && !treino.pulado;
+                const showPeek = !readOnly && isAdvanced && !treino.concluido && !treino.pulado;
 
                 return (
                   <Fragment key={treino.id}>
@@ -490,71 +500,73 @@ export default function ActiveProgram() {
                           <h4 className="font-medium">{displayName}</h4>
                           <p className="text-sm text-muted-foreground">Semana {weekNumber}</p>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          {showPeek && (
-                            <>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-9 w-9"
-                                title="Espiar"
-                                aria-label="Espiar treino"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate(`/workout/${treino.id}?peek=1`);
-                                }}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                className="h-9 w-9"
-                                title="Iniciar"
-                                aria-label="Iniciar treino"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate(`/workout/${treino.id}`);
-                                }}
-                              >
-                                <Play className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 shrink-0"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                              <DropdownMenuItem
-                                disabled={!canSkip}
-                                onClick={() => {
-                                  setSelectedTreinoId(treino.id);
-                                  setSkipDialogOpen(true);
-                                }}
-                              >
-                                <SkipForward className="h-4 w-4 mr-2" />
-                                Pular este treino
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                disabled={!canRestart}
-                                onClick={() => {
-                                  setSelectedTreinoId(treino.id);
-                                  setRestartDialogOpen(true);
-                                }}
-                              >
-                                <RotateCcw className="h-4 w-4 mr-2" />
-                                Reiniciar este treino
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
+                        {!readOnly && (
+                          <div className="flex items-center gap-1 shrink-0">
+                            {showPeek && (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-9 w-9"
+                                  title="Espiar"
+                                  aria-label="Espiar treino"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/workout/${treino.id}?peek=1`);
+                                  }}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  className="h-9 w-9"
+                                  title="Iniciar"
+                                  aria-label="Iniciar treino"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/workout/${treino.id}`);
+                                  }}
+                                >
+                                  <Play className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 shrink-0"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                <DropdownMenuItem
+                                  disabled={!canSkip}
+                                  onClick={() => {
+                                    setSelectedTreinoId(treino.id);
+                                    setSkipDialogOpen(true);
+                                  }}
+                                >
+                                  <SkipForward className="h-4 w-4 mr-2" />
+                                  Pular este treino
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  disabled={!canRestart}
+                                  onClick={() => {
+                                    setSelectedTreinoId(treino.id);
+                                    setRestartDialogOpen(true);
+                                  }}
+                                >
+                                  <RotateCcw className="h-4 w-4 mr-2" />
+                                  Reiniciar este treino
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        )}
                       </div>
 
                       {/* Status icon at bottom */}
@@ -584,7 +596,7 @@ export default function ActiveProgram() {
             </div>
             
             {/* Botão Concluir Programa quando 100% */}
-            {getProgramProgress() === 100 && (
+            {!readOnly && getProgramProgress() === 100 && (
               <div className="mt-8 p-6 bg-green-900/20 border border-green-500/30 rounded-lg text-center">
                 <Trophy className="h-12 w-12 text-green-400 mx-auto mb-3" />
                 <h4 className="text-lg font-semibold text-green-400 mb-2">

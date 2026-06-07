@@ -39,6 +39,7 @@ interface ExerciseSetsProps {
   onAddSet?: () => void;
   onRemoveSet?: (index: number) => void;
   originalSetCount?: number;
+  readOnly?: boolean;
 }
 
 export function ExerciseSets({
@@ -61,6 +62,7 @@ export function ExerciseSets({
   onAddSet,
   onRemoveSet,
   originalSetCount = 0,
+  readOnly = false,
 }: ExerciseSetsProps) {
   const [showAddSetDialog, setShowAddSetDialog] = useState(false);
 
@@ -137,17 +139,17 @@ export function ExerciseSets({
       return <div key={index} className={`grid grid-cols-4 gap-2 items-center py-2 ${index !== sets.length - 1 ? "border-b" : ""}`}>
             <div>{set.number}</div>
             <div className="flex items-center">
-              <Input type="number" value={displayWeight} placeholder={placeholderWeight} onFocus={() => handleWeightFocus(index, suggestedWeight)} onChange={e => handleWeightChange(index, e.target.value)} step={0.5} className="w-20 h-8 text-base" />
+              <Input type="number" value={displayWeight} placeholder={placeholderWeight} onFocus={() => handleWeightFocus(index, suggestedWeight)} onChange={e => handleWeightChange(index, e.target.value)} step={0.5} className="w-20 h-8 text-base" readOnly={readOnly} />
               <span className="ml-1 text-sm">kg</span>
             </div>
             <div>
-              <Input type="number" value={displayReps} placeholder={placeholderReps} onChange={e => handleRepsChange(index, Number(e.target.value))} min={0} step={1} className="w-20 h-8 text-base" />
+              <Input type="number" value={displayReps} placeholder={placeholderReps} onChange={e => handleRepsChange(index, Number(e.target.value))} min={0} step={1} className="w-20 h-8 text-base" readOnly={readOnly} />
             </div>
             <div className="flex justify-center gap-1">
-              <Button variant={set.completed ? "default" : "outline"} size="sm" className="h-8 w-8 p-0" onClick={() => handleSetComplete(index)}>
+              <Button variant={set.completed ? "default" : "outline"} size="sm" className="h-8 w-8 p-0" onClick={() => handleSetComplete(index)} disabled={readOnly}>
                 {set.completed ? <Check className="h-4 w-4" /> : null}
               </Button>
-              {canRemove && (
+              {canRemove && !readOnly && (
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive" onClick={() => onRemoveSet(index)}>
                   <X className="h-4 w-4" />
                 </Button>
@@ -157,7 +159,7 @@ export function ExerciseSets({
     })}
 
       {/* Add set button */}
-      {!exerciseConcluido && onAddSet && (
+      {!exerciseConcluido && onAddSet && !readOnly && (
         <button
           type="button"
           className="mt-2 text-sm text-primary hover:underline flex items-center gap-1"
@@ -189,29 +191,31 @@ export function ExerciseSets({
         </AlertDialogContent>
       </AlertDialog>
       
-      <div className="mt-4 space-y-4">
-        {showNoteInput ? <div className="space-y-2">
-            <Input placeholder="Digite sua anotação sobre este exercício" value={exerciseNote} onChange={e => setExerciseNote(e.target.value)} />
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowNoteInput(false)}>
-                Cancelar
-              </Button>
-              <Button size="sm" onClick={() => {
-                if (exerciseNote.trim()) {
-                  addNote(exerciseNote.trim());
-                  setExerciseNote('');
-                }
-              }}>
-                Salvar nota
-              </Button>
-            </div>
-          </div> : <Button variant="outline" className="text-sm" onClick={() => setShowNoteInput(true)}>
-            Adicionar nota
-          </Button>}
-        
-        <Button className="w-full" disabled={exerciseConcluido} onClick={handleExerciseComplete}>
-          {allSetsCompleted ? "Todas séries concluídas" : "Concluir exercício"}
-        </Button>
-      </div>
+      {!readOnly && (
+        <div className="mt-4 space-y-4">
+          {showNoteInput ? <div className="space-y-2">
+              <Input placeholder="Digite sua anotação sobre este exercício" value={exerciseNote} onChange={e => setExerciseNote(e.target.value)} />
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => setShowNoteInput(false)}>
+                  Cancelar
+                </Button>
+                <Button size="sm" onClick={() => {
+                  if (exerciseNote.trim()) {
+                    addNote(exerciseNote.trim());
+                    setExerciseNote('');
+                  }
+                }}>
+                  Salvar nota
+                </Button>
+              </div>
+            </div> : <Button variant="outline" className="text-sm" onClick={() => setShowNoteInput(true)}>
+              Adicionar nota
+            </Button>}
+          
+          <Button className="w-full" disabled={exerciseConcluido} onClick={handleExerciseComplete}>
+            {allSetsCompleted ? "Todas séries concluídas" : "Concluir exercício"}
+          </Button>
+        </div>
+      )}
     </div>;
 }

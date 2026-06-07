@@ -38,12 +38,14 @@ interface ExerciseCardProps {
   };
   onExerciseComplete: (exerciseId: string, isCompleted: boolean) => Promise<void>;
   onWeightUpdate: (exerciseId: string, weight: number) => Promise<void>;
+  readOnly?: boolean;
 }
 
 export function ExerciseCard({
   exercise,
   onExerciseComplete,
-  onWeightUpdate
+  onWeightUpdate,
+  readOnly = false
 }: ExerciseCardProps) {
   console.log(`=== RENDERING ExerciseCard for ${exercise.nome} ===`);
   console.log(`Exercise data:`, exercise);
@@ -78,7 +80,7 @@ export function ExerciseCard({
     saveIncrementSetting,
     resetIncrementDialogShown,
     checkIsFirstWeek
-  } = useExerciseState(exercise, onExerciseComplete, onWeightUpdate);
+  } = useExerciseState(exercise, onExerciseComplete, onWeightUpdate, readOnly);
 
   const { isLoadingSeries, previousSeries } = usePreviousSeries(isOpen, exercise.exercicio_original_id, exercise.card_original_id, exercise.substituto_custom_id);
 
@@ -192,6 +194,7 @@ export function ExerciseCard({
           setShowIncrementDialog={setShowIncrementDialog}
           skipIncompleteSets={skipIncompleteSets}
           onSubstitutionRequest={handleOpenSubstitution}
+          readOnly={readOnly}
         />
 
         <ExerciseObservation
@@ -226,6 +229,7 @@ export function ExerciseCard({
                 onAddSet={addSet}
                 onRemoveSet={removeSet}
                 originalSetCount={originalSetCount}
+                readOnly={readOnly}
               />
             </AccordionContent>
           </AccordionItem>

@@ -61,9 +61,15 @@ export default function Workout() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Peek mode: read-only view; only meaningful for advanced programs
+  // Peek mode: read-only espiar of the active program's upcoming workout (advanced only)
   const peekRequested = new URLSearchParams(location.search).get('peek') === '1';
   const peekMode = peekRequested && isAdvanced;
+
+  // View mode: read-only revisiting of an inactive (paused/finished) program — all levels
+  const viewMode = new URLSearchParams(location.search).get('view') === '1';
+
+  // Combined read-only flag
+  const readOnly = peekMode || viewMode;
 
   // ART check for advanced workouts
   const {
@@ -75,7 +81,7 @@ export default function Workout() {
     treino?.programa_usuario_id || null,
     treinoId || null,
     exerciciosAdvanced,
-    isAdvanced && !loading && !peekMode
+    isAdvanced && !loading && !readOnly
   );
   
   useEffect(() => {
@@ -116,8 +122,10 @@ export default function Workout() {
         if (advanced) {
           await fetchAdvancedExercises(treinoId, treinoData);
         } else {
-          // Aplicar progressão automática (only for beginner)
-          await applyWorkoutProgression(treinoId);
+          // Aplicar progressão automática (only for beginner; skip in read-only view)
+          if (!viewMode) {
+            await applyWorkoutProgression(treinoId);
+          }
           await fetchBeginnerExercises(treinoId);
         }
       } catch (error: any) {
@@ -226,7 +234,7 @@ export default function Workout() {
   const tableName = isAdvanced ? 'exercicios_treino_usuario_avancado' : 'exercicios_treino_usuario';
 
   const toggleExerciseCompletion = async (exerciseId: string, isCompleted: boolean) => {
-    if (peekMode) return;
+    if (readOnly) return;
     if (isAdvanced) {
       setExerciciosAdvanced(prev =>
         prev.map(ex => ex.id === exerciseId ? { ...ex, concluido: isCompleted } : ex)
@@ -263,7 +271,7 @@ export default function Workout() {
   };
 
   const updateExerciseWeight = async (exerciseId: string, weight: number) => {
-    if (peekMode) return;
+    if (readOnly) return;
     if (isAdvanced) {
       setExerciciosAdvanced(prev =>
         prev.map(ex => ex.id === exerciseId ? { ...ex, peso: weight } : ex)
@@ -290,7 +298,7 @@ export default function Workout() {
   };
 
   const completeWorkout = async () => {
-    if (peekMode) return;
+    if (readOnly) return;
     if (!treino) return;
     setSaving(true);
     try {
@@ -349,7 +357,7 @@ export default function Workout() {
   const navigateToAdjacentWorkout = async (direction: 'next' | 'previous') => {
     const adjacentWorkoutId = await findAdjacentWorkout(direction);
     if (adjacentWorkoutId) {
-      navigate(`/workout/${adjacentWorkoutId}`);
+      navigate(`/workout/${adjacentWorkoutId}${viewMode ? '?view=1' : ''}`);
     } else {
       toast({
         title: `Não há treino ${direction === 'next' ? 'próximo' : 'anterior'}`,
@@ -367,15 +375,23 @@ export default function Workout() {
 
   const isWorkoutAlreadyCompleted = () => treino?.concluido === true;
 
+  const handleBack = () => {
+    if (viewMode && treino?.programa_usuario_id) {
+      navigate(`/program-view/${treino.programa_usuario_id}`);
+    } else {
+      navigate("/active-program");
+    }
+  };
+
   return (
     <div className="pb-20">
-      <WorkoutTimer peekMode={peekMode} />
+      <WorkoutTimer peekMode={readOnly} />
       <PageHeader title={treino?.nome || "Carregando..."}>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => navigateToAdjacentWorkout('previous')}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="outline" onClick={() => navigate("/active-program")}>
+          <Button variant="outline" onClick={handleBack}>
             Voltar ao Programa
           </Button>
           <Button variant="outline" size="sm" onClick={() => navigateToAdjacentWorkout('next')}>
@@ -390,18 +406,22 @@ export default function Workout() {
         </div>
       ) : (
         <div className="space-y-6">
-          {peekMode && (
+          {readOnly && (
             <div className="flex items-center gap-3 p-3 rounded-md border border-amber-500/40 bg-amber-500/10">
               <Eye className="h-5 w-5 text-amber-500 shrink-0" />
               <p className="text-sm flex-1">
-                Modo visualização — nada será salvo.
+                {viewMode
+                  ? "Modo visualização — somente leitura."
+                  : "Modo visualização — nada será salvo."}
               </p>
-              <Button
-                size="sm"
-                onClick={() => navigate(`/workout/${treinoId}`, { replace: true })}
-              >
-                Iniciar treino
-              </Button>
+              {peekMode && (
+                <Button
+                  size="sm"
+                  onClick={() => navigate(`/workout/${treinoId}`, { replace: true })}
+                >
+                  Iniciar treino
+                </Button>
+              )}
             </div>
           )}
 
@@ -420,7 +440,7 @@ export default function Workout() {
                       )}
                       onExerciseComplete={toggleExerciseCompletion}
                       onWeightUpdate={updateExerciseWeight}
-                      peekMode={peekMode}
+                      peekMode={readOnly}
                     />
                   ))
               : exercicios
@@ -431,12 +451,13 @@ export default function Workout() {
                       exercise={exercicio}
                       onExerciseComplete={toggleExerciseCompletion}
                       onWeightUpdate={updateExerciseWeight}
+                      readOnly={readOnly}
                     />
                   ))
             }
           </div>
 
-          {!peekMode && (
+          {!readOnly && (
             <div className="pt-4">
               <Button
                 className="w-full"
