@@ -165,10 +165,10 @@ export default function ActiveProgram() {
     }
 
     fetchActiveProgram();
-  }, [navigate]);
+  }, [navigate, programaUsuarioId, readOnly]);
 
   const navigateToWorkout = (treinoId: string) => {
-    navigate(`/workout/${treinoId}`);
+    navigate(readOnly ? `/workout/${treinoId}?view=1` : `/workout/${treinoId}`);
   };
 
   const getProgramProgress = () => {
