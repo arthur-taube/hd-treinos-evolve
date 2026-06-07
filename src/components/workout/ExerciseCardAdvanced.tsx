@@ -75,7 +75,7 @@ export function ExerciseCardAdvanced({
     showIncrementDialog, setShowIncrementDialog,
     saveIncrementSetting,
     resetIncrementDialogShown
-  } = useExerciseStateAdvanced(exercise, onExerciseComplete, onWeightUpdate, peekMode);
+  } = useExerciseStateAdvanced(exercise, onExerciseComplete, onWeightUpdate, readOnly);
 
   const { isLoadingSeries, previousSeries } = usePreviousSeriesAdvanced(
     isOpen,
@@ -83,6 +83,10 @@ export function ExerciseCardAdvanced({
     exercise.card_original_id,
     exercise.substituto_custom_id
   );
+
+  // View mode: load the actual saved series for this exercise instance
+  const { savedSets } = useSavedSeries(isOpen && viewMode, exercise.id);
+
 
   const {
     handleSetComplete, handleWeightChange, handleRepsChange, handleWeightFocus,
