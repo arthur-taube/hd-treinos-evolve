@@ -191,29 +191,31 @@ export function ExerciseSets({
         </AlertDialogContent>
       </AlertDialog>
       
-      <div className="mt-4 space-y-4">
-        {showNoteInput ? <div className="space-y-2">
-            <Input placeholder="Digite sua anotação sobre este exercício" value={exerciseNote} onChange={e => setExerciseNote(e.target.value)} />
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowNoteInput(false)}>
-                Cancelar
-              </Button>
-              <Button size="sm" onClick={() => {
-                if (exerciseNote.trim()) {
-                  addNote(exerciseNote.trim());
-                  setExerciseNote('');
-                }
-              }}>
-                Salvar nota
-              </Button>
-            </div>
-          </div> : <Button variant="outline" className="text-sm" onClick={() => setShowNoteInput(true)}>
-            Adicionar nota
-          </Button>}
-        
-        <Button className="w-full" disabled={exerciseConcluido} onClick={handleExerciseComplete}>
-          {allSetsCompleted ? "Todas séries concluídas" : "Concluir exercício"}
-        </Button>
-      </div>
+      {!readOnly && (
+        <div className="mt-4 space-y-4">
+          {showNoteInput ? <div className="space-y-2">
+              <Input placeholder="Digite sua anotação sobre este exercício" value={exerciseNote} onChange={e => setExerciseNote(e.target.value)} />
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => setShowNoteInput(false)}>
+                  Cancelar
+                </Button>
+                <Button size="sm" onClick={() => {
+                  if (exerciseNote.trim()) {
+                    addNote(exerciseNote.trim());
+                    setExerciseNote('');
+                  }
+                }}>
+                  Salvar nota
+                </Button>
+              </div>
+            </div> : <Button variant="outline" className="text-sm" onClick={() => setShowNoteInput(true)}>
+              Adicionar nota
+            </Button>}
+          
+          <Button className="w-full" disabled={exerciseConcluido} onClick={handleExerciseComplete}>
+            {allSetsCompleted ? "Todas séries concluídas" : "Concluir exercício"}
+          </Button>
+        </div>
+      )}
     </div>;
 }
