@@ -38,12 +38,14 @@ interface ExerciseCardProps {
   };
   onExerciseComplete: (exerciseId: string, isCompleted: boolean) => Promise<void>;
   onWeightUpdate: (exerciseId: string, weight: number) => Promise<void>;
+  readOnly?: boolean;
 }
 
 export function ExerciseCard({
   exercise,
   onExerciseComplete,
-  onWeightUpdate
+  onWeightUpdate,
+  readOnly = false
 }: ExerciseCardProps) {
   console.log(`=== RENDERING ExerciseCard for ${exercise.nome} ===`);
   console.log(`Exercise data:`, exercise);
