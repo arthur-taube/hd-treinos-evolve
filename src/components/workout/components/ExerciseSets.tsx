@@ -39,6 +39,7 @@ interface ExerciseSetsProps {
   onAddSet?: () => void;
   onRemoveSet?: (index: number) => void;
   originalSetCount?: number;
+  readOnly?: boolean;
 }
 
 export function ExerciseSets({
@@ -61,6 +62,7 @@ export function ExerciseSets({
   onAddSet,
   onRemoveSet,
   originalSetCount = 0,
+  readOnly = false,
 }: ExerciseSetsProps) {
   const [showAddSetDialog, setShowAddSetDialog] = useState(false);
 
