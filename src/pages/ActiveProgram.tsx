@@ -395,7 +395,7 @@ export default function ActiveProgram() {
 
   return (
     <div className="pb-20">
-      <PageHeader title="Meu Programa Ativo">
+      <PageHeader title={readOnly ? "Visualizar Programa" : "Meu Programa Ativo"}>
         <Button variant="outline" onClick={() => navigate("/programs")}>
           Voltar
         </Button>
