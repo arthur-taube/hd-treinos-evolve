@@ -276,6 +276,7 @@ const Programs = () => {
                     description={program.description}
                     isPaused
                     hasUnfinishedWorkouts={program.hasUnfinishedWorkouts}
+                    onOpen={() => navigate(`/program-view/${program.id}`)}
                     onResume={() => handleResumeProgram(program.id)}
                     onFinish={() => handleFinishProgram(program.id, false)}
                     onDelete={() => handleDeleteProgram(program.id, true)}
