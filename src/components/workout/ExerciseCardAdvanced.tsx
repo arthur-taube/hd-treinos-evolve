@@ -252,7 +252,7 @@ export function ExerciseCardAdvanced({
           skipIncompleteSets={skipIncompleteSets}
           onSubstitutionRequest={handleOpenSubstitution}
           onMethodChange={handleMethodChange}
-          peekMode={peekMode}
+          peekMode={readOnly}
         />
 
         <ExerciseObservation
