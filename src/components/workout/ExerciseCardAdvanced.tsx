@@ -11,6 +11,7 @@ import { SpecialMethodDialog } from "./SpecialMethodDialog";
 import { useExerciseStateAdvanced } from "./hooks/useExerciseStateAdvanced";
 import { useExerciseActionsAdvanced } from "./hooks/useExerciseActionsAdvanced";
 import { usePreviousSeriesAdvanced } from "./hooks/usePreviousSeriesAdvanced";
+import { useSavedSeries } from "./hooks/useSavedSeries";
 import { useEpleyProgression } from "@/hooks/useEpleyProgression";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -45,6 +46,7 @@ interface ExerciseCardAdvancedProps {
   onExerciseComplete: (exerciseId: string, isCompleted: boolean) => Promise<void>;
   onWeightUpdate: (exerciseId: string, weight: number) => Promise<void>;
   peekMode?: boolean;
+  viewMode?: boolean;
 }
 
 export function ExerciseCardAdvanced({
@@ -52,8 +54,11 @@ export function ExerciseCardAdvanced({
   resolvedRer,
   onExerciseComplete,
   onWeightUpdate,
-  peekMode = false
+  peekMode = false,
+  viewMode = false
 }: ExerciseCardAdvancedProps) {
+  // Both peek and view are read-only for UI purposes
+  const readOnly = peekMode || viewMode;
   const [showARADialog, setShowARADialog] = useState(false);
   const [showAMPDialog, setShowAMPDialog] = useState(false);
   const [showSubstitutionDialog, setShowSubstitutionDialog] = useState(false);
@@ -70,7 +75,7 @@ export function ExerciseCardAdvanced({
     showIncrementDialog, setShowIncrementDialog,
     saveIncrementSetting,
     resetIncrementDialogShown
-  } = useExerciseStateAdvanced(exercise, onExerciseComplete, onWeightUpdate, peekMode);
+  } = useExerciseStateAdvanced(exercise, onExerciseComplete, onWeightUpdate, readOnly);
 
   const { isLoadingSeries, previousSeries } = usePreviousSeriesAdvanced(
     isOpen,
@@ -78,6 +83,10 @@ export function ExerciseCardAdvanced({
     exercise.card_original_id,
     exercise.substituto_custom_id
   );
+
+  // View mode: load the actual saved series for this exercise instance
+  const { savedSets } = useSavedSeries(isOpen && viewMode, exercise.id);
+
 
   const {
     handleSetComplete, handleWeightChange, handleRepsChange, handleWeightFocus,
@@ -110,8 +119,9 @@ export function ExerciseCardAdvanced({
   const suggestedWeight = epleyResult?.suggestedWeight || exercise.peso || 0;
   const suggestedReps = epleyResult?.suggestedReps || defaultMinReps;
 
-  // Update sets with Epley suggestions when they arrive
+  // Update sets with Epley suggestions when they arrive (skip in view mode — no progression)
   useEffect(() => {
+    if (viewMode) return;
     if (!epleyResult) return;
     setSets(prev => prev.map(set => {
       if (set.completed) return set;
@@ -123,7 +133,20 @@ export function ExerciseCardAdvanced({
         reps: isDefaultReps ? epleyResult.suggestedReps : set.reps,
       };
     }));
-  }, [epleyResult]);
+  }, [epleyResult, viewMode]);
+
+  // View mode: overwrite sets with the real saved values for this day
+  useEffect(() => {
+    if (!viewMode || !savedSets || savedSets.length === 0) return;
+    setSets(savedSets.map(s => ({
+      number: s.number,
+      weight: s.weight,
+      reps: s.reps,
+      completed: s.completed,
+      note: s.note,
+    })));
+  }, [viewMode, savedSets]);
+
 
   const allSetsCompleted = sets.every(set => set.completed);
 
@@ -229,7 +252,7 @@ export function ExerciseCardAdvanced({
           skipIncompleteSets={skipIncompleteSets}
           onSubstitutionRequest={handleOpenSubstitution}
           onMethodChange={handleMethodChange}
-          peekMode={peekMode}
+          peekMode={readOnly}
         />
 
         <ExerciseObservation
@@ -246,7 +269,7 @@ export function ExerciseCardAdvanced({
             <AccordionContent>
               <ExerciseSetsAdvanced
                 sets={sets}
-                previousSeries={previousSeries}
+                previousSeries={viewMode ? [] : previousSeries}
                 isLoadingSeries={isLoadingSeries}
                 handleSetComplete={handleSetComplete}
                 handleWeightChange={handleWeightChange}
@@ -262,7 +285,7 @@ export function ExerciseCardAdvanced({
                 onAddSet={addSet}
                 onRemoveSet={removeSet}
                 originalSetCount={originalSetCount}
-                peekMode={peekMode}
+                peekMode={readOnly}
               />
             </AccordionContent>
           </AccordionItem>
