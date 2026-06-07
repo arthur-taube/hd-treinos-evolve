@@ -7,6 +7,7 @@ import { DIFFICULTY_OPTIONS, COMBINED_FATIGUE_OPTIONS } from "@/hooks/use-exerci
 import { useExerciseState } from "./hooks/useExerciseState";
 import { useExerciseActions } from "./hooks/useExerciseActions";
 import { usePreviousSeries } from "./hooks/usePreviousSeries";
+import { useSavedSeries } from "./hooks/useSavedSeries";
 import { ExerciseHeader } from "./components/ExerciseHeader";
 import { ExerciseObservation } from "./components/ExerciseObservation";
 import { ExerciseSets } from "./components/ExerciseSets";
