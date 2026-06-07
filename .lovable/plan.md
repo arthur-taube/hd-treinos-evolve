@@ -1,78 +1,71 @@
-# Modo somente leitura para programas inativos
-
 ## Objetivo
 
-Permitir abrir programas **pausados** e **finalizados** a partir de `/programs` (clicando no card) e revisitar tudo em modo **somente leitura**: a lista de treinos e cada treino completo (séries, pesos, reps registrados), sem permissão de edição, em qualquer nível (iniciante, intermediário, avançado).
+Separar claramente dois comportamentos somente-leitura que hoje estão unificados na flag `readOnly`/`peekMode`:
 
-## Como vai funcionar
+- **Peek mode** (`?peek=1`, só avançado): espiar um treino **futuro** do programa ativo. Deve continuar rodando a progressão (Epley) para mostrar como peso/reps vão se comportar, **sem salvar**. Comportamento atual mantido.
+- **View mode** (`?view=1`, todos os níveis): revisitar treinos **passados** de programas pausados/finalizados. **Nenhuma progressão** deve rodar; deve exibir exatamente os dados salvos pelo usuário em `series_exercicio_usuario` para aquele dia. O "Histórico recente" deve ficar oculto.
+
+## Problema atual
+
+`Workout.tsx` define `readOnly = peekMode || viewMode` e passa esse valor combinado para os cards via a prop `peekMode` (avançado) e `readOnly` (iniciante). Como resultado:
+- No view mode o card avançado ainda roda o `useEffect` do Epley e sobrescreve os sets com sugestões de progressão, em vez de mostrar os dados reais.
+- No iniciante os sets aparecem com placeholders de `exercise.peso`/`reps_programadas`, não com os valores reais salvos.
+- O "Histórico recente" aparece mesmo quando estamos olhando dados de uma semana específica.
+
+A correção é introduzir uma flag distinta `viewMode` que desce até os cards, separada do `peekMode`, e usar essa flag para alternar a fonte de dados.
+
+## Mudanças
+
+### 1. Novo hook `useSavedSeries` (`src/components/workout/hooks/useSavedSeries.ts`)
+- Assinatura: `useSavedSeries(enabled: boolean, exerciseId: string)`.
+- Quando `enabled` (apenas view mode) e o card abrir, busca em `series_exercicio_usuario` por `exercicio_usuario_id = exerciseId`, ordenado por `numero_serie` ascendente.
+- Retorna `{ savedSets, isLoadingSaved }` onde cada item tem `{ number, weight, reps, completed: true, note }`.
+- Serve tanto iniciante quanto avançado (a tabela é compartilhada; a FK aponta para o id da instância do exercício, que é exatamente o exercício do dia visualizado).
+
+### 2. `Workout.tsx` — propagar `viewMode` separado de `peekMode`
+- Manter `peekMode` (peek, só avançado), `viewMode` (view, todos), e `readOnly = peekMode || viewMode` para os guards de escrita, timer e botão "Concluir Treino" (sem mudança nessa parte).
+- Passar **duas props distintas** para os cards:
+  - Avançado `ExerciseCardAdvanced`: manter `peekMode={peekMode}` (somente peek real) e adicionar `viewMode={viewMode}`.
+  - Iniciante `ExerciseCard`: manter `readOnly={readOnly}` (UI desabilitada) e adicionar `viewMode={viewMode}`.
+- Banner: já diferencia os textos; manter "Modo visualização — somente leitura." para view e "Modo visualização — nada será salvo." + botão "Iniciar treino" para peek.
+
+### 3. `ExerciseCardAdvanced.tsx`
+- Nova prop `viewMode?: boolean`. `readOnly` interno = `peekMode || viewMode` (para passar aos componentes filhos que desabilitam UI).
+- **Epley**: continuar chamando `useEpleyProgression` apenas quando **não** for `viewMode`; pular o `useEffect` que sobrescreve sets com sugestões quando `viewMode` (em peek continua rodando como hoje).
+- **Sets em view mode**: instanciar `useSavedSeries(isOpen && viewMode, exercise.id)`; quando os dados chegarem, sobrescrever `sets` com os valores reais (incluindo `note` por série).
+- **Histórico recente**: passar `previousSeries={viewMode ? [] : previousSeries}` para `ExerciseSetsAdvanced`. Em peek, mantém o histórico atual.
+- Passar `peekMode={readOnly}` para `ExerciseHeaderAdvanced`/`ExerciseSetsAdvanced` para manter inputs/menus desabilitados em ambos os modos (a UI continua read-only nos dois casos).
+
+### 4. `ExerciseCard.tsx` (iniciante)
+- Nova prop `viewMode?: boolean`.
+- Instanciar `useSavedSeries(isOpen && viewMode, exercise.id)`; quando os dados chegarem em `viewMode`, sobrescrever `sets` com os valores reais (`weight`, `reps`, `completed: true`).
+- Passar `previousSeries={viewMode ? [] : previousSeries}` para `ExerciseSets` para ocultar o "Histórico recente" no view mode.
+- `readOnly` continua controlando a desabilitação dos inputs/menus (já implementado).
+
+### 5. `useExerciseStateAdvanced.ts` / `useExerciseState.ts`
+- Garantir que o diálogo de incremento não abra em nenhum dos modos read-only. Hoje o avançado checa `peekMode`; ajustar para receber também `viewMode` (ou receber o `readOnly` combinado) e não abrir o diálogo. (O iniciante já recebe `readOnly`.)
+
+## Distinção final de comportamento
 
 ```text
-/programs
-  ├─ Programa Ativo      → clique → /active-program            (comportamento atual)
-  ├─ Programas Pausados  → clique → /program-view/<id>  [view] (novo)
-  └─ Programas Finalizados → clique → /program-view/<id> [view] (novo)
-
-/program-view/<id>  (mesma tela do programa, somente leitura)
-  └─ clique no treino → /workout/<treinoId>?view=1  (treino somente leitura)
+                 | peek (?peek=1)        | view (?view=1)
+-----------------+-----------------------+-----------------------
+Progressão Epley | roda (sugestão)       | NÃO roda
+Fonte dos sets   | sugestão progressão   | series_exercicio_usuario (dados reais)
+Persistência     | nenhuma               | nenhuma
+Histórico recente| visível               | oculto
+Inputs/menus     | desabilitados         | desabilitados
+Timer / Concluir | ocultos               | ocultos
 ```
 
-## Comportamento do modo leitura
-
-**Na tela do programa (`/program-view/<id>`):**
-- Mostra cabeçalho, progresso e lista de treinos com status (concluído/pulado), igual ao programa ativo.
-- Sem menu de ações (⋮ pular/reiniciar), sem botões espiar/iniciar, sem CTA de finalizar.
-- Clicar em qualquer treino abre o treino em modo leitura.
-
-**Dentro do treino (`?view=1`):**
-- Inputs de peso/reps em `readOnly`; checkboxes "concluir série", "+ série", notas, observação e menus (substituir/observação/incremento/método especial) ocultos/desabilitados — para **todos os níveis**.
-- Timer oculto.
-- Botão "Concluir Treino" oculto.
-- ART e progressão automática suprimidos (nada é gravado).
-- Banner "Modo visualização — somente leitura" (sem botão "Iniciar treino", pois o programa não está ativo).
-- "Voltar" retorna para `/program-view/<id>`; navegação entre treinos preserva `?view=1`.
-
-## Mudanças técnicas
-
-### 1. Rota nova
-- `src/App.tsx`: adicionar rota `/program-view/:programaUsuarioId` renderizando `ActiveProgram` dentro do `AppLayout`.
-
-### 2. `src/pages/ActiveProgram.tsx` — suportar modo leitura
-- Ler `useParams().programaUsuarioId`. Definir `readOnly = !!programaUsuarioId`.
-- No fetch: se `programaUsuarioId` presente, buscar `programas_usuario` por `id` (qualquer estado) em vez de `ativo = true`; validar que pertence ao usuário logado.
-- Quando `readOnly`:
-  - Card do treino: sempre `cursor-pointer`, `onClick` → `navigate('/workout/${treino.id}?view=1')`; ocultar botões espiar/iniciar e o menu ⋮.
-  - Ocultar o bloco "Concluir Programa" (troféu) e handlers de pular/reiniciar/finalizar.
-  - Ajustar título do `PageHeader` (ex.: nome do programa / "Visualizar programa") e manter botão "Voltar" → `/programs`.
-
-### 3. `src/pages/Workout.tsx` — read-only para todos os níveis
-- Novo flag: `viewMode = new URLSearchParams(location.search).get('view') === '1'`.
-- `readOnly = viewMode || peekMode` (peek continua só avançado; view vale para todos).
-- Usar `readOnly` no lugar de `peekMode` em: supressão do `useARTCheck`, guards de `toggleExerciseCompletion`/`updateExerciseWeight`/`completeWorkout`, ocultar "Concluir Treino" e o `WorkoutTimer`.
-- Pular `applyWorkoutProgression(treinoId)` no caminho iniciante quando `readOnly` (hoje ele grava).
-- Passar `readOnly` para `ExerciseCardAdvanced` (prop `peekMode` existente) **e** para `ExerciseCard` (iniciante — nova prop).
-- Banner: quando `viewMode`, texto "Modo visualização — somente leitura" sem o botão "Iniciar treino"; quando `peekMode` (espiar atual), mantém o botão.
-- "Voltar" e navegação adjacente: em `viewMode`, voltar para `/program-view/${treino.programa_usuario_id}` e preservar `?view=1` ao trocar de treino.
-
-### 4. Cards iniciantes somente leitura (espelhar o que já existe no avançado)
-- `src/components/workout/ExerciseCard.tsx`: aceitar `readOnly?: boolean` e propagar.
-- `src/components/workout/components/ExerciseHeader.tsx`: ocultar menu de ações (substituir/observação/incremento) em `readOnly`.
-- `src/components/workout/components/ExerciseSets.tsx`: inputs `readOnly`, desabilitar checkboxes/"+ série"/notas e ocultar "Concluir exercício".
-- `src/components/workout/hooks/useExerciseState.ts`: não abrir automaticamente o diálogo de incremento quando `readOnly`.
-
-### 5. `src/pages/Programs.tsx` — abrir inativos
-- Passar `onOpen={() => navigate('/program-view/${program.id}')}` nos `ProgramCard` de **pausados** e **finalizados**.
-- `ProgramCard`/`ProgramOptionsMenu` já suportam `onOpen` no clique do corpo do card; nenhuma mudança estrutural necessária além de fornecer o handler.
-
-## Arquivos a alterar
-- `src/App.tsx`
-- `src/pages/ActiveProgram.tsx`
+## Arquivos
+- `src/components/workout/hooks/useSavedSeries.ts` (novo)
 - `src/pages/Workout.tsx`
+- `src/components/workout/ExerciseCardAdvanced.tsx`
 - `src/components/workout/ExerciseCard.tsx`
-- `src/components/workout/components/ExerciseHeader.tsx`
-- `src/components/workout/components/ExerciseSets.tsx`
+- `src/components/workout/hooks/useExerciseStateAdvanced.ts`
 - `src/components/workout/hooks/useExerciseState.ts`
-- `src/pages/Programs.tsx`
 
 ## Fora de escopo
-- Sem mudanças de schema/RLS. Guards são client-side; o backend já restringe escritas ao dono. (RLS de leitura para programas inativos já funciona, pois pertencem ao próprio usuário.)
-- O modo "espiar" (`?peek=1`) do programa ativo permanece como está.
+- Sem mudanças de schema/RLS. As leituras de `series_exercicio_usuario` já são permitidas ao dono (`user_id = auth.uid()`).
+- Peek mode permanece exatamente como está hoje.
