@@ -406,18 +406,22 @@ export default function Workout() {
         </div>
       ) : (
         <div className="space-y-6">
-          {peekMode && (
+          {readOnly && (
             <div className="flex items-center gap-3 p-3 rounded-md border border-amber-500/40 bg-amber-500/10">
               <Eye className="h-5 w-5 text-amber-500 shrink-0" />
               <p className="text-sm flex-1">
-                Modo visualização — nada será salvo.
+                {viewMode
+                  ? "Modo visualização — somente leitura."
+                  : "Modo visualização — nada será salvo."}
               </p>
-              <Button
-                size="sm"
-                onClick={() => navigate(`/workout/${treinoId}`, { replace: true })}
-              >
-                Iniciar treino
-              </Button>
+              {peekMode && (
+                <Button
+                  size="sm"
+                  onClick={() => navigate(`/workout/${treinoId}`, { replace: true })}
+                >
+                  Iniciar treino
+                </Button>
+              )}
             </div>
           )}
 
