@@ -138,7 +138,7 @@ export default function ProgramCatalogTitle() {
       case "intermediario":
         return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Intermediário</Badge>;
       case "avancado":
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Avançado</Badge>;
+        return <Badge variant="outline" className="bg-red-600 text-white border-red-600">Avançado</Badge>;
       default:
         return <Badge variant="outline">{level}</Badge>;
     }
