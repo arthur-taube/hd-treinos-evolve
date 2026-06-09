@@ -1,6 +1,23 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Exercise } from "@/components/programs/ProgramEditor/types";
 
+/**
+ * Deriva uma chave de identidade estável (consistente entre todas as semanas)
+ * para casar exercícios editados com linhas do banco durante a propagação.
+ * Cadeia: card_original_id -> exercicio_original_id -> nome::grupo.
+ */
+function getStableKey(row: {
+  card_original_id?: string | null;
+  exercicio_original_id?: string | null;
+  nome?: string | null;
+  grupo_muscular?: string | null;
+}): string {
+  if (row.card_original_id) return `card::${row.card_original_id}`;
+  if (row.exercicio_original_id) return `orig::${row.exercicio_original_id}`;
+  return `name::${row.nome || ''}::${row.grupo_muscular || ''}`;
+}
+
+
 interface FlexibleDesconsiderar {
   domingos: boolean;
   sabados: boolean;
