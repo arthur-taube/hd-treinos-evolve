@@ -55,6 +55,7 @@ export function ExerciseHeaderAdvanced({
   peekMode = false
 }: ExerciseHeaderAdvancedProps) {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [showSkipConfirm, setShowSkipConfirm] = useState(false);
 
   // Fetch video_url from exercicios_avancados
   useEffect(() => {
