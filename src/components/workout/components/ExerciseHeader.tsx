@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Youtube, MoreHorizontal, Check, Play, TrendingUp } from "lucide-react";
 import { roundSetsForDisplay } from "@/utils/progressionCalculator";
 import { useProgressionIndicator } from "@/hooks/useProgressionIndicator";
@@ -43,6 +44,8 @@ export function ExerciseHeader({
   readOnly = false
 }: ExerciseHeaderProps) {
   const progressionMessage = useProgressionIndicator(exercise.id, exercise.exercicio_original_id || '');
+  const [showSkipConfirm, setShowSkipConfirm] = useState(false);
+  
   
   // Fetch video_url dynamically from exercicios_iniciantes
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -119,7 +122,7 @@ export function ExerciseHeader({
                 <DropdownMenuItem onClick={() => setShowIncrementDialog(true)}>
                   Redefinir incremento mínimo
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={skipIncompleteSets}>
+                <DropdownMenuItem onClick={() => setShowSkipConfirm(true)}>
                   Pular séries não concluídas
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -161,5 +164,22 @@ export function ExerciseHeader({
           {exercise.concluido ? <Check className="h-6 w-6" /> : <Play className="h-6 w-6" />}
         </Button>
       </div>
+
+      <AlertDialog open={showSkipConfirm} onOpenChange={setShowSkipConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Pular séries não concluídas?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja pular as séries não completadas e concluir este exercício?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => skipIncompleteSets()}>
+              Pular e concluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>;
 }
