@@ -44,6 +44,8 @@ export function ExerciseHeader({
   readOnly = false
 }: ExerciseHeaderProps) {
   const progressionMessage = useProgressionIndicator(exercise.id, exercise.exercicio_original_id || '');
+  const [showSkipConfirm, setShowSkipConfirm] = useState(false);
+  
   
   // Fetch video_url dynamically from exercicios_iniciantes
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
