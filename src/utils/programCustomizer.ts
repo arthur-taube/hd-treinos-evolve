@@ -1,6 +1,23 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Exercise } from "@/components/programs/ProgramEditor/types";
 
+/**
+ * Deriva uma chave de identidade estável (consistente entre todas as semanas)
+ * para casar exercícios editados com linhas do banco durante a propagação.
+ * Cadeia: card_original_id -> exercicio_original_id -> nome::grupo.
+ */
+function getStableKey(row: {
+  card_original_id?: string | null;
+  exercicio_original_id?: string | null;
+  nome?: string | null;
+  grupo_muscular?: string | null;
+}): string {
+  if (row.card_original_id) return `card::${row.card_original_id}`;
+  if (row.exercicio_original_id) return `orig::${row.exercicio_original_id}`;
+  return `name::${row.nome || ''}::${row.grupo_muscular || ''}`;
+}
+
+
 interface FlexibleDesconsiderar {
   domingos: boolean;
   sabados: boolean;
@@ -363,12 +380,12 @@ export async function updateUserProgram(
   for (const [dayKey, exercises] of Object.entries(customExercises)) {
     const ordemDia = parseInt(dayKey.replace('day', ''));
     const treinosDoDia = treinosByDay[ordemDia] || [];
-    
+
     // Extrair nome e nome_personalizado do título
     const customTitle = customDayTitles[dayKey];
     let nome = '';
     let nomePersonalizado: string | null = null;
-    
+
     if (customTitle) {
       if (customTitle.includes(" - ")) {
         [nome, nomePersonalizado] = customTitle.split(" - ").map(s => s.trim());
@@ -377,7 +394,24 @@ export async function updateUserProgram(
       }
     }
 
-    // 5. Atualizar cada treino do dia (todas as semanas não concluídas)
+    // 4.1. Montar lista "desejada" (visível, em ordem) com chave estável (card_original_id).
+    // Exercícios novos (sem card_original_id) recebem um id estável gerado, reutilizado em todas as semanas.
+    const desired = exercises
+      .filter(e => !e.hidden)
+      .map((exercise) => {
+        const existingCardId = (exercise as any).cardOriginalId || null;
+        const isNew = !existingCardId;
+        const cardOriginalId = existingCardId || crypto.randomUUID();
+        const stableKey = getStableKey({
+          card_original_id: cardOriginalId,
+          exercicio_original_id: exercise.originalId || null,
+          nome: exercise.name,
+          grupo_muscular: exercise.muscleGroup,
+        });
+        return { exercise, cardOriginalId, stableKey, isNew };
+      });
+
+    // 5. Reconciliar cada treino do dia (todas as semanas não concluídas)
     for (const treino of treinosDoDia) {
       if (treino.concluido) continue; // Pular treinos já concluídos
 
@@ -385,127 +419,97 @@ export async function updateUserProgram(
       if (nome) {
         await supabase
           .from("treinos_usuario")
-          .update({ 
-            nome: nome, 
-            nome_personalizado: nomePersonalizado 
+          .update({
+            nome: nome,
+            nome_personalizado: nomePersonalizado
           })
           .eq("id", treino.id);
       }
 
-      if (isAdvanced) {
-        // === ADVANCED FLOW ===
-        const { data: exerciciosAtuais } = await supabase
-          .from("exercicios_treino_usuario_avancado" as any)
-          .select("*")
-          .eq("treino_usuario_id", treino.id)
-          .order("ordem");
+      const tableName = isAdvanced
+        ? "exercicios_treino_usuario_avancado"
+        : "exercicios_treino_usuario";
 
-        const exerciciosAtuaisTyped = exerciciosAtuais as any[] || [];
+      const { data: exerciciosAtuais } = await supabase
+        .from(tableName as any)
+        .select("*")
+        .eq("treino_usuario_id", treino.id)
+        .order("ordem");
 
-        const exerciseIdsToKeep = exercises.filter(e => !e.hidden).map(e => e.id);
-        const exerciciosParaRemover = exerciciosAtuaisTyped.filter(
-          (ex: any) => !exerciseIdsToKeep.includes(ex.id) && !ex.concluido
-        );
+      const existingRows = (exerciciosAtuais as any[]) || [];
 
-        if (exerciciosParaRemover.length > 0) {
-          await supabase
-            .from("exercicios_treino_usuario_avancado" as any)
-            .delete()
-            .in("id", exerciciosParaRemover.map((e: any) => e.id));
-        }
+      // Linhas concluídas são histórico: nunca apagar/duplicar.
+      const editableRows = existingRows.filter(r => !r.concluido);
 
-        const visibleExercises = exercises.filter(e => !e.hidden);
-        for (let i = 0; i < visibleExercises.length; i++) {
-          const exercise = visibleExercises[i];
-          const existingExercise = exerciciosAtuaisTyped.find((ex: any) => ex.id === exercise.id);
+      // Índice das linhas editáveis por chave estável (pode haver duplicatas legadas).
+      const editableByKey = new Map<string, any[]>();
+      for (const row of editableRows) {
+        const key = getStableKey(row);
+        const list = editableByKey.get(key) || [];
+        list.push(row);
+        editableByKey.set(key, list);
+      }
 
-          if (existingExercise) {
-            if (!existingExercise.concluido) {
-              await supabase
-                .from("exercicios_treino_usuario_avancado" as any)
-                .update({
-                  nome: exercise.name,
-                  grupo_muscular: exercise.muscleGroup,
-                  series: exercise.sets,
-                  repeticoes: exercise.reps?.toString() || null,
-                  ordem: i + 1,
-                  metodo_especial: exercise.specialMethod || null,
-                })
-                .eq("id", existingExercise.id);
-            }
-          } else {
-            await supabase
-              .from("exercicios_treino_usuario_avancado" as any)
-              .insert({
-                treino_usuario_id: treino.id,
-                exercicio_original_id: exercise.originalId || null,
-                nome: exercise.name,
-                grupo_muscular: exercise.muscleGroup,
-                series: exercise.sets,
-                repeticoes: exercise.reps?.toString() || null,
-                oculto: false,
-                ordem: i + 1,
-                card_original_id: (exercise as any).cardOriginalId || null,
-                rer: exercise.rer || 'do_microciclo',
-                metodo_especial: exercise.specialMethod || null,
-                modelo_feedback: exercise.feedbackModel || 'ARA/ART',
-              });
+      const matchedRowIds = new Set<string>();
+
+      // Casar desejados <-> linhas editáveis por chave estável.
+      for (let i = 0; i < desired.length; i++) {
+        const { exercise, cardOriginalId, stableKey } = desired[i];
+        const candidates = editableByKey.get(stableKey) || [];
+        const match = candidates.find(c => !matchedRowIds.has(c.id));
+
+        if (match) {
+          matchedRowIds.add(match.id);
+          const updatePayload: any = {
+            nome: exercise.name,
+            grupo_muscular: exercise.muscleGroup,
+            series: exercise.sets,
+            repeticoes: exercise.reps?.toString() || null,
+            ordem: i + 1,
+          };
+          if (isAdvanced) {
+            updatePayload.metodo_especial = exercise.specialMethod || null;
+            updatePayload.rer = exercise.rer || 'do_microciclo';
+            updatePayload.modelo_feedback = exercise.feedbackModel || 'ARA/ART';
           }
-        }
-      } else {
-        // === BEGINNER FLOW ===
-        const { data: exerciciosAtuais } = await supabase
-          .from("exercicios_treino_usuario")
-          .select("*")
-          .eq("treino_usuario_id", treino.id)
-          .order("ordem");
-
-        const exerciseIdsToKeep = exercises.filter(e => !e.hidden).map(e => e.id);
-        const exerciciosParaRemover = exerciciosAtuais?.filter(
-          ex => !exerciseIdsToKeep.includes(ex.id) && !ex.concluido
-        ) || [];
-
-        if (exerciciosParaRemover.length > 0) {
           await supabase
-            .from("exercicios_treino_usuario")
-            .delete()
-            .in("id", exerciciosParaRemover.map(e => e.id));
-        }
-
-        const visibleExercises = exercises.filter(e => !e.hidden);
-        for (let i = 0; i < visibleExercises.length; i++) {
-          const exercise = visibleExercises[i];
-          const existingExercise = exerciciosAtuais?.find(ex => ex.id === exercise.id);
-
-          if (existingExercise) {
-            if (!existingExercise.concluido) {
-              await supabase
-                .from("exercicios_treino_usuario")
-                .update({
-                  nome: exercise.name,
-                  grupo_muscular: exercise.muscleGroup,
-                  series: exercise.sets,
-                  repeticoes: exercise.reps?.toString() || null,
-                  ordem: i + 1,
-                })
-                .eq("id", existingExercise.id);
-            }
-          } else {
-            await supabase
-              .from("exercicios_treino_usuario")
-              .insert({
-                treino_usuario_id: treino.id,
-                exercicio_original_id: exercise.originalId || null,
-                nome: exercise.name,
-                grupo_muscular: exercise.muscleGroup,
-                series: exercise.sets,
-                repeticoes: exercise.reps?.toString() || null,
-                oculto: false,
-                ordem: i + 1,
-                card_original_id: (exercise as any).cardOriginalId || null,
-              });
+            .from(tableName as any)
+            .update(updatePayload)
+            .eq("id", match.id);
+        } else {
+          // Inserir novo (ou movido para este dia).
+          const insertPayload: any = {
+            treino_usuario_id: treino.id,
+            exercicio_original_id: exercise.originalId || null,
+            nome: exercise.name,
+            grupo_muscular: exercise.muscleGroup,
+            series: exercise.sets,
+            repeticoes: exercise.reps?.toString() || null,
+            oculto: false,
+            ordem: i + 1,
+            card_original_id: cardOriginalId,
+          };
+          if (isAdvanced) {
+            insertPayload.rer = exercise.rer || 'do_microciclo';
+            insertPayload.metodo_especial = exercise.specialMethod || null;
+            insertPayload.modelo_feedback = exercise.feedbackModel || 'ARA/ART';
           }
+          await supabase
+            .from(tableName as any)
+            .insert(insertPayload);
         }
+      }
+
+      // Remover linhas editáveis não casadas (movidas para outro dia, ocultadas ou duplicatas).
+      const rowsToDelete = editableRows
+        .filter(r => !matchedRowIds.has(r.id))
+        .map(r => r.id);
+
+      if (rowsToDelete.length > 0) {
+        await supabase
+          .from(tableName as any)
+          .delete()
+          .in("id", rowsToDelete);
       }
     }
   }
