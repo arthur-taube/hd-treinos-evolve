@@ -122,7 +122,7 @@ export function ExerciseHeader({
                 <DropdownMenuItem onClick={() => setShowIncrementDialog(true)}>
                   Redefinir incremento mínimo
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={skipIncompleteSets}>
+                <DropdownMenuItem onClick={() => setShowSkipConfirm(true)}>
                   Pular séries não concluídas
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
