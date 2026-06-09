@@ -164,5 +164,22 @@ export function ExerciseHeader({
           {exercise.concluido ? <Check className="h-6 w-6" /> : <Play className="h-6 w-6" />}
         </Button>
       </div>
+
+      <AlertDialog open={showSkipConfirm} onOpenChange={setShowSkipConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Pular séries não concluídas?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja pular as séries não completadas e concluir este exercício?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => skipIncompleteSets()}>
+              Pular e concluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>;
 }
