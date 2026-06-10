@@ -224,6 +224,54 @@ export default function ProgramExercisesForm({
     await createMesocyclesAndWorkouts(programa.id);
   };
 
+  // Monta os registros de exercícios (semana 1 / template) para um treino.
+  const buildExerciciosToInsert = async (treinoId: string, exerciciosDia: Exercise[]) => {
+    const isAdvanced = programLevel !== 'iniciante';
+    const exerciseTable = isAdvanced ? 'exercicios_avancados' : 'exercicios_iniciantes';
+
+    return Promise.all(
+      exerciciosDia.map(async (ex, index) => {
+        let exercicioOriginalId: string | null = null;
+
+        if (ex.name && ex.name !== "Novo Exercício") {
+          const { data: exercicioOriginal } = await supabase
+            .from(exerciseTable)
+            .select('id')
+            .eq('nome', ex.name)
+            .single();
+
+          if (exercicioOriginal) {
+            exercicioOriginalId = exercicioOriginal.id;
+          }
+        }
+
+        const baseFields = {
+          treino_id: treinoId,
+          nome: ex.name,
+          grupo_muscular: ex.muscleGroup,
+          series: ex.sets,
+          repeticoes: ex.reps ? String(ex.reps) : null,
+          oculto: ex.hidden || false,
+          ordem: index + 1,
+          exercicio_original_id: exercicioOriginalId,
+          allow_multiple_groups: ex.allowMultipleGroups || false,
+          available_groups: ex.allowMultipleGroups ? ex.availableGroups : null,
+        };
+
+        if (isAdvanced) {
+          return {
+            ...baseFields,
+            rer: ex.rer || 'do_microciclo',
+            metodo_especial: ex.specialMethod || null,
+            modelo_feedback: ex.feedbackModel || 'ARA/ART',
+          };
+        }
+
+        return baseFields;
+      })
+    );
+  };
+
   const updateExistingProgram = async (programId: string) => {
     // Validar nome e descrição
     try {
@@ -232,7 +280,10 @@ export default function ProgramExercisesForm({
     } catch (error: any) {
       throw new Error(error.errors?.[0]?.message || "Erro de validação");
     }
-    
+
+    const isAdvanced = programLevel !== 'iniciante';
+    const targetTable = isAdvanced ? 'exercicios_treino_avancado' : 'exercicios_treino';
+
     // 1. Atualizar dados do programa
     const { error: programaError } = await supabase
       .from('programas')
@@ -251,38 +302,160 @@ export default function ProgramExercisesForm({
       throw new Error(`Erro ao atualizar programa: ${programaError.message}`);
     }
 
-    // 2. Deletar exercícios_treino existentes para recriar
-    const { data: treinos } = await supabase
-      .from('treinos')
-      .select('id')
-      .eq('programa_id', programId);
+    // 2. Reconciliar cada mesociclo IN-PLACE (sem apagar treinos/mesociclos,
+    // pois treinos_usuario referencia treinos via FK NO ACTION).
+    for (let i = 0; i < mesocycles; i++) {
+      const mesocicloNumero = i + 1;
 
-    if (treinos && treinos.length > 0) {
-      const treinoIds = treinos.map(t => t.id);
-      // Delete from both exercise tables
-      await supabase
-        .from('exercicios_treino')
-        .delete()
-        .in('treino_id', treinoIds);
-      await supabase
-        .from('exercicios_treino_avancado' as any)
-        .delete()
-        .in('treino_id', treinoIds);
+      const mesocycleRer = rerPerWeekPerMesocycle[mesocicloNumero];
+      const rerPorSemana = mesocycleRer && Object.keys(mesocycleRer).length > 0
+        ? Object.fromEntries(Object.entries(mesocycleRer).map(([k, v]) => [String(k), v]))
+        : null;
+
+      // 2.1. Localizar ou criar o mesociclo (por programa + numero)
+      const { data: existingMeso, error: findMesoError } = await supabase
+        .from('mesociclos')
+        .select('id')
+        .eq('programa_id', programId)
+        .eq('numero', mesocicloNumero)
+        .maybeSingle();
+
+      if (findMesoError) {
+        throw new Error(`Erro ao buscar mesociclo ${mesocicloNumero}: ${findMesoError.message}`);
+      }
+
+      let mesocicloId: string;
+
+      if (existingMeso) {
+        const { error: updateMesoError } = await supabase
+          .from('mesociclos')
+          .update({
+            duracao_semanas: mesocycleDurations[i],
+            cronogramas_recomendados: scheduleOptions,
+            rer_por_semana: rerPorSemana,
+          } as any)
+          .eq('id', existingMeso.id);
+
+        if (updateMesoError) {
+          throw new Error(`Erro ao atualizar mesociclo ${mesocicloNumero}: ${updateMesoError.message}`);
+        }
+        mesocicloId = existingMeso.id;
+      } else {
+        const { data: newMeso, error: insertMesoError } = await supabase
+          .from('mesociclos')
+          .insert({
+            programa_id: programId,
+            numero: mesocicloNumero,
+            duracao_semanas: mesocycleDurations[i],
+            cronogramas_recomendados: scheduleOptions,
+            rer_por_semana: rerPorSemana,
+          } as any)
+          .select()
+          .single();
+
+        if (insertMesoError || !newMeso) {
+          throw new Error(`Erro ao criar mesociclo ${mesocicloNumero}: ${insertMesoError?.message}`);
+        }
+        mesocicloId = newMeso.id;
+      }
+
+      const mesocicloKey = `mesocycle-${mesocicloNumero}`;
+      const mesocicloExercises = exercisesPerDay[mesocicloKey] || {};
+
+      // 2.2. Buscar treinos existentes deste mesociclo
+      const { data: existingTreinos, error: findTreinosError } = await supabase
+        .from('treinos')
+        .select('*')
+        .eq('mesociclo_id', mesocicloId);
+
+      if (findTreinosError) {
+        throw new Error(`Erro ao buscar treinos do mesociclo ${mesocicloNumero}: ${findTreinosError.message}`);
+      }
+
+      const treinoMap = new Map<string, any>();
+      (existingTreinos || []).forEach((t: any) => {
+        treinoMap.set(`${t.ordem_semana}-${t.ordem_dia}`, t);
+      });
+
+      for (let semana = 1; semana <= mesocycleDurations[i]; semana++) {
+        for (let diaIndex = 0; diaIndex < weeklyFrequency; diaIndex++) {
+          const dayKey = `day${diaIndex + 1}`;
+          const dayTitle = dayTitles[dayKey] || `Treino ${String.fromCharCode(65 + diaIndex)}`;
+          let nome = dayTitle;
+          let nomePersonalizado: string | null = null;
+
+          if (dayTitle.includes(' - ')) {
+            [nome, nomePersonalizado] = dayTitle.split(' - ').map(s => s.trim());
+          }
+
+          const key = `${semana}-${diaIndex + 1}`;
+          const existingTreino = treinoMap.get(key);
+
+          let treinoId: string;
+
+          if (existingTreino) {
+            // Atualizar título no lugar (preserva o id e as referências de treinos_usuario)
+            const { error: updateTreinoError } = await supabase
+              .from('treinos')
+              .update({
+                nome: nome.trim(),
+                nome_personalizado: nomePersonalizado?.trim() || null,
+              })
+              .eq('id', existingTreino.id);
+
+            if (updateTreinoError) {
+              throw new Error(`Erro ao atualizar treino ${nome}: ${updateTreinoError.message}`);
+            }
+            treinoId = existingTreino.id;
+          } else {
+            // Inserir treino faltante (estrutura cresceu)
+            const { data: newTreino, error: insertTreinoError } = await supabase
+              .from('treinos')
+              .insert({
+                programa_id: programId,
+                mesociclo_id: mesocicloId,
+                nome: nome.trim(),
+                nome_personalizado: nomePersonalizado?.trim() || null,
+                ordem_dia: diaIndex + 1,
+                ordem_semana: semana
+              } as any)
+              .select()
+              .single();
+
+            if (insertTreinoError || !newTreino) {
+              throw new Error(`Erro ao criar treino ${nome}: ${insertTreinoError?.message}`);
+            }
+            treinoId = newTreino.id;
+          }
+
+          // Exercícios são armazenados apenas na semana 1 (template).
+          // Seguro apagar e recriar: nenhuma tabela de usuário referencia exercicios_treino por FK.
+          if (semana === 1) {
+            const { error: deleteExError } = await supabase
+              .from(targetTable as any)
+              .delete()
+              .eq('treino_id', treinoId);
+
+            if (deleteExError) {
+              throw new Error(`Erro ao limpar exercícios do treino ${nome}: ${deleteExError.message}`);
+            }
+
+            const exerciciosDia = mesocicloExercises[dayKey] || [];
+            if (exerciciosDia.length > 0) {
+              const exerciciosToInsert = await buildExerciciosToInsert(treinoId, exerciciosDia);
+
+              const { error: exerciciosError } = await supabase
+                .from(targetTable as any)
+                .insert(exerciciosToInsert as any[]);
+
+              if (exerciciosError) {
+                throw new Error(`Erro ao inserir exercícios: ${exerciciosError.message}`);
+              }
+            }
+          }
+        }
+      }
     }
-
-    // 3. Deletar treinos e mesociclos existentes
-    await supabase
-      .from('treinos')
-      .delete()
-      .eq('programa_id', programId);
-
-    await supabase
-      .from('mesociclos')
-      .delete()
-      .eq('programa_id', programId);
-
-    // 4. Recriar mesociclos e treinos com novos dados
-    await createMesocyclesAndWorkouts(programId);
   };
 
   const createMesocyclesAndWorkouts = async (programaId: string) => {
