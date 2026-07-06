@@ -15,6 +15,7 @@ import { toast } from "@/hooks/use-toast";
 interface ARTFeedbackDialogProps {
   isOpen: boolean;
   pendingExercises: PendingARTExercise[];
+  nivel?: string;
   onSubmit: (evaluations: Record<string, number>) => Promise<void>;
 }
 
@@ -42,11 +43,38 @@ const ART_OPTIONS = [
   },
 ];
 
+// STAR (intermediate) uses smaller magnitude adjustments
+const STAR_ART_OPTIONS = [
+  {
+    labelLine1: "Ainda Dolorido",
+    labelLine2: "Não recuperado",
+    value: -0.25,
+    description:
+      "Tive (ou ainda tenho) muita dor muscular e/ou minha performance caiu.",
+  },
+  {
+    labelLine1: "Alguma dor",
+    labelLine2: "100% recuperado",
+    value: 0,
+    description:
+      "Tive alguma dor muscular e me recuperei a tempo do treino de hoje.",
+  },
+  {
+    labelLine1: "Nenhuma dor",
+    labelLine2: "200% recuperado",
+    value: 0.25,
+    description:
+      "Pouca ou nenhuma dor e me recuperei muito antes do treino de hoje.",
+  },
+];
+
 export function ARTFeedbackDialog({
   isOpen,
   pendingExercises,
+  nivel,
   onSubmit,
 }: ARTFeedbackDialogProps) {
+  const options = nivel === "intermediario" ? STAR_ART_OPTIONS : ART_OPTIONS;
   const [evaluations, setEvaluations] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
 
@@ -78,7 +106,7 @@ export function ARTFeedbackDialog({
   };
 
   const selectedOption = (exerciseId: string) =>
-    ART_OPTIONS.find((o) => o.value === evaluations[exerciseId]);
+    options.find((o) => o.value === evaluations[exerciseId]);
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
@@ -109,7 +137,7 @@ export function ARTFeedbackDialog({
               </div>
 
               <div className="grid grid-cols-3 gap-1.5">
-                {ART_OPTIONS.map((option) => (
+                {options.map((option) => (
                   <Button
                     key={option.value}
                     variant={

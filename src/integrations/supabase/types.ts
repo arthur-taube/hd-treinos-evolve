@@ -430,6 +430,7 @@ export type Database = {
       }
       exercicios_treino_usuario_avancado: {
         Row: {
+          avaliacao_desempenho: string | null
           avaliacao_dor: number | null
           avaliacao_fadiga: number | null
           avaliacao_performance: number | null
@@ -440,6 +441,7 @@ export type Database = {
           configuracao_inicial: boolean | null
           created_at: string
           data_avaliacao: string | null
+          deload: boolean
           exercicio_original_id: string | null
           grupo_muscular: string
           id: string
@@ -451,6 +453,8 @@ export type Database = {
           oculto: boolean
           ordem: number
           peso: number | null
+          progressao_base_peso: number | null
+          progressao_base_reps: number | null
           repeticoes: string | null
           rer: string | null
           series: number
@@ -462,6 +466,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          avaliacao_desempenho?: string | null
           avaliacao_dor?: number | null
           avaliacao_fadiga?: number | null
           avaliacao_performance?: number | null
@@ -472,6 +477,7 @@ export type Database = {
           configuracao_inicial?: boolean | null
           created_at?: string
           data_avaliacao?: string | null
+          deload?: boolean
           exercicio_original_id?: string | null
           grupo_muscular: string
           id?: string
@@ -483,6 +489,8 @@ export type Database = {
           oculto?: boolean
           ordem: number
           peso?: number | null
+          progressao_base_peso?: number | null
+          progressao_base_reps?: number | null
           repeticoes?: string | null
           rer?: string | null
           series: number
@@ -494,6 +502,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          avaliacao_desempenho?: string | null
           avaliacao_dor?: number | null
           avaliacao_fadiga?: number | null
           avaliacao_performance?: number | null
@@ -504,6 +513,7 @@ export type Database = {
           configuracao_inicial?: boolean | null
           created_at?: string
           data_avaliacao?: string | null
+          deload?: boolean
           exercicio_original_id?: string | null
           grupo_muscular?: string
           id?: string
@@ -515,6 +525,8 @@ export type Database = {
           oculto?: boolean
           ordem?: number
           peso?: number | null
+          progressao_base_peso?: number | null
+          progressao_base_reps?: number | null
           repeticoes?: string | null
           rer?: string | null
           series?: number

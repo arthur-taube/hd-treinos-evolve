@@ -57,6 +57,7 @@ export default function Workout() {
   const [exercicios, setExercicios] = useState<ExercicioUsuario[]>([]);
   const [exerciciosAdvanced, setExerciciosAdvanced] = useState<ExerciseAdvancedData[]>([]);
   const [isAdvanced, setIsAdvanced] = useState(false);
+  const [nivel, setNivel] = useState<string>('iniciante');
   const [rerPerWeek, setRerPerWeek] = useState<Record<string, string> | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -118,6 +119,7 @@ export default function Workout() {
 
         const advanced = programLevel !== 'iniciante';
         setIsAdvanced(advanced);
+        setNivel(programLevel);
 
         if (advanced) {
           await fetchAdvancedExercises(treinoId, treinoData);
@@ -151,6 +153,7 @@ export default function Workout() {
         series, repeticoes, oculto, ordem, concluido, peso, observacao,
         configuracao_inicial, incremento_minimo, treino_usuario_id,
         rer, metodo_especial, modelo_feedback,
+        deload, progressao_base_peso, progressao_base_reps, avaliacao_desempenho,
         substituicao_neste_treino, substituto_oficial_id, substituto_custom_id, substituto_nome
       `)
       .eq('treino_usuario_id', treinoId)
@@ -438,6 +441,7 @@ export default function Workout() {
                         rerPerWeek,
                         treino?.ordem_semana || 1
                       )}
+                      nivel={nivel}
                       onExerciseComplete={toggleExerciseCompletion}
                       onWeightUpdate={updateExerciseWeight}
                       peekMode={peekMode}
@@ -481,6 +485,7 @@ export default function Workout() {
         <ARTFeedbackDialog
           isOpen={showARTDialog}
           pendingExercises={artPendingExercises}
+          nivel={nivel}
           onSubmit={saveARTFeedback}
         />
       )}
