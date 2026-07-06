@@ -715,6 +715,7 @@ export default function ProgramExercisesForm({
         />
       ) : (
         <ExerciseKanbanAdvanced 
+          nivel={programLevel}
           weeklyFrequency={weeklyFrequency} 
           daysSchedule={scheduleOptions}
           currentMesocycle={currentMesocycle}

@@ -85,7 +85,7 @@ export function useARTCheck(
         .from('exercicios_treino_usuario_avancado')
         .select('id, nome, grupo_muscular, series, avaliacao_pump, avaliacao_fadiga, card_original_id, exercicio_original_id, substituto_custom_id, treino_usuario_id')
         .in('treino_usuario_id', prevWorkoutIds)
-        .not('avaliacao_pump', 'is', null)
+        .not('avaliacao_fadiga', 'is', null)
         .is('avaliacao_dor', null)
         .eq('concluido', true)
         .neq('modelo_feedback', 'AMP');
@@ -145,7 +145,7 @@ export function useARTCheck(
 
         // 2. Recalculate series with ARA + ART
         const currentSeries = Number(exercise.series);
-        const rawSeries = currentSeries + exercise.avaliacao_pump + exercise.avaliacao_fadiga + artValue;
+        const rawSeries = currentSeries + (exercise.avaliacao_pump || 0) + exercise.avaliacao_fadiga + artValue;
 
         if (rawSeries >= 1) {
           // Find the workout's week

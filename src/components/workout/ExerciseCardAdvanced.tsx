@@ -6,6 +6,7 @@ import { ExerciseObservation } from "./components/ExerciseObservation";
 import { ExerciseSetsAdvanced } from "./components/ExerciseSetsAdvanced";
 import { FeedbackDialog } from "./FeedbackDialog";
 import { ARAFeedbackDialog } from "./ARAFeedbackDialog";
+import { ARAStarFeedbackDialog, StarARAResult } from "./ARAStarFeedbackDialog";
 import { ExerciseSubstitutionDialog } from "./ExerciseSubstitutionDialog";
 import { SpecialMethodDialog } from "./SpecialMethodDialog";
 import { useExerciseStateAdvanced } from "./hooks/useExerciseStateAdvanced";
@@ -13,6 +14,8 @@ import { useExerciseActionsAdvanced } from "./hooks/useExerciseActionsAdvanced";
 import { usePreviousSeriesAdvanced } from "./hooks/usePreviousSeriesAdvanced";
 import { useSavedSeries } from "./hooks/useSavedSeries";
 import { useEpleyProgression } from "@/hooks/useEpleyProgression";
+import { useStarProgression } from "@/hooks/useStarProgression";
+import { roundSetsForDisplay } from "@/utils/progressionCalculator";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -36,6 +39,9 @@ export interface ExerciseAdvancedData {
   substituto_oficial_id?: string | null;
   substituto_custom_id?: string | null;
   substituto_nome?: string | null;
+  deload?: boolean;
+  progressao_base_peso?: number | null;
+  progressao_base_reps?: number | null;
   oculto: boolean;
   ordem: number;
 }
@@ -43,6 +49,7 @@ export interface ExerciseAdvancedData {
 interface ExerciseCardAdvancedProps {
   exercise: ExerciseAdvancedData;
   resolvedRer: string;
+  nivel?: string;
   onExerciseComplete: (exerciseId: string, isCompleted: boolean) => Promise<void>;
   onWeightUpdate: (exerciseId: string, weight: number) => Promise<void>;
   peekMode?: boolean;
@@ -52,6 +59,7 @@ interface ExerciseCardAdvancedProps {
 export function ExerciseCardAdvanced({
   exercise,
   resolvedRer,
+  nivel,
   onExerciseComplete,
   onWeightUpdate,
   peekMode = false,
@@ -59,7 +67,16 @@ export function ExerciseCardAdvanced({
 }: ExerciseCardAdvancedProps) {
   // Both peek and view are read-only for UI purposes
   const readOnly = peekMode || viewMode;
+  const isStar = nivel === 'intermediario';
+  const isDeloadWeek = isStar && exercise.deload === true && !viewMode;
+
+  // For a deload week, show one fewer set (visual only — the stored series value is untouched)
+  const effectiveExercise = isDeloadWeek
+    ? { ...exercise, series: Math.max(1, roundSetsForDisplay(exercise.series) - 1) }
+    : exercise;
+
   const [showARADialog, setShowARADialog] = useState(false);
+  const [showStarARADialog, setShowStarARADialog] = useState(false);
   const [showAMPDialog, setShowAMPDialog] = useState(false);
   const [showSubstitutionDialog, setShowSubstitutionDialog] = useState(false);
   const [showMethodDialog, setShowMethodDialog] = useState(false);
@@ -75,7 +92,7 @@ export function ExerciseCardAdvanced({
     showIncrementDialog, setShowIncrementDialog,
     saveIncrementSetting,
     resetIncrementDialogShown
-  } = useExerciseStateAdvanced(exercise, onExerciseComplete, onWeightUpdate, readOnly);
+  } = useExerciseStateAdvanced(effectiveExercise, onExerciseComplete, onWeightUpdate, readOnly);
 
   const { isLoadingSeries, previousSeries } = usePreviousSeriesAdvanced(
     isOpen,
@@ -91,7 +108,7 @@ export function ExerciseCardAdvanced({
   const {
     handleSetComplete, handleWeightChange, handleRepsChange, handleWeightFocus,
     handleNoteChange, saveSetNote,
-    handleExerciseComplete, saveARAFeedback, saveAMPFeedback,
+    handleExerciseComplete, saveARAFeedback, saveAMPFeedback, saveStarARAFeedback,
     saveObservation, skipIncompleteSets
   } = useExerciseActionsAdvanced(
     exercise, sets, setSets,
@@ -99,11 +116,22 @@ export function ExerciseCardAdvanced({
     setIsOpen, originalSetCount
   );
 
-  // Epley for suggested placeholders
+  // Epley for suggested placeholders (advanced only)
   const epleyResult = useEpleyProgression(
     exercise.id,
     exercise.exercicio_original_id,
     exercise.card_original_id,
+    exercise.treino_usuario_id,
+    exercise.repeticoes,
+    exercise.incremento_minimo || null
+  );
+
+  // STAR progression for intermediate programs
+  const starResult = useStarProgression(
+    isStar ? exercise.id : '',
+    exercise.exercicio_original_id,
+    exercise.card_original_id,
+    exercise.substituto_custom_id || null,
     exercise.treino_usuario_id,
     exercise.repeticoes,
     exercise.incremento_minimo || null
@@ -116,24 +144,48 @@ export function ExerciseCardAdvanced({
     return parseInt(exercise.repeticoes || '8') || 8;
   })();
 
-  const suggestedWeight = epleyResult?.suggestedWeight || exercise.peso || 0;
-  const suggestedReps = epleyResult?.suggestedReps || defaultMinReps;
+  // Base suggestion (before any deload reduction)
+  const baseSuggestedWeight = isStar
+    ? (starResult?.suggestedWeight ?? exercise.peso ?? 0)
+    : (epleyResult?.suggestedWeight || exercise.peso || 0);
+  const baseSuggestedReps = isStar
+    ? (starResult?.suggestedReps ?? defaultMinReps)
+    : (epleyResult?.suggestedReps || defaultMinReps);
 
-  // Update sets with Epley suggestions when they arrive (skip in view mode — no progression)
+  // Reactive deload: 70% load, half reps (min 5, max 12), computed from the stored base
+  // progression (or the current base suggestion as fallback).
+  const deloadWeight = (() => {
+    const inc = exercise.incremento_minimo || 2.5;
+    const refWeight = exercise.progressao_base_peso ?? baseSuggestedWeight;
+    const reduced = refWeight * 0.7;
+    return Math.max(0, Math.round(reduced / inc) * inc);
+  })();
+  const deloadReps = (() => {
+    const refReps = exercise.progressao_base_reps ?? baseSuggestedReps;
+    return Math.min(12, Math.max(5, Math.round(refReps / 2)));
+  })();
+
+  const suggestedWeight = isDeloadWeek ? deloadWeight : baseSuggestedWeight;
+  const suggestedReps = isDeloadWeek ? deloadReps : baseSuggestedReps;
+
+  // Update sets with suggestions when they arrive (skip in view mode — no progression)
   useEffect(() => {
     if (viewMode) return;
-    if (!epleyResult) return;
+    if (isStar && !starResult && !isDeloadWeek) return;
+    if (!isStar && !epleyResult) return;
     setSets(prev => prev.map(set => {
       if (set.completed) return set;
       const isDefaultWeight = set.weight === null;
       const isDefaultReps = set.reps === null || set.reps === defaultMinReps;
       return {
         ...set,
-        weight: isDefaultWeight ? epleyResult.suggestedWeight : set.weight,
-        reps: isDefaultReps ? epleyResult.suggestedReps : set.reps,
+        weight: isDefaultWeight ? suggestedWeight : set.weight,
+        reps: isDefaultReps ? suggestedReps : set.reps,
       };
     }));
-  }, [epleyResult, viewMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [epleyResult, starResult, viewMode, isDeloadWeek]);
+
 
   // View mode: overwrite sets with the real saved values for this day
   useEffect(() => {
@@ -164,7 +216,11 @@ export function ExerciseCardAdvanced({
     if (success) {
       const feedbackModel = exercise.modelo_feedback || 'ARA/ART';
       if (feedbackModel.includes('ARA')) {
-        setShowARADialog(true);
+        if (isStar) {
+          setShowStarARADialog(true);
+        } else {
+          setShowARADialog(true);
+        }
       } else if (feedbackModel.includes('AMP')) {
         setShowAMPDialog(true);
       } else {
@@ -177,6 +233,12 @@ export function ExerciseCardAdvanced({
     await saveARAFeedback(pumpValue, fadigaValue);
     setShowARADialog(false);
   };
+
+  const handleStarARASubmit = async (result: StarARAResult) => {
+    await saveStarARAFeedback(result);
+    setShowStarARADialog(false);
+  };
+
 
   const handleMethodChange = () => {
     setShowMethodDialog(true);
@@ -318,6 +380,14 @@ export function ExerciseCardAdvanced({
         muscleGroup={exercise.grupo_muscular}
         onSubmit={handleARASubmit}
       />
+
+      <ARAStarFeedbackDialog
+        isOpen={showStarARADialog}
+        exerciseName={exercise.nome}
+        muscleGroup={exercise.grupo_muscular}
+        onSubmit={handleStarARASubmit}
+      />
+
 
       <FeedbackDialog
         isOpen={showAMPDialog}

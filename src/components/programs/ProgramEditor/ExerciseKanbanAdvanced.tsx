@@ -11,7 +11,7 @@ import { useExerciseDrag } from "./hooks/useExerciseDrag";
 import { getDayRows } from "./hooks/useScheduleHelpers";
 
 const RER_PER_WEEK_OPTIONS = [
-  "5", "4-5", "4", "3-4", "3", "2-3", "2", "1-2", "1", "0-1", "0", "0-Falha", "Falha"
+  "5", "4-5", "4", "3-4", "3", "2-3", "2", "1-2", "1", "1-0", "0-1", "0", "0-Falha", "Falha"
 ];
 
 interface ExtendedExerciseKanbanAdvancedProps extends ExerciseKanbanProps {
@@ -27,6 +27,7 @@ interface ExtendedExerciseKanbanAdvancedProps extends ExerciseKanbanProps {
   onRerPerWeekUpdate?: (rerPerWeek: Record<number, string>) => void;
   initialRerPerWeek?: Record<number, string>;
   customizerMode?: boolean;
+  nivel?: string;
 }
 
 export default function ExerciseKanbanAdvanced({
@@ -49,6 +50,7 @@ export default function ExerciseKanbanAdvanced({
   onRerPerWeekUpdate,
   initialRerPerWeek = {},
   customizerMode = false,
+  nivel,
 }: ExtendedExerciseKanbanAdvancedProps) {
   const schedule = Array(weeklyFrequency)
     .fill("")
@@ -92,6 +94,22 @@ export default function ExerciseKanbanAdvanced({
       setRerPerWeek(initialRerPerWeek);
     }
   }, [initialRerPerWeek]);
+
+  // STAR (intermediate): pre-fill every week's RER target with 1-0 when not already set
+  useEffect(() => {
+    if (nivel !== 'intermediario') return;
+    setRerPerWeek(prev => {
+      const next = { ...prev };
+      let changed = false;
+      for (let w = 1; w <= mesocycleDuration; w++) {
+        if (!next[w]) {
+          next[w] = '1-0';
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [nivel, mesocycleDuration]);
 
   const handleRerWeekChange = (week: number, value: string) => {
     setRerPerWeek(prev => ({ ...prev, [week]: value }));
