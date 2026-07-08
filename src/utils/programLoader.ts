@@ -17,6 +17,8 @@ export interface LoadedProgramData {
   savedSchedules: string[][];
   weeklySchedules: string[][]; // Alias para compatibilidade
   mesocycleDurations: number[];
+  mesocycleMins?: number[];
+  mesocycleMaxs?: number[];
   dayTitles: Record<string, string>;
   rerPerWeekPerMesocycle?: Record<number, Record<number, string>>; // { mesocycleNum: { weekNum: rerValue } }
 }
