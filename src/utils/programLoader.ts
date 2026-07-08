@@ -207,6 +207,8 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
 
     // Extrair durações dos mesociclos
     const mesocycleDurations = mesociclos?.map(m => m.duracao_semanas) || [];
+    const mesocycleMins = mesociclos?.map((m: any) => m.semanas_min ?? m.duracao_semanas) || [];
+    const mesocycleMaxs = mesociclos?.map((m: any) => m.semanas_max ?? m.duracao_semanas) || [];
 
     // Criar dayTitles mapeando ordem_dia para título completo
     const dayTitles: Record<string, string> = {};
