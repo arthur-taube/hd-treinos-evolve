@@ -271,6 +271,7 @@ export default function ProgramCustomize() {
         customExercises,
         customDayTitles,
         programData,
+        selectedWeeks,
       });
 
       clearCache();
