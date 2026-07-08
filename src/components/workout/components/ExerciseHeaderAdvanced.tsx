@@ -30,6 +30,8 @@ interface ExerciseHeaderAdvancedProps {
   };
   resolvedRer: string;
   epleyResult: EpleyResult | null;
+  starResult?: StarProgressionHookResult | null;
+  isStar?: boolean;
   observation: string;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
