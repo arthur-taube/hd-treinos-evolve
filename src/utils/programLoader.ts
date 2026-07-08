@@ -455,6 +455,8 @@ export const loadUserProgramForCustomize = async (programaUsuarioId: string): Pr
     }
 
     const mesocycleDurations = mesociclos?.map(m => m.duracao_semanas) || [totalWeeks];
+    const mesocycleMins = mesociclos?.map((m: any) => m.semanas_min ?? m.duracao_semanas) || [totalWeeks];
+    const mesocycleMaxs = mesociclos?.map((m: any) => m.semanas_max ?? m.duracao_semanas) || [totalWeeks];
 
     // Carregar rer_por_semana dos mesociclos
     let rerPerWeekPerMesocycle: Record<number, Record<number, string>> | undefined;
