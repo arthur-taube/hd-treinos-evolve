@@ -68,6 +68,12 @@ export default function ProgramExercisesForm({
   const [mesocycleDurations, setMesocycleDurations] = useState<number[]>(
     initialMesocycleDurations.length > 0 ? initialMesocycleDurations : Array(mesocycles).fill(4)
   );
+  // Mínimo da faixa de semanas por mesociclo (máximo = mesocycleDurations)
+  const [mesocycleMins, setMesocycleMins] = useState<number[]>(
+    initialMesocycleMins.length > 0
+      ? initialMesocycleMins
+      : (initialMesocycleDurations.length > 0 ? initialMesocycleDurations : Array(mesocycles).fill(4))
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [exercisesPerDay, setExercisesPerDay] = useState<Record<string, Record<string, Exercise[]>>>(initialExercisesPerDay);
   const [dayTitles, setDayTitles] = useState<Record<string, string>>({});
