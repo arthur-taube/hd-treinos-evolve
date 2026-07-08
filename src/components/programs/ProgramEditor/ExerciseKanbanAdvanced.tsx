@@ -37,6 +37,8 @@ export default function ExerciseKanbanAdvanced({
   totalMesocycles,
   mesocycleDuration = 4,
   onDurationChange,
+  mesocycleMin,
+  onMinChange,
   onExercisesUpdate,
   onDayTitlesUpdate,
   initialExercises = {},
@@ -185,13 +187,29 @@ export default function ExerciseKanbanAdvanced({
           Mesociclo {currentMesocycle} de {totalMesocycles}
         </h3>
         <div className="flex items-center gap-3">
-          <label className="text-sm font-medium">Duração (semanas):</label>
+          <label className="text-sm font-medium">Semanas (mín–máx):</label>
           <Input
             type="number"
             min={1}
-            className="w-20"
+            max={mesocycleDuration}
+            className="w-16"
+            value={mesocycleMin ?? mesocycleDuration}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              onMinChange?.(Math.max(1, Math.min(v, mesocycleDuration)));
+            }}
+          />
+          <span className="text-sm text-muted-foreground">a</span>
+          <Input
+            type="number"
+            min={mesocycleMin ?? 1}
+            className="w-16"
             value={mesocycleDuration}
-            onChange={(e) => onDurationChange?.(Number(e.target.value))}
+            onChange={(e) => {
+              const v = Math.max(1, Number(e.target.value));
+              onDurationChange?.(v);
+              if ((mesocycleMin ?? 1) > v) onMinChange?.(v);
+            }}
           />
         </div>
       </div>

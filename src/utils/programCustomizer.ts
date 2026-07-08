@@ -49,6 +49,7 @@ interface SaveCustomizedProgramParams {
   customExercises: Record<string, Exercise[]>;
   customDayTitles: Record<string, string>;
   programData: LoadedProgramData;
+  selectedWeeks?: number;
 }
 
 function getDayName(dayOfWeek: number): string {
@@ -152,6 +153,30 @@ function getDiaSemanaForWeek(
   }
 }
 
+/**
+ * Determina quais semanas do template manter quando o usuário escolhe menos
+ * semanas do que o máximo disponível na faixa definida pelo admin.
+ * - iniciante/intermediário: mantém as PRIMEIRAS semanas (corta as últimas)
+ * - avançado: mantém as ÚLTIMAS semanas (corta as primeiras, mais leves)
+ * Retorna os números de semana do template (base 1) preservando a numeração original.
+ */
+export function computeKeptWeeks(
+  level: string | undefined,
+  selected: number,
+  max: number
+): number[] {
+  const n = Math.max(1, Math.min(selected, max));
+  const isAdvanced = level === "avancado";
+  if (isAdvanced) {
+    // Mantém as últimas n semanas: [max-n+1 .. max]
+    return Array.from({ length: n }, (_, i) => max - n + 1 + i);
+  }
+  // Mantém as primeiras n semanas: [1 .. n]
+  return Array.from({ length: n }, (_, i) => i + 1);
+}
+
+
+
 export async function saveCustomizedProgram(
   params: SaveCustomizedProgramParams
 ): Promise<string> {
@@ -164,10 +189,18 @@ export async function saveCustomizedProgram(
     customExercises,
     customDayTitles,
     programData,
+    selectedWeeks,
   } = params;
 
-  // 1. Calcular dias de treino (para cronograma flexível)
-  const totalWeeks = programData.mesocycleDurations.reduce((sum, dur) => sum + dur, 0);
+  // 1. Determinar semanas do template a manter (faixa mín–máx)
+  const maxWeeks = programData.mesocycleDurations.reduce((sum, dur) => sum + dur, 0);
+  const chosenWeeks = selectedWeeks
+    ? Math.max(1, Math.min(selectedWeeks, maxWeeks))
+    : maxWeeks;
+  const keptWeeks = computeKeptWeeks(programData.programLevel, chosenWeeks, maxWeeks);
+  const totalWeeks = keptWeeks.length;
+
+  // Calcular dias de treino (para cronograma flexível) com base nas semanas geradas
   const calculatedSchedule =
     cronogramaConfig.tipo === "flexivel"
       ? calculateFlexibleSchedule(
@@ -213,12 +246,16 @@ export async function saveCustomizedProgram(
 
   if (treinosError) throw treinosError;
 
-  // 5. Para cada treino, criar cópias para TODAS as semanas
+  // 5. Para cada treino, criar cópias apenas para as semanas mantidas.
+  //    seqIndex = posição sequencial (para datas); templateWeek = número original
+  //    da semana (para ordem_semana e resolução de RER por semana).
   for (const treinoOriginal of treinosOriginais!) {
-    for (let semana = 1; semana <= totalWeeks; semana++) {
+    for (let seqIndex = 0; seqIndex < keptWeeks.length; seqIndex++) {
+      const templateWeek = keptWeeks[seqIndex];
+      const semana = templateWeek; // ordem_semana preserva a numeração original
       const diaSemana = getDiaSemanaForWeek(
         treinoOriginal.ordem_dia,
-        semana,
+        seqIndex + 1,
         startDate,
         cronogramaConfig,
         calculatedSchedule

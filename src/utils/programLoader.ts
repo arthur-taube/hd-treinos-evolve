@@ -17,6 +17,8 @@ export interface LoadedProgramData {
   savedSchedules: string[][];
   weeklySchedules: string[][]; // Alias para compatibilidade
   mesocycleDurations: number[];
+  mesocycleMins?: number[];
+  mesocycleMaxs?: number[];
   dayTitles: Record<string, string>;
   rerPerWeekPerMesocycle?: Record<number, Record<number, string>>; // { mesocycleNum: { weekNum: rerValue } }
 }
@@ -205,6 +207,8 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
 
     // Extrair durações dos mesociclos
     const mesocycleDurations = mesociclos?.map(m => m.duracao_semanas) || [];
+    const mesocycleMins = mesociclos?.map((m: any) => m.semanas_min ?? m.duracao_semanas) || [];
+    const mesocycleMaxs = mesociclos?.map((m: any) => m.semanas_max ?? m.duracao_semanas) || [];
 
     // Criar dayTitles mapeando ordem_dia para título completo
     const dayTitles: Record<string, string> = {};
@@ -238,6 +242,8 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       savedSchedules,
       weeklySchedules: savedSchedules, // Alias para compatibilidade
       mesocycleDurations,
+      mesocycleMins,
+      mesocycleMaxs,
       dayTitles,
       rerPerWeekPerMesocycle,
     };
@@ -432,7 +438,7 @@ export const loadUserProgramForCustomize = async (programaUsuarioId: string): Pr
     // 7. Buscar cronogramas e rer_por_semana do programa original
     const { data: mesociclos } = await supabase
       .from('mesociclos')
-      .select('numero, cronogramas_recomendados, duracao_semanas, rer_por_semana')
+      .select('numero, cronogramas_recomendados, duracao_semanas, rer_por_semana, semanas_min, semanas_max')
       .eq('programa_id', programaOriginal.id)
       .order('numero');
 
@@ -449,6 +455,8 @@ export const loadUserProgramForCustomize = async (programaUsuarioId: string): Pr
     }
 
     const mesocycleDurations = mesociclos?.map(m => m.duracao_semanas) || [totalWeeks];
+    const mesocycleMins = mesociclos?.map((m: any) => m.semanas_min ?? m.duracao_semanas) || [totalWeeks];
+    const mesocycleMaxs = mesociclos?.map((m: any) => m.semanas_max ?? m.duracao_semanas) || [totalWeeks];
 
     // Carregar rer_por_semana dos mesociclos
     let rerPerWeekPerMesocycle: Record<number, Record<number, string>> | undefined;
@@ -480,6 +488,8 @@ export const loadUserProgramForCustomize = async (programaUsuarioId: string): Pr
       savedSchedules,
       weeklySchedules: savedSchedules,
       mesocycleDurations,
+      mesocycleMins,
+      mesocycleMaxs,
       dayTitles,
       rerPerWeekPerMesocycle,
     };

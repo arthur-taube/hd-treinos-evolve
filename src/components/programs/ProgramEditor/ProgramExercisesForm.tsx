@@ -39,6 +39,7 @@ interface ProgramExercisesFormProps {
   initialExercisesPerDay?: Record<string, Record<string, Exercise[]>>;
   initialSavedSchedules?: string[][];
   initialMesocycleDurations?: number[];
+  initialMesocycleMins?: number[];
   initialDayTitles?: Record<string, string>;
   isEditing?: boolean;
   programId?: string;
@@ -54,6 +55,7 @@ export default function ProgramExercisesForm({
   initialExercisesPerDay = {},
   initialSavedSchedules = [],
   initialMesocycleDurations = [],
+  initialMesocycleMins = [],
   initialDayTitles = {},
   isEditing = false,
   programId
@@ -65,6 +67,12 @@ export default function ProgramExercisesForm({
   const [currentMesocycle, setCurrentMesocycle] = useState(1);
   const [mesocycleDurations, setMesocycleDurations] = useState<number[]>(
     initialMesocycleDurations.length > 0 ? initialMesocycleDurations : Array(mesocycles).fill(4)
+  );
+  // Mínimo da faixa de semanas por mesociclo (máximo = mesocycleDurations)
+  const [mesocycleMins, setMesocycleMins] = useState<number[]>(
+    initialMesocycleMins.length > 0
+      ? initialMesocycleMins
+      : (initialMesocycleDurations.length > 0 ? initialMesocycleDurations : Array(mesocycles).fill(4))
   );
   const [isSaving, setIsSaving] = useState(false);
   const [exercisesPerDay, setExercisesPerDay] = useState<Record<string, Record<string, Exercise[]>>>(initialExercisesPerDay);
@@ -331,6 +339,8 @@ export default function ProgramExercisesForm({
           .from('mesociclos')
           .update({
             duracao_semanas: mesocycleDurations[i],
+            semanas_min: mesocycleMins[i],
+            semanas_max: mesocycleDurations[i],
             cronogramas_recomendados: scheduleOptions,
             rer_por_semana: rerPorSemana,
           } as any)
@@ -347,6 +357,8 @@ export default function ProgramExercisesForm({
             programa_id: programId,
             numero: mesocicloNumero,
             duracao_semanas: mesocycleDurations[i],
+            semanas_min: mesocycleMins[i],
+            semanas_max: mesocycleDurations[i],
             cronogramas_recomendados: scheduleOptions,
             rer_por_semana: rerPorSemana,
           } as any)
@@ -475,6 +487,8 @@ export default function ProgramExercisesForm({
           programa_id: programaId,
           numero: mesocicloNumero,
           duracao_semanas: mesocycleDurations[i],
+          semanas_min: mesocycleMins[i],
+          semanas_max: mesocycleDurations[i],
           cronogramas_recomendados: scheduleOptions,
           rer_por_semana: rerPorSemana,
         } as any)
@@ -594,6 +608,18 @@ export default function ProgramExercisesForm({
     const newDurations = [...mesocycleDurations];
     newDurations[currentMesocycle - 1] = duration;
     setMesocycleDurations(newDurations);
+    // Garante que o mínimo nunca exceda o máximo
+    if (mesocycleMins[currentMesocycle - 1] > duration) {
+      const newMins = [...mesocycleMins];
+      newMins[currentMesocycle - 1] = duration;
+      setMesocycleMins(newMins);
+    }
+  };
+
+  const handleMesocycleMinChange = (min: number) => {
+    const newMins = [...mesocycleMins];
+    newMins[currentMesocycle - 1] = min;
+    setMesocycleMins(newMins);
   };
 
   const copyFromPreviousMesocycle = () => {
@@ -708,6 +734,8 @@ export default function ProgramExercisesForm({
           totalMesocycles={mesocycles}
           mesocycleDuration={mesocycleDurations[currentMesocycle - 1]}
           onDurationChange={handleMesocycleDurationChange}
+          mesocycleMin={mesocycleMins[currentMesocycle - 1]}
+          onMinChange={handleMesocycleMinChange}
           onExercisesUpdate={handleExercisesUpdate}
           onDayTitlesUpdate={handleDayTitlesUpdate}
           initialExercises={exercisesPerDay[`mesocycle-${currentMesocycle}`]}
@@ -722,6 +750,8 @@ export default function ProgramExercisesForm({
           totalMesocycles={mesocycles}
           mesocycleDuration={mesocycleDurations[currentMesocycle - 1]}
           onDurationChange={handleMesocycleDurationChange}
+          mesocycleMin={mesocycleMins[currentMesocycle - 1]}
+          onMinChange={handleMesocycleMinChange}
           onExercisesUpdate={handleExercisesUpdate}
           onDayTitlesUpdate={handleDayTitlesUpdate}
           onRerPerWeekUpdate={handleRerPerWeekUpdate}

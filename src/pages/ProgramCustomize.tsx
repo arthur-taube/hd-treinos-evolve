@@ -55,6 +55,7 @@ export default function ProgramCustomize() {
   // Customization state
   const [customProgramName, setCustomProgramName] = useState("");
   const [startDate, setStartDate] = useState<Date>(new Date());
+  const [selectedWeeks, setSelectedWeeks] = useState<number>(0);
   const [cronogramaConfig, setCronogramaConfig] = useState<CronogramaConfig>({
     tipo: "recomendado",
     recomendadoIndex: 0,
@@ -126,6 +127,11 @@ export default function ProgramCustomize() {
       console.log('🔧 ProgramCustomize - Configurando programData');
       setProgramData(data);
       setCustomProgramName(data.programName);
+
+      // Inicializar semanas escolhidas: média arredondada da faixa mín–máx
+      const wMin = data.mesocycleMins?.[0] ?? data.mesocycleDurations?.[0] ?? 4;
+      const wMax = data.mesocycleMaxs?.[0] ?? data.mesocycleDurations?.[0] ?? 4;
+      setSelectedWeeks(Math.round((wMin + wMax) / 2));
 
       // Inicializar exercícios da semana 1 do primeiro mesociclo
       const firstMesocycleKey = "mesocycle-1";
@@ -271,6 +277,7 @@ export default function ProgramCustomize() {
         customExercises,
         customDayTitles,
         programData,
+        selectedWeeks,
       });
 
       clearCache();
@@ -381,10 +388,33 @@ export default function ProgramCustomize() {
               <p className="font-medium">{programData.mesocycles}</p>
             </div>
             <div>
-              <Label className="text-muted-foreground">Duração</Label>
-              <p className="font-medium">
-                {programData.mesocycleDurations?.[0] || 4} semanas
-              </p>
+              <Label className="text-muted-foreground">Duração (semanas)</Label>
+              {(() => {
+                const wMin = programData.mesocycleMins?.[0] ?? programData.mesocycleDurations?.[0] ?? 4;
+                const wMax = programData.mesocycleMaxs?.[0] ?? programData.mesocycleDurations?.[0] ?? 4;
+                if (wMin >= wMax) {
+                  return <p className="font-medium">{wMax} semanas</p>;
+                }
+                return (
+                  <div className="space-y-1">
+                    <Input
+                      type="number"
+                      min={wMin}
+                      max={wMax}
+                      className="w-24"
+                      value={selectedWeeks}
+                      onChange={(e) =>
+                        setSelectedWeeks(
+                          Math.max(wMin, Math.min(wMax, Number(e.target.value)))
+                        )
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Escolha entre {wMin} e {wMax} semanas
+                    </p>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </Card>
