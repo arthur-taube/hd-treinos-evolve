@@ -49,6 +49,7 @@ interface SaveCustomizedProgramParams {
   customExercises: Record<string, Exercise[]>;
   customDayTitles: Record<string, string>;
   programData: LoadedProgramData;
+  selectedWeeks?: number;
 }
 
 function getDayName(dayOfWeek: number): string {
