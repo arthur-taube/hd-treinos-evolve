@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { computeStarProgression } from "@/utils/starProgression";
+import { computeStarProgressionFull, type StarProgressionOption } from "@/utils/starProgression";
 
 export interface StarProgressionHookResult {
   suggestedWeight: number;
   suggestedReps: number;
-  base: { weight: number; reps: number };
+  base: { weight: number; reps: number; estimated1RM: number };
+  options: StarProgressionOption[];
   fromDeloadBase: boolean;
 }
 
