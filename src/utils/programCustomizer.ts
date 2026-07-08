@@ -246,12 +246,16 @@ export async function saveCustomizedProgram(
 
   if (treinosError) throw treinosError;
 
-  // 5. Para cada treino, criar cópias para TODAS as semanas
+  // 5. Para cada treino, criar cópias apenas para as semanas mantidas.
+  //    seqIndex = posição sequencial (para datas); templateWeek = número original
+  //    da semana (para ordem_semana e resolução de RER por semana).
   for (const treinoOriginal of treinosOriginais!) {
-    for (let semana = 1; semana <= totalWeeks; semana++) {
+    for (let seqIndex = 0; seqIndex < keptWeeks.length; seqIndex++) {
+      const templateWeek = keptWeeks[seqIndex];
+      const semana = templateWeek; // ordem_semana preserva a numeração original
       const diaSemana = getDiaSemanaForWeek(
         treinoOriginal.ordem_dia,
-        semana,
+        seqIndex + 1,
         startDate,
         cronogramaConfig,
         calculatedSchedule
