@@ -488,6 +488,8 @@ export const loadUserProgramForCustomize = async (programaUsuarioId: string): Pr
       savedSchedules,
       weeklySchedules: savedSchedules,
       mesocycleDurations,
+      mesocycleMins,
+      mesocycleMaxs,
       dayTitles,
       rerPerWeekPerMesocycle,
     };
