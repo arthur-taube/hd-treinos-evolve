@@ -189,10 +189,18 @@ export async function saveCustomizedProgram(
     customExercises,
     customDayTitles,
     programData,
+    selectedWeeks,
   } = params;
 
-  // 1. Calcular dias de treino (para cronograma flexível)
-  const totalWeeks = programData.mesocycleDurations.reduce((sum, dur) => sum + dur, 0);
+  // 1. Determinar semanas do template a manter (faixa mín–máx)
+  const maxWeeks = programData.mesocycleDurations.reduce((sum, dur) => sum + dur, 0);
+  const chosenWeeks = selectedWeeks
+    ? Math.max(1, Math.min(selectedWeeks, maxWeeks))
+    : maxWeeks;
+  const keptWeeks = computeKeptWeeks(programData.programLevel, chosenWeeks, maxWeeks);
+  const totalWeeks = keptWeeks.length;
+
+  // Calcular dias de treino (para cronograma flexível) com base nas semanas geradas
   const calculatedSchedule =
     cronogramaConfig.tipo === "flexivel"
       ? calculateFlexibleSchedule(
