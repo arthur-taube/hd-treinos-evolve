@@ -39,6 +39,7 @@ interface ProgramExercisesFormProps {
   initialExercisesPerDay?: Record<string, Record<string, Exercise[]>>;
   initialSavedSchedules?: string[][];
   initialMesocycleDurations?: number[];
+  initialMesocycleMins?: number[];
   initialDayTitles?: Record<string, string>;
   isEditing?: boolean;
   programId?: string;
