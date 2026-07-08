@@ -11,6 +11,21 @@ export interface StarProgressionResult {
   baseEstimated1RM: number;
 }
 
+export interface StarProgressionOption {
+  weight: number;
+  reps: number;
+  estimated1RM: number;
+  percentIncrease: number;
+}
+
+export interface StarProgressionFull {
+  base: { weight: number; reps: number; estimated1RM: number };
+  // All candidates tied at the smallest positive 1RMe increase, sorted by weight ascending.
+  options: StarProgressionOption[];
+  // The option applied to the inputs (heaviest among ties).
+  suggested: StarProgressionOption;
+}
+
 export function epley1RM(weight: number, reps: number): number {
   if (reps <= 0) return weight;
   return weight * (1 + reps / 30);
