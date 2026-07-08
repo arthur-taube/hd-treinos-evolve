@@ -602,6 +602,18 @@ export default function ProgramExercisesForm({
     const newDurations = [...mesocycleDurations];
     newDurations[currentMesocycle - 1] = duration;
     setMesocycleDurations(newDurations);
+    // Garante que o mínimo nunca exceda o máximo
+    if (mesocycleMins[currentMesocycle - 1] > duration) {
+      const newMins = [...mesocycleMins];
+      newMins[currentMesocycle - 1] = duration;
+      setMesocycleMins(newMins);
+    }
+  };
+
+  const handleMesocycleMinChange = (min: number) => {
+    const newMins = [...mesocycleMins];
+    newMins[currentMesocycle - 1] = min;
+    setMesocycleMins(newMins);
   };
 
   const copyFromPreviousMesocycle = () => {
