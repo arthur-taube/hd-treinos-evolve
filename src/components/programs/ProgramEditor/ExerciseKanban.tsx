@@ -29,6 +29,8 @@ export default function ExerciseKanban({
   totalMesocycles,
   mesocycleDuration = 4,
   onDurationChange,
+  mesocycleMin,
+  onMinChange,
   onExercisesUpdate,
   onDayTitlesUpdate,
   initialExercises = {},
