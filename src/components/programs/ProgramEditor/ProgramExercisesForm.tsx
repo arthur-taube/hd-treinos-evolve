@@ -339,6 +339,8 @@ export default function ProgramExercisesForm({
           .from('mesociclos')
           .update({
             duracao_semanas: mesocycleDurations[i],
+            semanas_min: mesocycleMins[i],
+            semanas_max: mesocycleDurations[i],
             cronogramas_recomendados: scheduleOptions,
             rer_por_semana: rerPorSemana,
           } as any)
