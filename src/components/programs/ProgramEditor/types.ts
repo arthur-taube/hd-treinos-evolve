@@ -19,8 +19,10 @@ export interface ExerciseKanbanProps {
   daysSchedule: string[][];
   currentMesocycle: number;
   totalMesocycles: number;
-  mesocycleDuration?: number;
-  onDurationChange?: (duration: number) => void;
+  mesocycleDuration?: number; // representa o MÁXIMO da faixa de semanas
+  onDurationChange?: (duration: number) => void; // atualiza o máximo
+  mesocycleMin?: number; // mínimo da faixa de semanas
+  onMinChange?: (min: number) => void;
   onExercisesUpdate?: (dayId: string, exercises: Exercise[]) => void;
   onDayTitlesUpdate?: (dayTitles: Record<string, string>) => void;
 }
