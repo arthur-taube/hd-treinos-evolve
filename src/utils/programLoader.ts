@@ -438,7 +438,7 @@ export const loadUserProgramForCustomize = async (programaUsuarioId: string): Pr
     // 7. Buscar cronogramas e rer_por_semana do programa original
     const { data: mesociclos } = await supabase
       .from('mesociclos')
-      .select('numero, cronogramas_recomendados, duracao_semanas, rer_por_semana')
+      .select('numero, cronogramas_recomendados, duracao_semanas, rer_por_semana, semanas_min, semanas_max')
       .eq('programa_id', programaOriginal.id)
       .order('numero');
 
