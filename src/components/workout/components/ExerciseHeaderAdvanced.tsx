@@ -160,8 +160,25 @@ export function ExerciseHeaderAdvanced({
             {formatExerciseDisplay()}
           </p>
 
-          {/* Epley progression indicator */}
-          {epleyResult && epleyResult.options.length > 0 && (
+          {/* STAR (intermediate) minimal progression indicator */}
+          {isStar && starResult && starResult.options.length > 0 && (
+            <div className="mt-1.5 space-y-0.5">
+              <span className="text-[11px] text-muted-foreground">
+                Progressão sugerida: (base: {starResult.base.weight}kg x {starResult.base.reps} reps – 1RMe = {starResult.base.estimated1RM.toFixed(1)}kg)
+              </span>
+              {starResult.options.map((opt, i) => (
+                <div key={i} className="flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3 text-blue-600" />
+                  <span className="text-xs font-medium text-blue-600">
+                    {opt.weight}kg x {opt.reps} reps – 1RMe = {opt.estimated1RM.toFixed(1)}kg (progressão mínima – {opt.percentIncrease.toFixed(1)}%)
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Epley progression indicator (advanced) */}
+          {!isStar && epleyResult && epleyResult.options.length > 0 && (
             <div className="mt-1.5 space-y-0.5">
               <span className="text-[11px] text-muted-foreground">
                 Progressão sugerida: (base: {epleyResult.base.weight}kg x {epleyResult.base.reps} reps – 1RMe = {epleyResult.base.estimated1RM.toFixed(1)}kg)
