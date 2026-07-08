@@ -242,6 +242,8 @@ export const loadExistingProgram = async (programId: string): Promise<LoadedProg
       savedSchedules,
       weeklySchedules: savedSchedules, // Alias para compatibilidade
       mesocycleDurations,
+      mesocycleMins,
+      mesocycleMaxs,
       dayTitles,
       rerPerWeekPerMesocycle,
     };
