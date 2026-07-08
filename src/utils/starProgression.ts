@@ -103,3 +103,64 @@ export function computeStarProgression(
 
   return best;
 }
+
+/**
+ * Full STAR progression: returns the base reference and ALL candidates tied at the
+ * smallest positive 1RMe increase (so the UI can show every tie), plus the suggested
+ * option to apply to the inputs (heaviest among ties).
+ */
+export function computeStarProgressionFull(
+  prevWeight: number,
+  prevReps: number,
+  increment: number,
+  repeticoes: string | null
+): StarProgressionFull | null {
+  const bounds = getStarMatrixBounds(repeticoes);
+  if (!bounds) return null;
+  const { minReps, maxReps } = bounds;
+
+  const inc = increment && increment > 0 ? increment : 2.5;
+  const base1RM = epley1RM(prevWeight, prevReps);
+  if (base1RM <= 0) return null;
+
+  const weights: number[] = [];
+  for (let k = -3; k <= 3; k++) {
+    const w = prevWeight + k * inc;
+    if (w > 0) weights.push(Math.round(w * 100) / 100);
+  }
+
+  const EPS = 1e-6;
+  const candidates: { weight: number; reps: number; estimated1RM: number }[] = [];
+
+  for (const w of weights) {
+    for (let r = minReps; r <= maxReps; r++) {
+      const est = epley1RM(w, r);
+      if (est - base1RM <= EPS) continue; // must be a positive increase
+      candidates.push({ weight: w, reps: r, estimated1RM: est });
+    }
+  }
+
+  if (candidates.length === 0) return null;
+
+  // Smallest positive 1RMe increase
+  const minEst = candidates.reduce((m, c) => Math.min(m, c.estimated1RM), Infinity);
+
+  const tied = candidates
+    .filter((c) => Math.abs(c.estimated1RM - minEst) <= EPS)
+    .map((c) => ({
+      weight: c.weight,
+      reps: c.reps,
+      estimated1RM: c.estimated1RM,
+      percentIncrease: (c.estimated1RM / base1RM - 1) * 100,
+    }))
+    .sort((a, b) => a.weight - b.weight);
+
+  // Suggested = heaviest among ties
+  const suggested = tied.reduce((best, c) => (c.weight > best.weight ? c : best), tied[0]);
+
+  return {
+    base: { weight: prevWeight, reps: prevReps, estimated1RM: base1RM },
+    options: tied,
+    suggested,
+  };
+}
