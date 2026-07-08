@@ -128,6 +128,11 @@ export default function ProgramCustomize() {
       setProgramData(data);
       setCustomProgramName(data.programName);
 
+      // Inicializar semanas escolhidas: média arredondada da faixa mín–máx
+      const wMin = data.mesocycleMins?.[0] ?? data.mesocycleDurations?.[0] ?? 4;
+      const wMax = data.mesocycleMaxs?.[0] ?? data.mesocycleDurations?.[0] ?? 4;
+      setSelectedWeeks(Math.round((wMin + wMax) / 2));
+
       // Inicializar exercícios da semana 1 do primeiro mesociclo
       const firstMesocycleKey = "mesocycle-1";
       console.log('🔧 ProgramCustomize - Verificando exercícios para:', firstMesocycleKey);
