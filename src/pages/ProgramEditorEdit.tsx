@@ -92,6 +92,7 @@ export default function ProgramEditorEdit() {
         initialExercisesPerDay={programData.exercisesPerDay}
         initialSavedSchedules={programData.savedSchedules}
         initialMesocycleDurations={programData.mesocycleDurations}
+        initialMesocycleMins={programData.mesocycleMins}
         initialDayTitles={programData.dayTitles}
         isEditing={true}
         programId={programId}
