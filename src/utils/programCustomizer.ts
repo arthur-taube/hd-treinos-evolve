@@ -152,6 +152,30 @@ function getDiaSemanaForWeek(
   }
 }
 
+/**
+ * Determina quais semanas do template manter quando o usuário escolhe menos
+ * semanas do que o máximo disponível na faixa definida pelo admin.
+ * - iniciante/intermediário: mantém as PRIMEIRAS semanas (corta as últimas)
+ * - avançado: mantém as ÚLTIMAS semanas (corta as primeiras, mais leves)
+ * Retorna os números de semana do template (base 1) preservando a numeração original.
+ */
+export function computeKeptWeeks(
+  level: string | undefined,
+  selected: number,
+  max: number
+): number[] {
+  const n = Math.max(1, Math.min(selected, max));
+  const isAdvanced = level === "avancado";
+  if (isAdvanced) {
+    // Mantém as últimas n semanas: [max-n+1 .. max]
+    return Array.from({ length: n }, (_, i) => max - n + 1 + i);
+  }
+  // Mantém as primeiras n semanas: [1 .. n]
+  return Array.from({ length: n }, (_, i) => i + 1);
+}
+
+
+
 export async function saveCustomizedProgram(
   params: SaveCustomizedProgramParams
 ): Promise<string> {
