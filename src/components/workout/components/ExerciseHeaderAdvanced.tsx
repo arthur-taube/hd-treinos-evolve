@@ -7,6 +7,7 @@ import { Youtube, MoreHorizontal, Check, Play, TrendingUp, Zap } from "lucide-re
 import { roundSetsForDisplay } from "@/utils/progressionCalculator";
 import { supabase } from "@/integrations/supabase/client";
 import { type EpleyResult } from "@/hooks/useEpleyProgression";
+import { type StarProgressionHookResult } from "@/hooks/useStarProgression";
 
 interface ExerciseHeaderAdvancedProps {
   exercise: {
