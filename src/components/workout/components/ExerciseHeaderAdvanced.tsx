@@ -47,6 +47,8 @@ export function ExerciseHeaderAdvanced({
   exercise,
   resolvedRer,
   epleyResult,
+  starResult,
+  isStar = false,
   observation,
   isOpen,
   setIsOpen,
