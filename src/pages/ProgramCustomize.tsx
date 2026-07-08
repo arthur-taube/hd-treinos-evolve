@@ -388,10 +388,33 @@ export default function ProgramCustomize() {
               <p className="font-medium">{programData.mesocycles}</p>
             </div>
             <div>
-              <Label className="text-muted-foreground">Duração</Label>
-              <p className="font-medium">
-                {programData.mesocycleDurations?.[0] || 4} semanas
-              </p>
+              <Label className="text-muted-foreground">Duração (semanas)</Label>
+              {(() => {
+                const wMin = programData.mesocycleMins?.[0] ?? programData.mesocycleDurations?.[0] ?? 4;
+                const wMax = programData.mesocycleMaxs?.[0] ?? programData.mesocycleDurations?.[0] ?? 4;
+                if (wMin >= wMax) {
+                  return <p className="font-medium">{wMax} semanas</p>;
+                }
+                return (
+                  <div className="space-y-1">
+                    <Input
+                      type="number"
+                      min={wMin}
+                      max={wMax}
+                      className="w-24"
+                      value={selectedWeeks}
+                      onChange={(e) =>
+                        setSelectedWeeks(
+                          Math.max(wMin, Math.min(wMax, Number(e.target.value)))
+                        )
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Escolha entre {wMin} e {wMax} semanas
+                    </p>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </Card>
