@@ -306,6 +306,8 @@ export function ExerciseCardAdvanced({
           exercise={exercise}
           resolvedRer={resolvedRer}
           epleyResult={epleyResult}
+          starResult={starResult}
+          isStar={isStar}
           observation={observation}
           isOpen={isOpen}
           setIsOpen={setIsOpen}
