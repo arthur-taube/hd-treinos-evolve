@@ -691,6 +691,8 @@ export type Database = {
           numero: number
           programa_id: string
           rer_por_semana: Json | null
+          semanas_max: number | null
+          semanas_min: number | null
         }
         Insert: {
           created_at?: string
@@ -700,6 +702,8 @@ export type Database = {
           numero: number
           programa_id: string
           rer_por_semana?: Json | null
+          semanas_max?: number | null
+          semanas_min?: number | null
         }
         Update: {
           created_at?: string
@@ -709,6 +713,8 @@ export type Database = {
           numero?: number
           programa_id?: string
           rer_por_semana?: Json | null
+          semanas_max?: number | null
+          semanas_min?: number | null
         }
         Relationships: [
           {

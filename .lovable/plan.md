@@ -1,46 +1,65 @@
-# Corrigir texto de "Progressão sugerida" no card intermediário (STAR)
+## Objetivo
 
-## Problema
+Permitir que o admin defina uma **faixa de semanas (mín–máx)** no mesociclo, em vez de um número único. Na hora de ativar o programa, o usuário escolhe **um único número dentro da faixa**, e o sistema gera apenas essas semanas — cortando o excedente conforme o nível.
 
-No nível intermediário (STAR), os **inputs de carga e reps** já usam a nova progressão mínima baseada em Epley (`useStarProgression`). Porém o **texto de progressão sugerida no cabeçalho** do card (`ExerciseHeaderAdvanced`) ainda mostra a lógica do avançado — três opções rotuladas "mais fácil / intermediário / mais difícil", vindas de `epleyResult`.
+## Regras de corte (confirmadas)
 
-O cabeçalho deve, no intermediário, mostrar a progressão mínima:
-- Mesmo formato do avançado (linha base + linha(s) de opção com carga × reps – 1RMe – percentual de evolução).
-- Rótulo **"progressão mínima"** em vez de mais fácil/intermediário/mais difícil.
-- Em caso de **empate no 1RMe**, mostrar todas as opções empatadas (duas ou mais), mesmo que os inputs continuem sendo preenchidos sempre com a carga mais pesada.
+- **Iniciante e Intermediário**: corta as **últimas** semanas. Ex: faixa 6–10, usuário escolhe 8 → mantém semanas 1–8.
+- **Avançado**: corta as **primeiras** semanas (as mais leves, longe da falha). Ex: faixa 6–10, usuário escolhe 8 → mantém semanas 3–10 (mantendo a numeração original 3..10, que casa com o modelo mental do usuário e com o RER por semana já definido).
+- **Valor padrão** pré-selecionado ao usuário: **média arredondada** da faixa (ex: 6–10 → 8; se necessário, arredondar para cima, ex: 4,5 arredonda para 5).
 
-## Mudanças
+## Banco de dados
 
-### 1. `src/utils/starProgression.ts`
-- `computeStarProgression` hoje retorna apenas o melhor único (`best`). Alterar para também coletar **todas as opções empatadas** no menor aumento positivo de 1RMe.
-- Retornar uma estrutura com:
-  - `base` (peso, reps, 1RMe da semana anterior);
-  - `options[]`: cada uma com `weight`, `reps`, `estimated1RM`, `percentIncrease` (= `(est/base1RM - 1) * 100`), ordenadas por carga; a implementada nos inputs continua sendo a de **maior carga** entre as empatadas.
-- Manter compatibilidade: o "suggested" implementado nos inputs = opção de maior carga.
+Adicionar duas colunas à tabela `mesociclos`:
 
-### 2. `src/hooks/useStarProgression.ts`
-- Expandir `StarProgressionHookResult` para incluir `base { weight, reps, estimated1RM }` e `options[]` (mesmo shape usado no cabeçalho), além dos já existentes `suggestedWeight`/`suggestedReps`/`fromDeloadBase`.
-- No caminho normal, preencher `options` a partir do novo retorno de `computeStarProgression`.
-- No caminho de retorno pós-deload (repete `progressao_base_*`) e nos fallbacks (sem aumento positivo), montar uma `options` de um único item para o cabeçalho refletir corretamente.
+- `semanas_min` (inteiro, opcional)
+- `semanas_max` (inteiro, opcional)
 
-### 3. `src/components/workout/ExerciseCardAdvanced.tsx`
-- Passar o resultado STAR para o cabeçalho quando `isStar` (ex.: nova prop `starResult` no `ExerciseHeaderAdvanced`, mantendo `epleyResult` para o avançado).
+Migração de dados existentes: preencher `semanas_min = semanas_max = duracao_semanas` (faixa fixa; sem cortes até o admin editar). `duracao_semanas` continua representando o comprimento total do template (igual ao máximo).
 
-### 4. `src/components/workout/components/ExerciseHeaderAdvanced.tsx`
-- Aceitar `starResult` e um flag/`nivel` para decidir a fonte.
-- Quando intermediário: renderizar o bloco de progressão a partir de `starResult` — linha base igual ao avançado e, para cada opção, `Xkg x Y reps – 1RMe = Z kg (progressão mínima – P%)`.
-- Quando há múltiplas opções empatadas, listar todas (cada uma como uma linha com o ícone `TrendingUp`), todas rotuladas "progressão mínima".
-- Avançado permanece exatamente como está.
+## Editor do admin (criação/edição de programa)
+
+Na 2ª tela (`ExerciseKanbanAdvanced` e `ExerciseKanban`), substituir a caixa única "Duração (semanas)" por **duas caixas**: "Semanas (mín)" e "Semanas (máx)", com validação `mín ≤ máx`.
+
+- O número das colunas de semanas montadas (e, no avançado, o número de linhas de "RER alvo por semana") passa a ser o **máximo** da faixa.
+- `ProgramExercisesForm` guarda min/max por mesociclo e grava `semanas_min`, `semanas_max` e `duracao_semanas` (= máx) em `mesociclos`, tanto na criação quanto na reconciliação/edição.
+
+## Tela de ativação do programa (usuário)
+
+Em `ProgramCustomize`, no bloco "Dados do Programa / Duração":
+
+- Se `semanas_min === semanas_max`: exibe o número fixo (comportamento atual).
+- Se houver faixa: mostra um **seletor numérico único** limitado a `[mín, máx]`, com padrão = média arredondada. Um texto auxiliar explica a faixa disponível (ex: "Escolha entre 6 e 10 semanas").
+- O valor escolhido é passado para a geração do programa.
+
+## Geração do programa do usuário (corte)
+
+Em `programCustomizer.ts` (`saveCustomizedProgram`):
+
+- Nova função utilitária `computeKeptWeeks(level, selected, max)` que retorna a lista de **números de semana do template** a manter:
+  - iniciante/intermediário → `[1 .. selected]`
+  - avançado → `[max - selected + 1 .. max]`
+- O loop de geração passa a iterar sobre essa lista. Para cada semana mantida:
+  - `ordem_semana` = número da semana do template (preserva 1–8 no iniciante/intermediário e 3–10 no avançado, mantendo o RER por semana correto via `rer_por_semana`).
+  - O cálculo de data/cronograma usa a **posição sequencial** (0,1,2,…) e não o número da semana, para que as datas comecem corretamente na primeira sessão independentemente do corte.
+- `totalWeeks` para cronograma flexível passa a ser o número selecionado.
+
+Como o RER avançado é resolvido dinamicamente por `rer_por_semana[ordem_semana]`, manter a numeração original garante que as semanas remanescentes usem exatamente o RER definido pelo admin — sem necessidade de remapeamento.
 
 ## Detalhes técnicos
 
-- Empate: definido pela mesma `estimated1RM` dentro de `EPS` (já usado em `starProgression.ts`). Todas as candidatas com esse 1RMe mínimo positivo entram em `options`.
-- O preenchimento automático dos inputs (`suggestedWeight`/`suggestedReps`) não muda: continua a opção de maior carga entre as empatadas.
-- Sem alterações de banco de dados. Mudança apenas de apresentação + forma do retorno do cálculo/hook STAR.
+- `programLoader.ts`: incluir `semanas_min`/`semanas_max` ao carregar mesociclos, disponibilizando-os para a tela de customização.
+- `ProgramCustomize.tsx`: novo estado `selectedWeeks`, seletor com clamp em `[min,max]`, passado a `saveCustomizedProgram`.
+- `programCustomizer.ts`: assinatura recebe `selectedWeeks`; usa `computeKeptWeeks`; ajusta cálculo de datas por índice sequencial.
+- Editor: estados `semanasMin`/`semanasMax` por mesociclo em `ProgramExercisesForm`, propagados para os dois Kanbans; UI de RER por semana renderiza `semanas_max` linhas.
+- Sem mudanças em RLS (colunas novas herdam as políticas existentes de `mesociclos`).
 
 ## Validação
 
-- Abrir um treino intermediário e confirmar que o cabeçalho mostra "progressão mínima" com percentual, coerente com os valores preenchidos nos inputs.
-- Construir/simular um caso de empate de 1RMe e verificar que duas ou mais opções aparecem, com os inputs preenchidos pela carga mais pesada.
-- Confirmar que o avançado continua mostrando mais fácil/intermediário/mais difícil sem mudanças.
-- Rodar typecheck.
+- Criar programa avançado com faixa 6–10, montar RER das 10 semanas; ativar escolhendo 8 → confere que restam semanas 3–10 com o RER correto.
+- Criar programa iniciante/intermediário com faixa 6–10, escolher 8 → confere semanas 1–8.
+- Programa antigo (sem faixa) continua funcionando como número fixo.
+- `tsgo` typecheck limpo.
+  &nbsp;
+
+Adiciona faixa mín–máx de semanas definida pelo admin, seletor único para o usuário dentro da faixa, e corte de semanas por nível (últimas para iniciante/intermediário, primeiras para avançado).
