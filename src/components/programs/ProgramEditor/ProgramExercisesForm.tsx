@@ -357,6 +357,8 @@ export default function ProgramExercisesForm({
             programa_id: programId,
             numero: mesocicloNumero,
             duracao_semanas: mesocycleDurations[i],
+            semanas_min: mesocycleMins[i],
+            semanas_max: mesocycleDurations[i],
             cronogramas_recomendados: scheduleOptions,
             rer_por_semana: rerPorSemana,
           } as any)
