@@ -78,10 +78,14 @@ export function useStarProgression(
 
       // Return week after a deload: repeat the stored base progression.
       if (prev.deload && prev.progressao_base_peso != null && prev.progressao_base_reps != null) {
+        const w = Number(prev.progressao_base_peso);
+        const r = Number(prev.progressao_base_reps);
+        const est = w * (1 + r / 30);
         setResult({
-          suggestedWeight: Number(prev.progressao_base_peso),
-          suggestedReps: Number(prev.progressao_base_reps),
-          base: { weight: Number(prev.progressao_base_peso), reps: Number(prev.progressao_base_reps) },
+          suggestedWeight: w,
+          suggestedReps: r,
+          base: { weight: w, reps: r, estimated1RM: est },
+          options: [{ weight: w, reps: r, estimated1RM: est, percentIncrease: 0 }],
           fromDeloadBase: true,
         });
         return;
@@ -106,7 +110,9 @@ export function useStarProgression(
         return;
       }
 
-      const progression = computeStarProgression(
+      const prevEst = prevWeight * (1 + prevReps / 30);
+
+      const progression = computeStarProgressionFull(
         prevWeight,
         prevReps,
         incrementoMinimo || 2.5,
@@ -118,16 +124,18 @@ export function useStarProgression(
         setResult({
           suggestedWeight: prevWeight,
           suggestedReps: prevReps,
-          base: { weight: prevWeight, reps: prevReps },
+          base: { weight: prevWeight, reps: prevReps, estimated1RM: prevEst },
+          options: [{ weight: prevWeight, reps: prevReps, estimated1RM: prevEst, percentIncrease: 0 }],
           fromDeloadBase: false,
         });
         return;
       }
 
       setResult({
-        suggestedWeight: progression.weight,
-        suggestedReps: progression.reps,
-        base: { weight: prevWeight, reps: prevReps },
+        suggestedWeight: progression.suggested.weight,
+        suggestedReps: progression.suggested.reps,
+        base: progression.base,
+        options: progression.options,
         fromDeloadBase: false,
       });
     } catch (error) {
