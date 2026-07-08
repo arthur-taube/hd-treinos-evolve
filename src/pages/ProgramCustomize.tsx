@@ -55,6 +55,7 @@ export default function ProgramCustomize() {
   // Customization state
   const [customProgramName, setCustomProgramName] = useState("");
   const [startDate, setStartDate] = useState<Date>(new Date());
+  const [selectedWeeks, setSelectedWeeks] = useState<number>(0);
   const [cronogramaConfig, setCronogramaConfig] = useState<CronogramaConfig>({
     tipo: "recomendado",
     recomendadoIndex: 0,
