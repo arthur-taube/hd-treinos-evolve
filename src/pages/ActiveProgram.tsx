@@ -175,6 +175,78 @@ export default function ActiveProgram() {
     fetchActiveProgram();
   }, [navigate, programaUsuarioId, readOnly]);
 
+  // Load deload week status when program is loaded
+  useEffect(() => {
+    if (!programaUsuario || !programaOriginal) return;
+    (async () => {
+      try {
+        const { data: semana } = await supabase
+          .from("deload_semanas" as any)
+          .select("*")
+          .eq("programa_usuario_id", programaUsuario.id)
+          .maybeSingle();
+
+        if (semana) {
+          setDeloadSemana(semana);
+          const { data: dias } = await supabase
+            .from("deload_dias" as any)
+            .select("*")
+            .eq("deload_semana_id", (semana as any).id)
+            .order("ordem_dia", { ascending: true });
+          setDeloadDias((dias as any[]) || []);
+          setDeloadEligible(false);
+        } else {
+          const { eligible } = await canStartDeload(
+            programaUsuario.id,
+            programaOriginal.nivel
+          );
+          setDeloadEligible(eligible);
+        }
+      } catch (e) {
+        console.error("Erro ao carregar deload:", e);
+      }
+    })();
+  }, [programaUsuario, programaOriginal]);
+
+  const handleStartDeload = async () => {
+    if (!programaUsuario || !programaOriginal) return;
+    setDeloadLoading(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+
+      const result = await initiateDeloadWeek(
+        programaUsuario.id,
+        userData.user.id,
+        programaOriginal.frequencia_semanal
+      );
+      if (!result) throw new Error("Falha ao iniciar deload");
+
+      // Reload deload state
+      const { data: semana } = await supabase
+        .from("deload_semanas" as any)
+        .select("*")
+        .eq("id", result.deloadSemanaId)
+        .single();
+      setDeloadSemana(semana);
+      const { data: dias } = await supabase
+        .from("deload_dias" as any)
+        .select("*")
+        .eq("deload_semana_id", result.deloadSemanaId)
+        .order("ordem_dia", { ascending: true });
+      setDeloadDias((dias as any[]) || []);
+      setDeloadEligible(false);
+
+      sonnerToast.success("Semana de deload iniciada");
+    } catch (e: any) {
+      console.error(e);
+      sonnerToast.error(e?.message || "Erro ao iniciar deload");
+    } finally {
+      setDeloadLoading(false);
+      setStartDeloadDialogOpen(false);
+    }
+  };
+
   const navigateToWorkout = (treinoId: string) => {
     navigate(readOnly ? `/workout/${treinoId}?view=1` : `/workout/${treinoId}`);
   };
