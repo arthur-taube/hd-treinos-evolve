@@ -24,6 +24,7 @@ import ProgramEditorEdit from "./pages/ProgramEditorEdit";
 import ProgramCustomize from "./pages/ProgramCustomize";
 import ProgramUserEdit from "./pages/ProgramUserEdit";
 import ProgramCatalogTitle from "./pages/ProgramCatalogTitle";
+import DeloadWorkout from "./pages/DeloadWorkout";
 
 const queryClient = new QueryClient();
 
