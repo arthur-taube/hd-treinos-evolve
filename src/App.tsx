@@ -97,6 +97,14 @@ const App = () => (
               }
             />
             <Route
+              path="/deload-workout/:deloadDiaId"
+              element={
+                <AppLayout>
+                  <DeloadWorkout />
+                </AppLayout>
+              }
+            />
+            <Route
               path="/programs/new"
               element={
                 <AppLayout>
