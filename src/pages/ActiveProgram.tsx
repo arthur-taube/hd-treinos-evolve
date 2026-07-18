@@ -809,6 +809,24 @@ export default function ActiveProgram() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog: Iniciar semana de deload */}
+      <AlertDialog open={startDeloadDialogOpen} onOpenChange={setStartDeloadDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Iniciar semana de deload</AlertDialogTitle>
+            <AlertDialogDescription>
+              A semana de deload usará como referência o último treino concluído de cada dia. Os treinos restantes do programa serão preservados, mas a semana de deload aparecerá logo abaixo. Deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deloadLoading}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction disabled={deloadLoading} onClick={handleStartDeload}>
+              Sim, iniciar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
