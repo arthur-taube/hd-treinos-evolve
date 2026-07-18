@@ -1,65 +1,62 @@
+# Semana de Deload (avançado/intermediário)
+
 ## Objetivo
+Permitir que o usuário inicie **uma única semana de deload por programa**, disponível a partir do momento em que ele **inicia a 3ª semana**. O botão fica **sempre no fim da lista de semanas** (acima do botão de finalizar), exige **confirmação**, e ao concluir todos os dias do deload o programa fica pronto para ser **finalizado**.
 
-Permitir que o admin defina uma **faixa de semanas (mín–máx)** no mesociclo, em vez de um número único. Na hora de ativar o programa, o usuário escolhe **um único número dentro da faixa**, e o sistema gera apenas essas semanas — cortando o excedente conforme o nível.
+Aplica-se somente a programas **avançado** e **intermediário (STAR)** — nunca iniciante. Esta semana de deload **não tem relação** com o deload reativo do sistema STAR (que age em um único exercício); aqui o deload é para o programa inteiro e usa fórmulas próprias.
 
-## Regras de corte (confirmadas)
+## Regras confirmadas
+- **Aparece**: a partir do início da 3ª semana (existe treino concluído/iniciado com `ordem_semana >= 3`).
+- **Posição**: sempre no rodapé da página `active-program`, logo acima do botão "Concluir Programa".
+- **Confirmação**: `AlertDialog` perguntando se o usuário realmente deseja **pular todos os treinos não concluídos** (se houver) e iniciar a semana de deload.
+- **Único deload por programa**: depois de criado, o botão some.
+- **Após concluir o deload**: todos os treinos ficam concluídos/pulados → aparece o bloco "Concluir Programa". Não bloqueamos outras ações.
+- **Dados congelados**: cada dia de deload concluído grava carga/séries/reps usadas. Reabrir/reiniciar treinos antigos **não** recalcula o deload — os valores ficam fixos.
+- **Origem dos dados**: cada dia de deload copia do **último treino concluído daquele dia** (mesmo `ordem_dia`), independente da semana.
 
-- **Iniciante e Intermediário**: corta as **últimas** semanas. Ex: faixa 6–10, usuário escolhe 8 → mantém semanas 1–8.
-- **Avançado**: corta as **primeiras** semanas (as mais leves, longe da falha). Ex: faixa 6–10, usuário escolhe 8 → mantém semanas 3–10 (mantendo a numeração original 3..10, que casa com o modelo mental do usuário e com o RER por semana já definido).
-- **Valor padrão** pré-selecionado ao usuário: **média arredondada** da faixa (ex: 6–10 → 8; se necessário, arredondar para cima, ex: 4,5 arredonda para 5).
+## Fórmulas da semana de deload
+
+A semana é dividida em duas metades por **dia**, arredondando a primeira metade **para cima** (ex.: 5 dias → 3 dias na 1ª metade, 2 na 2ª; 4 dias → 2 e 2).
+
+**Primeira metade da semana** — cada exercício mostra no cabeçalho do card **dois modelos** para o usuário escolher:
+- **Volume** (opção padrão, pré-selecionada): carga **mantida** igual à do último workout concluído; séries e repetições **reduzidas em 50%**, arredondando para cima.
+- **Carga**: séries e repetições **mantidas** iguais ao último workout concluído; carga **reduzida em 50%**, arredondando para cima e respeitando o incremento mínimo.
+
+**Segunda metade da semana** — deload de **carga e volume combinados** (sem escolha):
+- carga reduzida em 50%, séries reduzidas em 50% e repetições reduzidas em 50%, todos arredondando para cima.
+
+Referências de arredondamento:
+- Séries/reps: `ceil(valor / 2)`.
+- Carga: `ceil((carga_base * 0.5) / incremento) * incremento` (respeita incremento mínimo; mín. 0).
 
 ## Banco de dados
 
-Adicionar duas colunas à tabela `mesociclos`:
+Três tabelas novas (com GRANTs + RLS por `user_id`):
 
-- `semanas_min` (inteiro, opcional)
-- `semanas_max` (inteiro, opcional)
+- `deload_semanas` — `programa_usuario_id`, `user_id`, `concluido`, `data_concluido`.
+- `deload_dias` — `deload_semana_id`, `user_id`, `ordem_dia`, `nome`, `treino_origem_id`, `metade` (`primeira`/`segunda`), `concluido`, `data_concluido`.
+- `deload_series` — `deload_dia_id`, `user_id`, `exercicio_nome`, `grupo_muscular`, `ordem`, `modo` (`volume`/`carga`/`combinado`), `numero_serie`, `peso`, `repeticoes`, `concluida`.
 
-Migração de dados existentes: preencher `semanas_min = semanas_max = duracao_semanas` (faixa fixa; sem cortes até o admin editar). `duracao_semanas` continua representando o comprimento total do template (igual ao máximo).
+Cada dia de deload é gerado do último treino concluído com aquele `ordem_dia`; `metade` define se é 1ª (com escolha volume/carga) ou 2ª (combinado).
 
-## Editor do admin (criação/edição de programa)
+## Fluxo na tela (active-program)
 
-Na 2ª tela (`ExerciseKanbanAdvanced` e `ExerciseKanban`), substituir a caixa única "Duração (semanas)" por **duas caixas**: "Semanas (mín)" e "Semanas (máx)", com validação `mín ≤ máx`.
+1. **Botão "Iniciar semana de deload"** no rodapé (avançado/intermediário, ≥3ª semana iniciada, sem deload existente).
+2. Clicar → `AlertDialog` de confirmação avisando que treinos não concluídos serão pulados.
+3. Confirmar:
+   - Pular todos os treinos não concluídos (reusa `handleSkipWorkout`).
+   - Criar `deload_semanas` + um `deload_dias` por dia da frequência (marcando `metade`), copiando do último treino concluído daquele `ordem_dia`.
+4. Bloco próprio "Semana Deload" no fim da lista, cards em cor distinta (laranja/roxo). Cada card abre a nova página `DeloadWorkout`.
+5. Concluir um dia → grava em `deload_series`, marca `deload_dias.concluido`, card muda para tom mais escuro. **Não recomputa** dias já concluídos.
+6. Todos os dias concluídos → `deload_semanas.concluido = true` e bloco "Concluir Programa" disponível.
 
-- O número das colunas de semanas montadas (e, no avançado, o número de linhas de "RER alvo por semana") passa a ser o **máximo** da faixa.
-- `ProgramExercisesForm` guarda min/max por mesociclo e grava `semanas_min`, `semanas_max` e `duracao_semanas` (= máx) em `mesociclos`, tanto na criação quanto na reconciliação/edição.
-
-## Tela de ativação do programa (usuário)
-
-Em `ProgramCustomize`, no bloco "Dados do Programa / Duração":
-
-- Se `semanas_min === semanas_max`: exibe o número fixo (comportamento atual).
-- Se houver faixa: mostra um **seletor numérico único** limitado a `[mín, máx]`, com padrão = média arredondada. Um texto auxiliar explica a faixa disponível (ex: "Escolha entre 6 e 10 semanas").
-- O valor escolhido é passado para a geração do programa.
-
-## Geração do programa do usuário (corte)
-
-Em `programCustomizer.ts` (`saveCustomizedProgram`):
-
-- Nova função utilitária `computeKeptWeeks(level, selected, max)` que retorna a lista de **números de semana do template** a manter:
-  - iniciante/intermediário → `[1 .. selected]`
-  - avançado → `[max - selected + 1 .. max]`
-- O loop de geração passa a iterar sobre essa lista. Para cada semana mantida:
-  - `ordem_semana` = número da semana do template (preserva 1–8 no iniciante/intermediário e 3–10 no avançado, mantendo o RER por semana correto via `rer_por_semana`).
-  - O cálculo de data/cronograma usa a **posição sequencial** (0,1,2,…) e não o número da semana, para que as datas comecem corretamente na primeira sessão independentemente do corte.
-- `totalWeeks` para cronograma flexível passa a ser o número selecionado.
-
-Como o RER avançado é resolvido dinamicamente por `rer_por_semana[ordem_semana]`, manter a numeração original garante que as semanas remanescentes usem exatamente o RER definido pelo admin — sem necessidade de remapeamento.
-
-## Detalhes técnicos
-
-- `programLoader.ts`: incluir `semanas_min`/`semanas_max` ao carregar mesociclos, disponibilizando-os para a tela de customização.
-- `ProgramCustomize.tsx`: novo estado `selectedWeeks`, seletor com clamp em `[min,max]`, passado a `saveCustomizedProgram`.
-- `programCustomizer.ts`: assinatura recebe `selectedWeeks`; usa `computeKeptWeeks`; ajusta cálculo de datas por índice sequencial.
-- Editor: estados `semanasMin`/`semanasMax` por mesociclo em `ProgramExercisesForm`, propagados para os dois Kanbans; UI de RER por semana renderiza `semanas_max` linhas.
-- Sem mudanças em RLS (colunas novas herdam as políticas existentes de `mesociclos`).
+## Nova página DeloadWorkout
+Reaproveita `ExerciseCardAdvanced` em modo deload. No cabeçalho de cada exercício da **1ª metade**, seletor **Volume/Carga** (Volume default) que ajusta os valores exibidos; na **2ª metade**, valores combinados fixos. Grava em `deload_series`. Não altera a lógica normal de progressão/histórico dos treinos comuns.
 
 ## Validação
-
-- Criar programa avançado com faixa 6–10, montar RER das 10 semanas; ativar escolhendo 8 → confere que restam semanas 3–10 com o RER correto.
-- Criar programa iniciante/intermediário com faixa 6–10, escolher 8 → confere semanas 1–8.
-- Programa antigo (sem faixa) continua funcionando como número fixo.
-- `tsgo` typecheck limpo.
-  &nbsp;
-
-Adiciona faixa mín–máx de semanas definida pelo admin, seletor único para o usuário dentro da faixa, e corte de semanas por nível (últimas para iniciante/intermediário, primeiras para avançado).
+- Programa avançado/intermediário com 3ª semana iniciada → botão no fim; iniciar cria deload com dias copiados do último treino concluído de cada dia e `metade` correta.
+- 1ª metade: alternar Volume (mantém carga, corta séries/reps) e Carga (mantém séries/reps, corta carga) funciona; padrão Volume.
+- 2ª metade: carga, séries e reps todas reduzidas 50% (arredondando para cima).
+- Concluir dia → grava em `deload_series`, card escurece; reabrir treino antigo não altera valores do deload.
+- Concluído todo o deload → botão "Concluir Programa" disponível.
+- Iniciante nunca vê o botão. Um deload por programa. Typecheck limpo.

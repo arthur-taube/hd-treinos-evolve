@@ -14,6 +14,150 @@ export type Database = {
   }
   public: {
     Tables: {
+      deload_dias: {
+        Row: {
+          concluido: boolean
+          created_at: string
+          data_concluido: string | null
+          deload_semana_id: string
+          id: string
+          metade: string
+          nome: string
+          ordem_dia: number
+          treino_origem_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          concluido?: boolean
+          created_at?: string
+          data_concluido?: string | null
+          deload_semana_id: string
+          id?: string
+          metade: string
+          nome: string
+          ordem_dia: number
+          treino_origem_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          concluido?: boolean
+          created_at?: string
+          data_concluido?: string | null
+          deload_semana_id?: string
+          id?: string
+          metade?: string
+          nome?: string
+          ordem_dia?: number
+          treino_origem_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deload_dias_deload_semana_id_fkey"
+            columns: ["deload_semana_id"]
+            isOneToOne: false
+            referencedRelation: "deload_semanas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deload_semanas: {
+        Row: {
+          concluido: boolean
+          created_at: string
+          data_concluido: string | null
+          id: string
+          programa_usuario_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          concluido?: boolean
+          created_at?: string
+          data_concluido?: string | null
+          id?: string
+          programa_usuario_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          concluido?: boolean
+          created_at?: string
+          data_concluido?: string | null
+          id?: string
+          programa_usuario_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deload_semanas_programa_usuario_id_fkey"
+            columns: ["programa_usuario_id"]
+            isOneToOne: true
+            referencedRelation: "programas_usuario"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deload_series: {
+        Row: {
+          concluida: boolean
+          created_at: string
+          deload_dia_id: string
+          exercicio_nome: string
+          grupo_muscular: string | null
+          id: string
+          modo: string
+          numero_serie: number
+          ordem: number
+          peso: number | null
+          repeticoes: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          concluida?: boolean
+          created_at?: string
+          deload_dia_id: string
+          exercicio_nome: string
+          grupo_muscular?: string | null
+          id?: string
+          modo: string
+          numero_serie: number
+          ordem: number
+          peso?: number | null
+          repeticoes?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          concluida?: boolean
+          created_at?: string
+          deload_dia_id?: string
+          exercicio_nome?: string
+          grupo_muscular?: string | null
+          id?: string
+          modo?: string
+          numero_serie?: number
+          ordem?: number
+          peso?: number | null
+          repeticoes?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deload_series_deload_dia_id_fkey"
+            columns: ["deload_dia_id"]
+            isOneToOne: false
+            referencedRelation: "deload_dias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercicios_avancados: {
         Row: {
           created_at: string
