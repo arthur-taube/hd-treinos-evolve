@@ -77,6 +77,13 @@ export default function ActiveProgram() {
   const [restartDialogOpen, setRestartDialogOpen] = useState(false);
   const [selectedTreinoId, setSelectedTreinoId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Deload state
+  const [deloadEligible, setDeloadEligible] = useState(false);
+  const [deloadSemana, setDeloadSemana] = useState<any | null>(null);
+  const [deloadDias, setDeloadDias] = useState<any[]>([]);
+  const [startDeloadDialogOpen, setStartDeloadDialogOpen] = useState(false);
+  const [deloadLoading, setDeloadLoading] = useState(false);
   
   useEffect(() => {
     async function fetchActiveProgram() {
