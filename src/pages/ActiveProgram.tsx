@@ -674,6 +674,63 @@ export default function ActiveProgram() {
                 );
               })}
             </div>
+
+            {/* Semana de deload (bloco após todas as semanas) */}
+            {!readOnly && deloadSemana && (
+              <div className="mt-6">
+                <div className="flex items-center gap-2 mt-4 mb-2">
+                  <div className="h-px flex-1 bg-sky-500/40"></div>
+                  <span className="text-sm font-semibold text-sky-300 px-2 flex items-center gap-1">
+                    <Snowflake className="h-3.5 w-3.5" />
+                    Semana de Deload
+                  </span>
+                  <div className="h-px flex-1 bg-sky-500/40"></div>
+                </div>
+                <div className="flex flex-col gap-4 max-w-2xl mx-auto">
+                  {deloadDias.map((dia) => (
+                    <Card
+                      key={dia.id}
+                      className={`p-4 cursor-pointer transition-colors border-sky-500/30 ${
+                        dia.concluido ? "bg-green-900/20 opacity-80" : "bg-sky-950/20 hover:bg-sky-950/40"
+                      }`}
+                      onClick={() => navigate(`/deload-workout/${dia.id}`)}
+                    >
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium flex items-center gap-2">
+                            <Snowflake className="h-4 w-4 text-sky-300" />
+                            Dia {dia.ordem_dia}: {dia.nome}
+                          </h4>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {dia.metade === "primeira"
+                              ? "Deload de volume ou carga"
+                              : "Deload combinado (volume + carga)"}
+                          </p>
+                        </div>
+                        {dia.concluido && (
+                          <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Botão iniciar semana de deload */}
+            {!readOnly && !deloadSemana && deloadEligible && (
+              <div className="mt-8 flex justify-center">
+                <Button
+                  variant="outline"
+                  className="border-sky-500/50 text-sky-200 hover:bg-sky-950/40"
+                  onClick={() => setStartDeloadDialogOpen(true)}
+                >
+                  <Snowflake className="h-4 w-4 mr-2" />
+                  Iniciar semana de deload
+                </Button>
+              </div>
+            )}
+
             
             {/* Botão Concluir Programa quando 100% */}
             {!readOnly && getProgramProgress() === 100 && (
