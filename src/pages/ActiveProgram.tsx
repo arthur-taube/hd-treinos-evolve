@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
-import { Calendar, CheckCircle, XCircle, Trophy, MoreVertical, SkipForward, RotateCcw, Info, Eye, Play } from "lucide-react";
+import { Calendar, CheckCircle, XCircle, Trophy, MoreVertical, SkipForward, RotateCcw, Info, Eye, Play, Snowflake } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast as sonnerToast } from "sonner";
 import {
