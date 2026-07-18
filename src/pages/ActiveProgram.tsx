@@ -27,6 +27,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { precomputeNextExerciseProgression } from "@/utils/nextWorkoutProgression";
+import { canStartDeload, initiateDeloadWeek } from "@/utils/deload";
 
 interface ProgramaUsuario {
   id: string;
