@@ -189,7 +189,7 @@ export default function DeloadWorkout() {
       concluida: false,
     }));
   };
-  };
+
 
   const handleModeChange = (index: number, mode: DeloadMode) => {
     setExercises((prev) =>
