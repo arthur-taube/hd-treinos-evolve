@@ -177,19 +177,18 @@ export default function DeloadWorkout() {
   const recomputeSetsForMode = (ex: ExerciseState, newMode: DeloadMode): DeloadSerieRow[] => {
     const setsCount = computeDeloadSeriesCount(ex.origin.series, newMode);
     const baseline = buildBaselineSets(ex.origin.sets, setsCount);
-    return baseline.map((b) => {
-      const computed = computeDeloadSet(b, newMode, ex.origin.incremento_minimo);
-      return {
-        exercicio_nome: ex.origin.nome,
-        grupo_muscular: ex.origin.grupo_muscular,
-        ordem: ex.origin.ordem,
-        modo: newMode,
-        numero_serie: b.numero_serie,
-        peso: computed.peso,
-        repeticoes: computed.repeticoes,
-        concluida: false,
-      };
-    });
+    const computedSets = computeDeloadExerciseSets(baseline, newMode, ex.origin.incremento_minimo);
+    return computedSets.map((c) => ({
+      exercicio_nome: ex.origin.nome,
+      grupo_muscular: ex.origin.grupo_muscular,
+      ordem: ex.origin.ordem,
+      modo: newMode,
+      numero_serie: c.numero_serie,
+      peso: c.peso,
+      repeticoes: c.repeticoes,
+      concluida: false,
+    }));
+  };
   };
 
   const handleModeChange = (index: number, mode: DeloadMode) => {
