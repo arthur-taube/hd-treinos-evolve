@@ -72,6 +72,42 @@ export function computeDeloadSeriesCount(
 }
 
 /**
+ * Compute the full array of deload sets for an exercise, applying the
+ * inter-set 20% floor rule on reps for `volume` and `combinado` modes.
+ *
+ * Rule: for sets N >= 2, reps cannot drop below 80% of the previous set's
+ * deload reps (ceil). This prevents special-method exercises (e.g. Rest Pause)
+ * from ending up with unrealistically low deload reps like 2-4.
+ *
+ * The `carga` mode is unaffected — it preserves the original reps verbatim.
+ */
+export function computeDeloadExerciseSets(
+  baselineSets: DeloadOriginSet[],
+  mode: DeloadMode,
+  incrementoMinimo: number | null
+): Array<{ numero_serie: number; peso: number | null; repeticoes: number | null }> {
+  const computed = baselineSets.map((b) => {
+    const c = computeDeloadSet(b, mode, incrementoMinimo);
+    return { numero_serie: b.numero_serie, peso: c.peso, repeticoes: c.repeticoes };
+  });
+
+  if (mode === "carga") return computed;
+
+  for (let i = 1; i < computed.length; i++) {
+    const prevReps = computed[i - 1].repeticoes;
+    const curReps = computed[i].repeticoes;
+    if (prevReps == null || prevReps <= 0) continue;
+    if (curReps == null || curReps <= 0) continue;
+    const floor = Math.ceil(prevReps * 0.8);
+    if (curReps < floor) {
+      computed[i].repeticoes = floor;
+    }
+  }
+
+  return computed;
+}
+
+/**
  * Check whether the deload button should be visible for the current program.
  * Conditions:
  * - level is 'intermediario' or 'avancado' (never iniciante)

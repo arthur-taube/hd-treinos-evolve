@@ -20,7 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   buildBaselineSets,
   computeDeloadSeriesCount,
-  computeDeloadSet,
+  computeDeloadExerciseSets,
   DeloadMode,
   DeloadOriginExercise,
   loadOriginExercises,
@@ -146,19 +146,17 @@ export default function DeloadWorkout() {
           }
 
           const baseline = buildBaselineSets(ex.sets, setsCount);
-          const sets: DeloadSerieRow[] = baseline.map((b) => {
-            const computed = computeDeloadSet(b, mode, ex.incremento_minimo);
-            return {
-              exercicio_nome: ex.nome,
-              grupo_muscular: ex.grupo_muscular,
-              ordem: ex.ordem,
-              modo: mode,
-              numero_serie: b.numero_serie,
-              peso: computed.peso,
-              repeticoes: computed.repeticoes,
-              concluida: false,
-            };
-          });
+          const computedSets = computeDeloadExerciseSets(baseline, mode, ex.incremento_minimo);
+          const sets: DeloadSerieRow[] = computedSets.map((c) => ({
+            exercicio_nome: ex.nome,
+            grupo_muscular: ex.grupo_muscular,
+            ordem: ex.ordem,
+            modo: mode,
+            numero_serie: c.numero_serie,
+            peso: c.peso,
+            repeticoes: c.repeticoes,
+            concluida: false,
+          }));
           return { origin: ex, mode, sets };
         });
 
@@ -179,20 +177,19 @@ export default function DeloadWorkout() {
   const recomputeSetsForMode = (ex: ExerciseState, newMode: DeloadMode): DeloadSerieRow[] => {
     const setsCount = computeDeloadSeriesCount(ex.origin.series, newMode);
     const baseline = buildBaselineSets(ex.origin.sets, setsCount);
-    return baseline.map((b) => {
-      const computed = computeDeloadSet(b, newMode, ex.origin.incremento_minimo);
-      return {
-        exercicio_nome: ex.origin.nome,
-        grupo_muscular: ex.origin.grupo_muscular,
-        ordem: ex.origin.ordem,
-        modo: newMode,
-        numero_serie: b.numero_serie,
-        peso: computed.peso,
-        repeticoes: computed.repeticoes,
-        concluida: false,
-      };
-    });
+    const computedSets = computeDeloadExerciseSets(baseline, newMode, ex.origin.incremento_minimo);
+    return computedSets.map((c) => ({
+      exercicio_nome: ex.origin.nome,
+      grupo_muscular: ex.origin.grupo_muscular,
+      ordem: ex.origin.ordem,
+      modo: newMode,
+      numero_serie: c.numero_serie,
+      peso: c.peso,
+      repeticoes: c.repeticoes,
+      concluida: false,
+    }));
   };
+
 
   const handleModeChange = (index: number, mode: DeloadMode) => {
     setExercises((prev) =>

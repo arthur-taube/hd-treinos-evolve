@@ -1,62 +1,38 @@
-# Semana de Deload (avançado/intermediário)
+## Ajuste: piso de 80% entre séries no deload (volume e combinado)
 
-## Objetivo
-Permitir que o usuário inicie **uma única semana de deload por programa**, disponível a partir do momento em que ele **inicia a 3ª semana**. O botão fica **sempre no fim da lista de semanas** (acima do botão de finalizar), exige **confirmação**, e ao concluir todos os dias do deload o programa fica pronto para ser **finalizado**.
+### Problema
+No deload de **volume** e **combinado**, cortamos as reps de cada série efetiva pela metade. Quando o exercício usa métodos especiais (Rest Pause, etc.) que já reduzem muito as reps da 2ª série em diante, dividir por 2 chega a 2–4 reps — irrealista para um deload.
 
-Aplica-se somente a programas **avançado** e **intermediário (STAR)** — nunca iniciante. Esta semana de deload **não tem relação** com o deload reativo do sistema STAR (que age em um único exercício); aqui o deload é para o programa inteiro e usa fórmulas próprias.
+### Regra nova
+Para os modos **volume** e **combinado** apenas:
 
-## Regras confirmadas
-- **Aparece**: a partir do início da 3ª semana (existe treino concluído/iniciado com `ordem_semana >= 3`).
-- **Posição**: sempre no rodapé da página `active-program`, logo acima do botão "Concluir Programa".
-- **Confirmação**: `AlertDialog` perguntando se o usuário realmente deseja **pular todos os treinos não concluídos** (se houver) e iniciar a semana de deload.
-- **Único deload por programa**: depois de criado, o botão some.
-- **Após concluir o deload**: todos os treinos ficam concluídos/pulados → aparece o bloco "Concluir Programa". Não bloqueamos outras ações.
-- **Dados congelados**: cada dia de deload concluído grava carga/séries/reps usadas. Reabrir/reiniciar treinos antigos **não** recalcula o deload — os valores ficam fixos.
-- **Origem dos dados**: cada dia de deload copia do **último treino concluído daquele dia** (mesmo `ordem_dia`), independente da semana.
+- Série 1: mantém o cálculo atual (`ceil(reps_originais / 2)`).
+- Série N (N ≥ 2): `deload_reps[N] = max(ceil(reps_originais[N] / 2), ceil(deload_reps[N-1] * 0.8))`
 
-## Fórmulas da semana de deload
+Ou seja, cada série do deload não pode cair mais de 20% em relação à série anterior **do mesmo exercício no próprio deload**. Se o corte pela metade violar esse piso, usa-se 80% da série anterior (arredondando para cima).
 
-A semana é dividida em duas metades por **dia**, arredondando a primeira metade **para cima** (ex.: 5 dias → 3 dias na 1ª metade, 2 na 2ª; 4 dias → 2 e 2).
+O modo **carga** não muda — reps continuam sendo cópia literal do último treino.
 
-**Primeira metade da semana** — cada exercício mostra no cabeçalho do card **dois modelos** para o usuário escolher:
-- **Volume** (opção padrão, pré-selecionada): carga **mantida** igual à do último workout concluído; séries e repetições **reduzidas em 50%**, arredondando para cima.
-- **Carga**: séries e repetições **mantidas** iguais ao último workout concluído; carga **reduzida em 50%**, arredondando para cima e respeitando o incremento mínimo.
+### Onde alterar
 
-**Segunda metade da semana** — deload de **carga e volume combinados** (sem escolha):
-- carga reduzida em 50%, séries reduzidas em 50% e repetições reduzidas em 50%, todos arredondando para cima.
+- `src/utils/deload.ts`
+  - `computeDeloadSet` hoje calcula uma série isoladamente, sem saber da anterior. Vou adicionar um helper `applyDeloadRepsFloor(sets, mode)` que, depois de gerar todas as séries do exercício via `computeDeloadSet`, percorre da 2ª em diante e aplica o piso de 80% quando `mode` é `volume` ou `combinado`.
+  - Alternativa (mais limpa): expor uma função `computeDeloadExerciseSets(baselineSets, mode, incrementoMinimo)` que já retorna o array final com o piso aplicado. Mantemos `computeDeloadSet` para o caso simples.
 
-Referências de arredondamento:
-- Séries/reps: `ceil(valor / 2)`.
-- Carga: `ceil((carga_base * 0.5) / incremento) * incremento` (respeita incremento mínimo; mín. 0).
+- `src/pages/DeloadWorkout.tsx`
+  - Trocar o loop que chama `computeDeloadSet` por série pela nova função de exercício, de modo que o piso seja aplicado tanto no cálculo inicial quanto quando o usuário alterna Volume/Carga no cabeçalho.
 
-## Banco de dados
+### Detalhes
 
-Três tabelas novas (com GRANTs + RLS por `user_id`):
+- Arredondamento: `ceil` em ambos os lados (metade e 80%) — mantém consistência com o resto do deload.
+- Piso mínimo absoluto continua sendo 1 rep (já implícito no `ceil`).
+- Séries com `repeticoes` nulas ou 0 no baseline permanecem inalteradas (não temos base para inferir).
+- Dias já concluídos não são recalculados (dados já persistidos em `deload_series`).
 
-- `deload_semanas` — `programa_usuario_id`, `user_id`, `concluido`, `data_concluido`.
-- `deload_dias` — `deload_semana_id`, `user_id`, `ordem_dia`, `nome`, `treino_origem_id`, `metade` (`primeira`/`segunda`), `concluido`, `data_concluido`.
-- `deload_series` — `deload_dia_id`, `user_id`, `exercicio_nome`, `grupo_muscular`, `ordem`, `modo` (`volume`/`carga`/`combinado`), `numero_serie`, `peso`, `repeticoes`, `concluida`.
-
-Cada dia de deload é gerado do último treino concluído com aquele `ordem_dia`; `metade` define se é 1ª (com escolha volume/carga) ou 2ª (combinado).
-
-## Fluxo na tela (active-program)
-
-1. **Botão "Iniciar semana de deload"** no rodapé (avançado/intermediário, ≥3ª semana iniciada, sem deload existente).
-2. Clicar → `AlertDialog` de confirmação avisando que treinos não concluídos serão pulados.
-3. Confirmar:
-   - Pular todos os treinos não concluídos (reusa `handleSkipWorkout`).
-   - Criar `deload_semanas` + um `deload_dias` por dia da frequência (marcando `metade`), copiando do último treino concluído daquele `ordem_dia`.
-4. Bloco próprio "Semana Deload" no fim da lista, cards em cor distinta (laranja/roxo). Cada card abre a nova página `DeloadWorkout`.
-5. Concluir um dia → grava em `deload_series`, marca `deload_dias.concluido`, card muda para tom mais escuro. **Não recomputa** dias já concluídos.
-6. Todos os dias concluídos → `deload_semanas.concluido = true` e bloco "Concluir Programa" disponível.
-
-## Nova página DeloadWorkout
-Reaproveita `ExerciseCardAdvanced` em modo deload. No cabeçalho de cada exercício da **1ª metade**, seletor **Volume/Carga** (Volume default) que ajusta os valores exibidos; na **2ª metade**, valores combinados fixos. Grava em `deload_series`. Não altera a lógica normal de progressão/histórico dos treinos comuns.
-
-## Validação
-- Programa avançado/intermediário com 3ª semana iniciada → botão no fim; iniciar cria deload com dias copiados do último treino concluído de cada dia e `metade` correta.
-- 1ª metade: alternar Volume (mantém carga, corta séries/reps) e Carga (mantém séries/reps, corta carga) funciona; padrão Volume.
-- 2ª metade: carga, séries e reps todas reduzidas 50% (arredondando para cima).
-- Concluir dia → grava em `deload_series`, card escurece; reabrir treino antigo não altera valores do deload.
-- Concluído todo o deload → botão "Concluir Programa" disponível.
-- Iniciante nunca vê o botão. Um deload por programa. Typecheck limpo.
+### Validação
+- Exemplo Rest Pause com reps originais [12, 6, 4]:
+  - Antes (volume): [6, 3, 2].
+  - Depois: série 1 = 6; série 2 = max(ceil(6/2)=3, ceil(6*0.8)=5) = **5**; série 3 = max(ceil(4/2)=2, ceil(5*0.8)=4) = **4**. → [6, 5, 4].
+- Exemplo tradicional [10, 10, 10] em volume: série 1 = 5; série 2 = max(5, ceil(5*0.8)=4) = 5; série 3 = 5. Sem regressão.
+- Combinado com reps [12, 6, 4]: mesmas reps do exemplo Rest Pause acima; carga cai 50% normalmente.
+- Modo carga: reps inalteradas em qualquer cenário.
