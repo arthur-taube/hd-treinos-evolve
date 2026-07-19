@@ -20,7 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   buildBaselineSets,
   computeDeloadSeriesCount,
-  computeDeloadSet,
+  computeDeloadExerciseSets,
   DeloadMode,
   DeloadOriginExercise,
   loadOriginExercises,
