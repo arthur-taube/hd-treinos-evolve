@@ -160,6 +160,10 @@ export type Database = {
       }
       exercicios_avancados: {
         Row: {
+          auxiliary_muscle_1: string | null
+          auxiliary_muscle_2: string | null
+          auxiliary_muscle_3: string | null
+          auxiliary_muscle_4: string | null
           created_at: string
           descricao: string | null
           grande_grupo: string | null
@@ -175,6 +179,10 @@ export type Database = {
           video_url: string | null
         }
         Insert: {
+          auxiliary_muscle_1?: string | null
+          auxiliary_muscle_2?: string | null
+          auxiliary_muscle_3?: string | null
+          auxiliary_muscle_4?: string | null
           created_at?: string
           descricao?: string | null
           grande_grupo?: string | null
@@ -190,6 +198,10 @@ export type Database = {
           video_url?: string | null
         }
         Update: {
+          auxiliary_muscle_1?: string | null
+          auxiliary_muscle_2?: string | null
+          auxiliary_muscle_3?: string | null
+          auxiliary_muscle_4?: string | null
           created_at?: string
           descricao?: string | null
           grande_grupo?: string | null
@@ -235,6 +247,10 @@ export type Database = {
       }
       exercicios_iniciantes: {
         Row: {
+          auxiliary_muscle_1: string | null
+          auxiliary_muscle_2: string | null
+          auxiliary_muscle_3: string | null
+          auxiliary_muscle_4: string | null
           created_at: string
           grupo_muscular: string[]
           id: string
@@ -247,6 +263,10 @@ export type Database = {
           video_url: string | null
         }
         Insert: {
+          auxiliary_muscle_1?: string | null
+          auxiliary_muscle_2?: string | null
+          auxiliary_muscle_3?: string | null
+          auxiliary_muscle_4?: string | null
           created_at?: string
           grupo_muscular: string[]
           id?: string
@@ -259,6 +279,10 @@ export type Database = {
           video_url?: string | null
         }
         Update: {
+          auxiliary_muscle_1?: string | null
+          auxiliary_muscle_2?: string | null
+          auxiliary_muscle_3?: string | null
+          auxiliary_muscle_4?: string | null
           created_at?: string
           grupo_muscular?: string[]
           id?: string
@@ -898,6 +922,7 @@ export type Database = {
           full_name: string | null
           id: string
           phone_number: string | null
+          stats_volume_grupos_padrao: string[] | null
           training_goal: string | null
           training_level: string | null
           updated_at: string
@@ -909,6 +934,7 @@ export type Database = {
           full_name?: string | null
           id: string
           phone_number?: string | null
+          stats_volume_grupos_padrao?: string[] | null
           training_goal?: string | null
           training_level?: string | null
           updated_at?: string
@@ -920,6 +946,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone_number?: string | null
+          stats_volume_grupos_padrao?: string[] | null
           training_goal?: string | null
           training_level?: string | null
           updated_at?: string
